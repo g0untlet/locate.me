@@ -78,33 +78,33 @@ To ensure high availability and robust container orchestration (e.g., within Kub
 
 ```mermaid
 graph TD
-    subgraph Client Space
+    subgraph ClientSpace [Client Space]
         Browser[Browser / REST Client]
     end
 
-    subgraph Backend Microservice (BCE Layers)
-        subgraph Boundary Layer
-            Resource[PositionsResource<br/><i>@Boundary / RequestScoped</i>]
+    subgraph BackendMicroservice [Backend Microservice]
+        subgraph BoundaryLayer [Boundary Layer]
+            Resource["PositionsResource (Boundary)"]
         end
 
-        subgraph Control Layer
-            Control[Positions<br/><i>@Control / Dependent</i>]
+        subgraph ControlLayer [Control Layer]
+            Control["Positions (Control)"]
         end
 
-        subgraph Entity Layer
-            Entity[Position Entity<br/><i>JPA State & JSON-P</i>]
+        subgraph EntityLayer [Entity Layer]
+            Entity["Position (Entity)"]
         end
     end
 
-    subgraph Database Layer
-        DB[(Embedded H2 Database<br/><i>./data/locator</i>)]
+    subgraph DatabaseLayer [Database Layer]
+        DB[("Embedded H2 Database (./data/locator)")]
     end
 
-    Browser -->|HTTP JSON Requests| Resource
-    Resource -->|Bean Validation & JSON-P mapping| Entity
-    Resource -->|Delegates Calls| Control
-    Control -->|EntityManager Transactions| DB
-    Entity <.->|OR Mapping| DB
+    Browser --> Resource
+    Resource --> Entity
+    Resource --> Control
+    Control --> DB
+    Entity <--> DB
 ```
 
 ---
