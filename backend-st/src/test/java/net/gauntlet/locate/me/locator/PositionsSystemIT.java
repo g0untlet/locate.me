@@ -1,7 +1,7 @@
 //==============================================================================
 // Copyright (c) 2026 g0untlet. All rights reserved.
 //==============================================================================
-package net.gauntlet.locate.me.locator;
+package test.java.net.gauntlet.locate.me.locator;
 
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
