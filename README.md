@@ -173,3 +173,54 @@ cd backend-st
 mvn clean verify
 ```
 
+---
+
+#### Tier 4: Manual Testing using cURL
+
+You can manually interact with and test the RESTful API endpoints using `curl` while the backend application is running.
+
+##### 1. Record a New Geo-Position (POST)
+Creates a new position entry for a user (validates `userId` length <= 32).
+```bash
+curl -i -X POST http://localhost:8080/positions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "user123",
+    "latitude": 48.1351,
+    "longitude": 11.5820,
+    "accuracy": 10.5,
+    "timestamp": "2026-06-11T22:00:00Z"
+  }'
+```
+
+##### 2. Retrieve All Recorded Positions (GET)
+Gets list of all stored user locations sorted by timestamp descending.
+```bash
+curl -i -X GET http://localhost:8080/positions
+```
+
+##### 3. Filter Positions by User ID (GET with Query Param)
+Gets recorded locations specifically matching a certain user.
+```bash
+curl -i -X GET "http://localhost:8080/positions?userId=user123"
+```
+
+##### 4. Delete a Position (DELETE)
+Removes a recorded position by its generated ID (e.g. ID `1`).
+```bash
+curl -i -X DELETE http://localhost:8080/positions/1
+```
+
+##### 5. Check MicroProfile Readiness Check (GET)
+Returns the system status and H2 database availability check.
+```bash
+curl -i -X GET http://localhost:8080/q/health/ready
+```
+
+##### 6. Check MicroProfile Liveness Check (GET)
+Returns the state of the JVM process.
+```bash
+curl -i -X GET http://localhost:8080/q/health/live
+```
+
+
