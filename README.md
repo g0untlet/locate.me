@@ -19,7 +19,64 @@ locate.me/
 
 ## 2. Frontend Layer (`frontend/`)
 
-The frontend folder contains the client-side component of the application. It interacts directly with the backend's RESTful web endpoints to display real-time positions, allow users to submit new locations, and delete unwanted entries.
+The frontend is a lightweight, mobile-first **Progressive Web App (PWA)** built using standard web technologies (HTML5, CSS3, and Vanilla JavaScript). It is designed to run in modern mobile and desktop browsers, requesting real-time high-accuracy geolocation coordinates from the physical device and dispatching them securely to the backend service.
+
+---
+
+### 2.1 Core Components & Structure
+
+*   **`index.html` (Application Shell)**: Defines the minimal HTML structure required to boot the application. It provides the main user interface container, registers the service worker, and includes the action button and status feedback element.
+*   **`app.js` (Core Application Controller)**: Orchestrates device interaction, handles user events, manages state transitions, and handles network communications.
+*   **`sw.js` (Service Worker)**: Implements lifecycle event handling (`install` and `fetch` events) enabling standard Progressive Web App capabilities.
+*   **`manifest.json` (Web App Manifest)**: Controls how the application appears to the user on their device (standalone display mode, theme colors, and icons), allowing it to be installed locally like a native app.
+*   **`css/style.css` (Visual Presentation)**: Styles the mobile-first layouts, ensuring touch targets (like the "Standort senden" tracking button) are prominent and responsive.
+
+---
+
+### 2.2 Geolocation Tracking Flow
+
+When a user triggers tracking, the frontend executes a coordinated flow to request coordinates, transform them into the required domain payloads, and submit them:
+
+```mermaid
+sequenceDiagram
+    actor User as User / Browser
+    participant UI as index.html (UI)
+    participant App as app.js (Controller)
+    participant Geo as navigator.geolocation
+    participant BE as /api/geo (Backend)
+
+    User->>UI: Clicks "Standort senden"
+    UI->>App: Button Click Event
+    App->>UI: Update status to "Ortung läuft..."
+    App->>Geo: getCurrentPosition(options)
+    Note over Geo: Configured with:<br/>- enableHighAccuracy: true<br/>- timeout: 10000ms<br/>- maximumAge: 0ms
+    Geo-->>App: Success (Coords & Timestamp)
+    App->>UI: Update status to "Sende Daten..."
+    App->>BE: POST JSON Payload
+    BE-->>App: HTTP 200 OK / Response
+    App->>UI: Update status to "Standort erfolgreich gespeichert!"
+```
+
+#### 1. Device Location Fetching
+Using `navigator.geolocation.getCurrentPosition()`, the controller asks the browser to obtain the current latitude, longitude, and accuracy of the device. High-precision options are enforced:
+- `enableHighAccuracy: true`: Forces the browser/device to use hardware GPS modules if available for fine-grained coordinates rather than coarse IP-based tracking.
+- `timeout: 10000`: Sets a strict 10-second limit on location acquisition to prevent UI hangs.
+- `maximumAge: 0`: Guarantees fresh real-time coordinates, bypassing any cached positions.
+
+#### 2. Payload Construction & Mapping
+Once coordinates are acquired, the raw browser coordinates are parsed and structured into the domain JSON model required by the backend:
+- `userId`: Currently a static placeholder (`user_static_1`), ready for future authentication integration.
+- `latitude` / `longitude`: Exact decimal degree numbers.
+- `accuracy`: Margin of error in meters (if provided by the device).
+- `timestamp`: The system-acquired timestamp converted to a standardized **ISO 8601 string** format (e.g., `2026-06-11T22:00:00.000Z`) for consistent database persistence.
+
+#### 3. State-Driven User Feedback
+The status banner is updated reactively throughout the lifecycle of the location check:
+- `Bereit` (Initial state)
+- `Ortung läuft...` (Acquiring physical GPS coordinate)
+- `Sende Daten an Backend...` (Performing fetch transmission)
+- `Standort erfolgreich gespeichert!` (Success state)
+- `Fehler bei der Ortung: [Error Message]` / `Verbindungsfehler zum Backend.` (Failure branches)
 
 ---
 
