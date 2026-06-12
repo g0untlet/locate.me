@@ -4,11 +4,16 @@
 package net.gauntlet.locate.me.locator.boundary;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.InjectMock;
 import io.restassured.http.ContentType;
 import java.time.Instant;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import org.junit.jupiter.api.Test;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
+import org.mockito.Mockito;
+import net.gauntlet.locate.me.locator.control.GeocodingClient;
+import net.gauntlet.locate.me.locator.control.WeatherClient;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -17,6 +22,14 @@ import static org.hamcrest.CoreMatchers.nullValue;
 @QuarkusTest
 class PositionsResourceIT {
 
+    @InjectMock
+    @RestClient
+    GeocodingClient geocodingClient;
+
+    @InjectMock
+    @RestClient
+    WeatherClient weatherClient;
+
     @Test
     void createAndLifecyclePosition() {
         JsonObject json = Json.createObjectBuilder()
@@ -24,6 +37,7 @@ class PositionsResourceIT {
                 .add("latitude", 48.1351)
                 .add("longitude", 11.5820)
                 .add("accuracy", 5.0)
+                .add("displayName", "Test Location")
                 .add("timestamp", Instant.now().toString())
                 .build();
 
@@ -40,6 +54,7 @@ class PositionsResourceIT {
                 .body("latitude", is(48.1351f))
                 .body("longitude", is(11.5820f))
                 .body("accuracy", is(5.0f))
+                .body("displayName", is("Test Location"))
                 .extract()
                 .path("id");
 
@@ -49,7 +64,8 @@ class PositionsResourceIT {
                 .get("/positions?userId=validUser")
                 .then()
                 .statusCode(200)
-                .body("[0].id", is(id));
+                .body("[0].id", is(id))
+                .body("[0].displayName", is("Test Location"));
 
         // 3. Delete Position
         given()
@@ -87,6 +103,29 @@ class PositionsResourceIT {
     }
 
     @Test
+    void createWithTooLongDisplayName() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 256; i++) {
+            sb.append("a");
+        }
+        JsonObject json = Json.createObjectBuilder()
+                .add("userId", "validUser")
+                .add("latitude", 48.1351)
+                .add("longitude", 11.5820)
+                .add("displayName", sb.toString())
+                .add("timestamp", Instant.now().toString())
+                .build();
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(json.toString())
+                .when()
+                .post("/positions")
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
     void createWithoutOptionalAccuracy() {
         JsonObject json = Json.createObjectBuilder()
                 .add("userId", "noAccuracyUser")
@@ -104,6 +143,72 @@ class PositionsResourceIT {
                 .statusCode(201)
                 .body("id", notNullValue())
                 .body("accuracy", nullValue())
+                .extract()
+                .path("id");
+
+        // Cleanup
+        given()
+                .when()
+                .delete("/positions/" + id)
+                .then()
+                .statusCode(204);
+    }
+
+    @Test
+    void createWithNominatimGeocoding() {
+        Mockito.when(this.geocodingClient.reverse(48.1351, 11.5820, "jsonv2"))
+                .thenReturn(Json.createObjectBuilder()
+                        .add("display_name", "Mocked OSM Munich")
+                        .build());
+
+        JsonObject json = Json.createObjectBuilder()
+                .add("userId", "geoUser")
+                .add("latitude", 48.1351)
+                .add("longitude", 11.5820)
+                .add("timestamp", Instant.now().toString())
+                .build();
+
+        int id = given()
+                .contentType(ContentType.JSON)
+                .body(json.toString())
+                .when()
+                .post("/positions")
+                .then()
+                .statusCode(201)
+                .body("id", notNullValue())
+                .body("displayName", is("Mocked OSM Munich"))
+                .extract()
+                .path("id");
+
+        // Cleanup
+        given()
+                .when()
+                .delete("/positions/" + id)
+                .then()
+                .statusCode(204);
+    }
+
+    @Test
+    void createWithNominatimGeocodingFailure() {
+        Mockito.when(this.geocodingClient.reverse(52.5200, 13.4050, "jsonv2"))
+                .thenThrow(new RuntimeException("OSM Service Unavailable"));
+
+        JsonObject json = Json.createObjectBuilder()
+                .add("userId", "geoFailUser")
+                .add("latitude", 52.5200)
+                .add("longitude", 13.4050)
+                .add("timestamp", Instant.now().toString())
+                .build();
+
+        int id = given()
+                .contentType(ContentType.JSON)
+                .body(json.toString())
+                .when()
+                .post("/positions")
+                .then()
+                .statusCode(201)
+                .body("id", notNullValue())
+                .body("displayName", nullValue())
                 .extract()
                 .path("id");
 

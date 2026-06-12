@@ -28,6 +28,7 @@ class PositionsSystemIT {
                 .add("latitude", 52.5200)
                 .add("longitude", 13.4050)
                 .add("accuracy", 15.0)
+                .add("displayName", "Berlin Office")
                 .add("timestamp", Instant.now().toString())
                 .build();
 
@@ -36,6 +37,7 @@ class PositionsSystemIT {
             assertThat(response.getStatus()).isEqualTo(201);
             JsonObject created = response.readEntity(JsonObject.class);
             assertThat(created.getString("userId")).isEqualTo("stUser");
+            assertThat(created.getString("displayName")).isEqualTo("Berlin Office");
             long id = created.getJsonNumber("id").longValue();
 
             // 2. Query Position via REST Client
@@ -45,6 +47,7 @@ class PositionsSystemIT {
                 assertThat(array).isNotEmpty();
                 JsonObject queried = array.getJsonObject(0);
                 assertThat(queried.getJsonNumber("id").longValue()).isEqualTo(id);
+                assertThat(queried.getString("displayName")).isEqualTo("Berlin Office");
             }
 
             // 3. Delete Position via REST Client

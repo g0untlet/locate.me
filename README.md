@@ -100,6 +100,7 @@ Each recorded geo-position consists of the following attributes:
 *   `latitude` (double, mandatory): Latitude coordinate.
 *   `longitude` (double, mandatory): Longitude coordinate.
 *   `accuracy` (Double, optional): Accuracy radius in meters.
+*   `displayName` (String, optional): Optional display name/label for the position (maximum 255 characters).
 *   `timestamp` (Instant, mandatory): Explicit point in time when the position was recorded.
 
 ---
@@ -246,6 +247,7 @@ curl -i -X POST http://localhost:8080/positions \
     "latitude": 48.1351,
     "longitude": 11.5820,
     "accuracy": 10.5,
+    "displayName": "Munich Office",
     "timestamp": "2026-06-11T22:00:00Z"
   }'
 ```
