@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,14 +12,37 @@
 <body>
 
     <div class="app-container">
-        <h1>locate.me</h1>
+        <h1 class="app-title">locate.me</h1>
         
         <button id="track-btn" class="track-btn">
-            Standort<br>senden
+            SEND LOCATION
         </button>
         
         <div class="status-container">
-            <div id="status">Bereit</div>
+            <div id="status" class="status-ready">Ready</div>
+        </div>
+
+        <div id="response-card" class="response-card hidden">
+            <div class="card-header">Location Details</div>
+            
+            <div class="table-grid">
+                <div class="table-cell border-right border-bottom">
+                    <span class="label">RECORD ID</span>
+                    <span id="res-id" class="value">-</span>
+                </div>
+                <div class="table-cell border-bottom">
+                    <span class="label">TEMPERATURE</span>
+                    <span id="res-temp" class="value">-</span>
+                </div>
+                <div class="table-cell border-right">
+                    <span class="label">WEATHER CODE</span>
+                    <span id="res-weather" class="value">-</span>
+                </div>
+                <div class="table-cell">
+                    <span class="label">RESOLVED ADDRESS</span>
+                    <span id="res-address" class="value address-text">-</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -29,8 +52,8 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('Service Worker erfolgreich registriert. Scope:', reg.scope))
-                    .catch(err => console.error('Service Worker Registrierung fehlgeschlagen:', err));
+                    .then(reg => console.log('Service Worker registered. Scope:', reg.scope))
+                    .catch(err => console.error('Service Worker registration failed:', err));
             });
         }
     </script>
