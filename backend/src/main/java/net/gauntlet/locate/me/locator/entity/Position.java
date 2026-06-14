@@ -38,6 +38,15 @@ public class Position {
 
     Double accuracy;
 
+    @Size(max = 255)
+    @Column(name = "display_name", length = 255)
+    String displayName;
+
+    Float temperature;
+
+    @Column(name = "weather_code")
+    WeatherCode weatherCode;
+
     @NotNull
     @Column(nullable = false)
     Instant timestamp;
@@ -90,6 +99,33 @@ public class Position {
         return this;
     }
 
+    public String displayName() {
+        return this.displayName;
+    }
+
+    public Position displayName(String displayName) {
+        this.displayName = displayName;
+        return this;
+    }
+
+    public Float temperature() {
+        return this.temperature;
+    }
+
+    public Position temperature(Float temperature) {
+        this.temperature = temperature;
+        return this;
+    }
+
+    public WeatherCode weatherCode() {
+        return this.weatherCode;
+    }
+
+    public Position weatherCode(WeatherCode weatherCode) {
+        this.weatherCode = weatherCode;
+        return this;
+    }
+
     public Instant timestamp() {
         return this.timestamp;
     }
@@ -110,6 +146,18 @@ public class Position {
         
         if (this.accuracy != null) {
             builder.add("accuracy", this.accuracy);
+        }
+        
+        if (this.displayName != null) {
+            builder.add("displayName", this.displayName);
+        }
+        
+        if (this.temperature != null) {
+            builder.add("temperature", this.temperature);
+        }
+
+        if (this.weatherCode != null) {
+            builder.add("weatherCode", this.weatherCode.code());
         }
         
         if (this.timestamp != null) {
@@ -135,6 +183,15 @@ public class Position {
         }
         if (json.containsKey("accuracy") && !json.isNull("accuracy")) {
             position.accuracy(json.getJsonNumber("accuracy").doubleValue());
+        }
+        if (json.containsKey("displayName") && !json.isNull("displayName")) {
+            position.displayName(json.getString("displayName"));
+        }
+        if (json.containsKey("temperature") && !json.isNull("temperature")) {
+            position.temperature((float) json.getJsonNumber("temperature").doubleValue());
+        }
+        if (json.containsKey("weatherCode") && !json.isNull("weatherCode")) {
+            position.weatherCode(WeatherCode.fromCode(json.getJsonNumber("weatherCode").intValue()));
         }
         if (json.containsKey("timestamp") && !json.isNull("timestamp")) {
             position.timestamp(Instant.parse(json.getString("timestamp")));

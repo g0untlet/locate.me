@@ -89,7 +89,7 @@ The backend is built as a highly structured, secure-by-default Java 21 microserv
 The core domain responsibility of the backend is managed by the **Locator** Business Component under the package `net.gauntlet.locate.me.locator`. 
 
 #### Domain Capabilities
-*   **Create Geo-Positions**: Ingests new position records, runs strict Bean Validation, and persists them.
+*   **Create Geo-Positions**: Ingests new position records, runs strict Bean Validation, enriches them asynchronously/synchronously with external metadata (geocoding via OpenStreetMap Nominatim and current weather conditions via Open-Meteo), and persists them.
 *   **Search/Query Positions**: Supports querying positions globally or filtering them specifically by a given `userId`. Records are returned sorted by timestamp in descending order.
 *   **Delete Positions**: Safely removes recorded positions by their technical primary key.
 
@@ -100,6 +100,9 @@ Each recorded geo-position consists of the following attributes:
 *   `latitude` (double, mandatory): Latitude coordinate.
 *   `longitude` (double, mandatory): Longitude coordinate.
 *   `accuracy` (Double, optional): Accuracy radius in meters.
+*   `displayName` (String, optional): Optional display name/label resolved via OpenStreetMap Nominatim (maximum 255 characters).
+*   `temperature` (Float, optional): Current ambient temperature in °C resolved via Open-Meteo API.
+*   `weatherCode` (WeatherCode, optional): Current weather condition classification (mapped via WMO Weather Interpretation Codes).
 *   `timestamp` (Instant, mandatory): Explicit point in time when the position was recorded.
 
 ---
@@ -111,9 +114,9 @@ The backend follows the Boundary-Control-Entity pattern. To ensure loose couplin
 *   **Boundary Layer (`boundary/`)**: 
     Exposes Restful APIs using JAX-RS. The `PositionsResource` JAX-RS facade is annotated with `@Boundary` (Request-scoped), is the exclusive holder of `@Transactional` boundary controls, handles Bean Validation on deserialized entity models, and delegates operations directly to the controller.
 *   **Control Layer (`control/`)**: 
-    Zustandslose/Stateless business logic classes. `Positions` BA is annotated with `@Control` (Dependent-scoped) and performs operations using an injected package-private `EntityManager`.
+    Zustandslose/Stateless business logic classes. `Positions` BA is annotated with `@Control` (Dependent-scoped) and performs operations using an injected package-private `EntityManager`. It acts as an orchestrator that leverages CDI-injected MicroProfile REST clients (`GeocodingClient` and `WeatherClient`) to automatically query and enrich incoming coordinates with real-time location addresses and weather metrics.
 *   **Entity Layer (`entity/`)**: 
-    Represents persistent state and core business logic. The `Position` JPA Entity exposes a record-style getter interface (e.g. `userId()` instead of `getUserId()`) and encapsulates its own JSON-P transformations (`toJSON()` and `fromJSON()`).
+    Represents persistent state and core business logic. The `Position` JPA Entity exposes a record-style getter interface (e.g. `userId()` instead of `getUserId()`) and encapsulates its own JSON-P transformations (`toJSON()` and `fromJSON()`). It maps optional parameters such as `temperature` and `weatherCode`. The weather condition is represented as a structured `WeatherCode` enum, which is persisted to the database via a JPA `AttributeConverter` (`WeatherCodeConverter`).
 
 ---
 
@@ -153,6 +156,11 @@ graph TD
         end
     end
 
+    subgraph ExternalAPIs [External APIs]
+        Nominatim["OSM Nominatim API (Geocoding)"]
+        OpenMeteo["Open-Meteo API (Weather)"]
+    end
+
     subgraph DatabaseLayer [Database Layer]
         DB[("Embedded H2 Database (./data/locator)")]
     end
@@ -161,8 +169,45 @@ graph TD
     Resource --> Entity
     Resource --> Control
     Control --> DB
+    Control --> Nominatim
+    Control --> OpenMeteo
     Entity <--> DB
 ```
+
+---
+
+### 3.4 External Service Integrations & Fault-Tolerance
+
+To provide automated data enrichment upon position creation, the backend integrates with external RESTful web APIs using declarative MicroProfile REST Clients.
+
+#### 3.4.1 Open-Meteo Weather API Integration
+*   **Purpose**: Resolves the current ambient temperature and weather condition code for the given coordinates.
+*   **Endpoint**: `/v1/forecast` relative to the configured base URL.
+*   **Parameters**:
+    *   `latitude`: Requested coordinate.
+    *   `longitude`: Requested coordinate.
+    *   `current`: Configured to retrieve `"temperature_2m,weather_code"`.
+*   **Configuration**:
+    *   Client Interface: `WeatherClient.java`
+    *   Config Key: `weather_uri/mp-rest/url` (defaults to `https://api.open-meteo.com`)
+
+#### 3.4.2 OpenStreetMap Nominatim Geocoding API Integration
+*   **Purpose**: Resolves the physical address or landmark name (reverse geocoding) for the given coordinates, which is mapped to the `displayName` attribute.
+*   **Endpoint**: `/reverse` relative to the configured base URL.
+*   **Parameters**:
+    *   `lat`: Requested coordinate.
+    *   `lon`: Requested coordinate.
+    *   `format`: Configured to retrieve `"jsonv2"`.
+*   **Configuration**:
+    *   Client Interface: `GeocodingClient.java`
+    *   Config Key: `nominatim_uri/mp-rest/url` (defaults to `https://nominatim.openstreetmap.org`)
+    *   **Custom Headers**: Enforces a `User-Agent` header (`LocateMeApp/1.0 (internal@local.me)`) to comply with Nominatim's strict usage policy.
+
+#### 3.4.3 Fault-Tolerance & Graceful Fallback
+External network calls are prone to latency spikes, rate-limiting, and downtime. To ensure high availability and prevent external failures from disrupting the core system, the integrations implement a **Graceful Fallback pattern**:
+*   **Error Isolation**: Both API calls are isolated inside separate, dedicated `try-catch` blocks in the `Positions.java` Control layer bean.
+*   **Fail-Safe Persistence**: If an external service is unavailable, returns a timeout, or throws an HTTP error, the exception is caught, logged as a warning (`System.Logger.Level.WARNING`), and the core location coordinate is **successfully persisted** without the enriched fields (meaning `displayName`, `temperature`, and `weatherCode` remain `null` or hold default values).
+*   **Resilience Benefit**: Users can always submit their coordinates regardless of third-party API availability, protecting the core application flow.
 
 ---
 
@@ -237,7 +282,7 @@ mvn clean verify
 You can manually interact with and test the RESTful API endpoints using `curl` while the backend application is running.
 
 ##### 1. Record a New Geo-Position (POST)
-Creates a new position entry for a user (validates `userId` length <= 32).
+Creates a new position entry for a user. If `displayName`, `temperature`, or `weatherCode` are omitted, the backend will automatically resolve them using the geocoding and weather APIs.
 ```bash
 curl -i -X POST http://localhost:8080/positions \
   -H "Content-Type: application/json" \
@@ -249,9 +294,23 @@ curl -i -X POST http://localhost:8080/positions \
     "timestamp": "2026-06-11T22:00:00Z"
   }'
 ```
+*Response payload showing automatic address and weather enrichment:*
+```json
+{
+  "id": 1,
+  "userId": "user123",
+  "latitude": 48.1351,
+  "longitude": 11.5820,
+  "accuracy": 10.5,
+  "displayName": "Marienplatz, Altstadt-Lehel, Munich, Upper Bavaria, Bavaria, 80331, Germany",
+  "temperature": 16.8,
+  "weatherCode": 2,
+  "timestamp": "2026-06-11T22:00:00Z"
+}
+```
 
 ##### 2. Retrieve All Recorded Positions (GET)
-Gets list of all stored user locations sorted by timestamp descending.
+Gets list of all stored user locations sorted by timestamp descending, complete with enriched address and weather metrics.
 ```bash
 curl -i -X GET http://localhost:8080/positions
 ```
