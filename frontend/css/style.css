@@ -1,16 +1,17 @@
 /* ==========================================================================
-   Geglobte Stile & Variablen (Modernes Blau-Design)
+   Design Tokens & Base Setup
    ========================================================================== */
 :root {
-    --bg-color: #f4f7f6;
+    --bg-color: #f8fafc;
     --card-bg: #ffffff;
-    --primary-color: #007acc;
-    --primary-hover: #005999;
-    --text-color: #2c3e50;
-    --text-muted: #7f8c8d;
-    --border-radius: 16px;
-    --shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
-    --transition: all 0.3s ease;
+    --primary-color: #72b2dc;
+    --primary-hover: #5fa3cf;
+    --text-color: #1e293b;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+    --border-radius: 24px;
+    --shadow: 0 20px 40px rgba(0, 0, 0, 0.03);
+    --transition: all 0.25s ease;
 }
 
 * {
@@ -21,105 +22,251 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: var(--bg-color);
+    background-color: #cbd5e1;
     color: var(--text-color);
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    padding: 20px;
+    padding: 20px 10px;
 }
 
 /* ==========================================================================
-   App-Container (Zentrierte Card)
+   App Container
    ========================================================================== */
 .app-container {
     background-color: var(--card-bg);
-    padding: 40px 30px;
+    padding: 40px 24px;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow);
     width: 100%;
-    max-width: 400px;
-    text-align: center;
+    max-width: 360px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 24px;
 }
 
-/* Header-Bereich mit App-Name */
-h1 {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--primary-color);
-    letter-spacing: -0.5px;
-}
-
-/* ==========================================================================
-   Interaktiver Tracking-Button
-   ========================================================================== */
-.track-btn {
-    width: 160px;
-    height: 160px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: white;
-    background: linear-gradient(135deg, var(--primary-color), #0099ff);
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 0 8px 15px rgba(0, 122, 204, 0.3);
-    outline: none;
-    transition: var(--transition);
-    
-    /* Perfekt zentrierter Text im Kreis */
+.app-header {
     display: flex;
     justify-content: center;
     align-items: center;
+    width: 100%;
+    margin-top: 10px;
+    margin-bottom: 45px;
 }
 
-.track-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 20px rgba(0, 122, 204, 0.4);
-}
-
-.track-btn:active {
-    transform: translateY(1px);
-    background: linear-gradient(135deg, var(--primary-hover), var(--primary-color));
-    box-shadow: 0 4px 8px rgba(0, 122, 204, 0.2);
+.app-title {
+    font-size: 2.4rem;
+    font-weight: 400;
+    color: #1a5f8c;
+    letter-spacing: -0.5px;
+    white-space: nowrap;
+    text-align: center;
 }
 
 /* ==========================================================================
-   Status-Anzeige
+   Button & Links
+   ========================================================================== */
+.track-btn {
+    width: 100%;
+    max-width: 280px;
+    padding: 14px 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: white;
+    background-color: var(--primary-color);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: 0 4px 6px rgba(114, 178, 220, 0.15);
+    margin-bottom: 25px;
+}
+
+.track-btn:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.track-btn:active {
+    background-color: #4b92be;
+    transform: translateY(0);
+}
+
+.history-link {
+    margin-top: 25px;
+    font-size: 0.85rem;
+    color: var(--primary-hover);
+    text-decoration: none;
+    font-weight: 500;
+    transition: var(--transition);
+    border-bottom: 1px dashed var(--primary-hover);
+    padding-bottom: 2px;
+    cursor: pointer;
+}
+
+.history-link:hover {
+    color: #1a5f8c;
+    border-bottom-color: #1a5f8c;
+}
+
+/* ==========================================================================
+   Status Indicator
    ========================================================================== */
 .status-container {
     min-height: 24px;
+    margin-bottom: 30px;
 }
 
 #status {
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 500;
-    color: var(--text-muted);
-    transition: var(--transition);
 }
 
-/* Optionale CSS-Hilfsklassen für JavaScript-Statusänderungen */
-.status-loading {
-    color: #f39c12 !important;
-    animation: pulse 1.5s infinite;
-}
+.status-ready { color: #0284c7; }
+.status-loading { color: #d97706; animation: pulse 1.5s infinite; }
+.status-success { color: #16a34a; }
+.status-error { color: #dc2626; }
 
-.status-success {
-    color: #2ecc71 !important;
-}
-
-.status-error {
-    color: #e74c3c !important;
-}
-
-/* Sanfter Puls-Effekt während der Ortung */
 @keyframes pulse {
     0% { opacity: 0.6; }
     50% { opacity: 1; }
     100% { opacity: 0.6; }
+}
+
+/* ==========================================================================
+   Dashboard Layout (Card)
+   ========================================================================== */
+.response-card {
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    background-color: #ffffff;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.card-header {
+    font-size: 1rem;
+    font-weight: 500;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    color: #000000;
+}
+
+#res-id-span {
+    color: var(--primary-hover);
+    font-weight: 600;
+    margin-left: 2px;
+}
+
+.flex-rows {
+    display: flex;
+    flex-direction: column;
+}
+
+.row-split {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.row-full {
+    width: 100%;
+}
+
+.cell {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    background-color: #ffffff;
+}
+
+.border-bottom { 
+    border-bottom: 1px solid var(--border-color); 
+}
+
+.text-right {
+    align-items: flex-end;
+    text-align: right;
+}
+
+.label {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    letter-spacing: 0.3px;
+}
+
+.value {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #000000;
+}
+
+.address-text {
+    font-size: 0.85rem;
+    font-weight: 400;
+    line-height: 1.4;
+}
+
+/* ==========================================================================
+   History Sektion & Tabelle
+   ========================================================================== */
+.history-container {
+    width: 100%;
+    margin-top: 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #ffffff;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    text-align: left;
+}
+
+.history-table th {
+    background-color: #f8fafc;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.history-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-color);
+    font-variant-numeric: tabular-nums;
+}
+
+.history-table tr:last-child td {
+    border-bottom: none;
+}
+
+.history-table tr:nth-child(even) {
+    background-color: #fdfdfd;
+}
+
+/* ==========================================================================
+   Utilities
+   ========================================================================== */
+.hidden {
+    display: none !important;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }

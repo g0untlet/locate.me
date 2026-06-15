@@ -1,36 +1,79 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>locate.me</title>
-    
     <link rel="manifest" href="manifest.json">
-    
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
     <div class="app-container">
-        <h1>locate.me</h1>
+        <header class="app-header">
+            <h1 class="app-title">locate.me</h1>
+        </header>
         
         <button id="track-btn" class="track-btn">
-            Standort<br>senden
+            SEND LOCATION
         </button>
         
         <div class="status-container">
-            <div id="status">Bereit</div>
+            <div id="status" class="status-ready">Ready</div>
+        </div>
+
+        <div id="response-card" class="response-card hidden">
+            <div class="card-header">
+                Location Details <span id="res-id-span">for #-</span>
+            </div>
+            
+            <div class="flex-rows">
+                <div class="row-split border-bottom">
+                    <div class="cell">
+                        <span class="label">TEMPERATURE</span>
+                        <span id="res-temp" class="value">-</span>
+                    </div>
+                    <div class="cell text-right">
+                        <span class="label">WEATHER CODE</span>
+                        <span id="res-weather" class="value">-</span>
+                    </div>
+                </div>
+                
+                <div class="row-full">
+                    <div class="cell">
+                        <span class="label">RESOLVED ADDRESS</span>
+                        <span id="res-address" class="value address-text">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <a href="#" id="toggle-history-btn" class="history-link">Show Position History</a>
+
+        <div id="history-container" class="history-container hidden">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Date</th>
+                        <th>User</th>
+                        <th>Temp</th>
+                        <th>Address</th>
+                    </tr>
+                </thead>
+                <tbody id="history-tbody">
+                    </tbody>
+            </table>
         </div>
     </div>
 
-    <script src="app.js"></script>
-    
+    <script src="app.js" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('Service Worker erfolgreich registriert. Scope:', reg.scope))
-                    .catch(err => console.error('Service Worker Registrierung fehlgeschlagen:', err));
+                    .then(reg => console.log('Service Worker registered.'))
+                    .catch(err => console.error(err));
             });
         }
     </script>
