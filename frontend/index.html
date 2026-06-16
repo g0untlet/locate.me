@@ -4,67 +4,102 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>locate.me</title>
-    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
 </head>
 <body>
 
     <div class="app-container">
         <header class="app-header">
+            <img src="icons/icon_192.png" alt="locate.me logo" class="app-header-icon">
             <h1 class="app-title">locate.me</h1>
+            <img src="icons/icon_192.png" alt="locate.me logo" class="app-header-icon">
         </header>
         
-        <button id="track-btn" class="track-btn">
-            SEND LOCATION
-        </button>
-        
-        <div class="status-container">
-            <div id="status" class="status-ready">Ready</div>
-        </div>
-
-        <div id="response-card" class="response-card hidden">
-            <div class="card-header">
-                Location Details <span id="res-id-span">for #-</span>
-            </div>
+        <section id="page-locate" class="app-page">
+            <button id="track-btn" class="track-btn">
+                SEND LOCATION
+            </button>
             
-            <div class="flex-rows">
-                <div class="row-split border-bottom">
-                    <div class="cell">
-                        <span class="label">TEMPERATURE</span>
-                        <span id="res-temp" class="value">-</span>
-                    </div>
-                    <div class="cell text-right">
-                        <span class="label">WEATHER CODE</span>
-                        <span id="res-weather" class="value">-</span>
-                    </div>
+            <div class="status-container">
+                <div id="status" class="status-ready">Ready</div>
+            </div>
+
+            <div id="response-card" class="response-card hidden">
+                <div class="card-header">
+                    Location Details <span id="res-time-span">at --:--</span>
                 </div>
-                
-                <div class="row-full">
-                    <div class="cell">
-                        <span class="label">RESOLVED ADDRESS</span>
-                        <span id="res-address" class="value address-text">-</span>
+                <div class="flex-rows">
+                    <div class="row-split border-bottom">
+                        <div class="cell">
+                            <span class="label">TEMPERATURE</span>
+                            <div class="temp-display-wrapper">
+                                <span id="res-weather-icon-container"></span>
+                                <span id="res-temp" class="value">-</span>
+                            </div>
+                        </div>
+                        <div class="cell text-right">
+                            <span class="label">WEATHER CODE</span>
+                            <span id="res-weather" class="value">-</span>
+                        </div>
+                    </div>
+                    <div class="row-full">
+                        <div class="cell">
+                            <span class="label">RESOLVED ADDRESS</span>
+                            <span id="res-address" class="value address-text">-</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <a href="#" id="toggle-history-btn" class="history-link">Show Position History</a>
+        <section id="page-history" class="app-page hidden">
+            <div id="history-list" class="history-list">
+                </div>
+        </section>
 
-        <div id="history-container" class="history-container hidden">
-            <table class="history-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Date</th>
-                        <th>User</th>
-                        <th>Temp</th>
-                        <th>Address</th>
-                    </tr>
-                </thead>
-                <tbody id="history-tbody">
-                    </tbody>
-            </table>
-        </div>
+        <section id="page-settings" class="app-page hidden">
+            <div class="settings-card">
+                <h2 class="settings-title">Application Settings</h2>
+                <div class="form-group">
+                    <label for="username-input" class="label">USER ID</label>
+                    <input type="text" id="username-input" class="settings-input" placeholder="user123">
+                    <small class="help-text">Left blank, "user123" will be used by default.</small>
+                </div>
+                <button id="save-settings-btn" class="track-btn">SAVE SETTINGS</button>
+                <div id="settings-status" class="settings-status"></div>
+                
+                <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: 25px; letter-spacing: 0.5px;">
+                    Version 0.0.1
+                </div>
+            </div>
+        </section>
+
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-target="page-locate">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                <span class="nav-label">Locate</span>
+            </button>
+            
+            <button class="nav-item" data-target="page-history">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span class="nav-label">History</span>
+            </button>
+            
+            <button class="nav-item" data-target="page-settings">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                <span class="nav-label">Settings</span>
+            </button>
+        </nav>
     </div>
 
     <script src="app.js" defer></script>

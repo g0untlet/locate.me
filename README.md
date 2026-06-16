@@ -152,7 +152,7 @@ graph TD
         end
 
         subgraph EntityLayer [Entity Layer]
-            Entity["Position (Entity)"]
+            EntityNode["Position (Entity)"]
         end
     end
 
@@ -162,16 +162,16 @@ graph TD
     end
 
     subgraph DatabaseLayer [Database Layer]
-        DB[("Embedded H2 Database (./data/locator)")]
+        DB[("Embedded H2 Database")]
     end
 
     Browser --> Resource
-    Resource --> Entity
+    Resource --> EntityNode
     Resource --> Control
     Control --> DB
     Control --> Nominatim
     Control --> OpenMeteo
-    Entity <--> DB
+    EntityNode <--> DB
 ```
 
 ---
