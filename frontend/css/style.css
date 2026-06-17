@@ -11,7 +11,7 @@
     --border-color: #e2e8f0;
     --border-radius: 24px;
     --shadow: 0 20px 40px rgba(0, 0, 0, 0.03);
-    --transition: all 0.2s ease;
+    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); /* Smoother expansion curves */
 }
 
 * {
@@ -36,7 +36,7 @@ body {
    ========================================================================== */
 .app-container {
     background-color: var(--card-bg);
-    padding: 30px 20px 90px 20px; /* Space at bottom for navigation bar */
+    padding: 30px 20px 90px 20px;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow);
     width: 100%;
@@ -46,13 +46,14 @@ body {
     flex-direction: column;
     align-items: center;
     position: relative;
+    overflow: hidden;
 }
 
 .app-header {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 14px; /* Slightly widened gap for a cleaner layout breath */
+    gap: 14px;
     width: 100%;
     margin-bottom: 35px;
 }
@@ -61,13 +62,13 @@ body {
     width: 44px;
     height: 44px;
     object-fit: contain;
-    border-radius: 8px; /* Smooth corners for an app-like feeling */
-    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.06)); /* Gives the logo premium optical depth */
+    border-radius: 8px;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.06));
 }
 
 .app-title {
     font-size: 1.8rem;
-    font-weight: 500; /* Subtle bump to medium weight to anchor the title beautifully */
+    font-weight: 500;
     color: #1a5f8c;
     letter-spacing: -0.5px;
 }
@@ -184,7 +185,6 @@ body {
 .value { font-size: 0.95rem; font-weight: 600; color: #000000; }
 .address-text { font-size: 0.85rem; font-weight: 400; line-height: 1.4; }
 
-/* Dynamic Layout for Main Screen Temperature Box */
 .temp-display-wrapper {
     display: flex;
     align-items: center;
@@ -192,7 +192,6 @@ body {
     margin-top: 2px;
 }
 
-/* Embedded Weather Inline SVGs sizing */
 .embedded-weather-icon {
     width: 20px;
     height: 20px;
@@ -201,34 +200,52 @@ body {
 }
 
 /* ==========================================================================
-   History Log Card List (Mobile-Optimized)
+   History Log Card List (Actionable Expandable Cards Layout)
    ========================================================================== */
 .history-list {
     width: 100%;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    max-height: 420px;
-    overflow-y: auto;
+    height: 400px; /* Fixed viewport height to guarantee scrolling metrics */
+    overflow-y: auto; /* Active local scrolling behavior */
     padding-right: 4px;
+    padding-bottom: 20px; /* Safe padding anchor at bottom of list */
 }
 
 .history-list::-webkit-scrollbar { width: 4px; }
 .history-list::-webkit-scrollbar-thumb { background-color: var(--border-color); border-radius: 4px; }
 
+/* The Accordion Container */
 .log-card {
     background-color: #ffffff;
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    padding: 12px 14px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    overflow: hidden;
     transition: var(--transition);
+    cursor: pointer;
+    flex-shrink: 0; /* 🔥 CRITICAL FIX: Stops browser from shrinking cards inside flex containers */
 }
 
 .log-card:hover {
     border-color: var(--primary-color);
+}
+
+/* Active Open Card State Layout tweaks */
+.log-card.expanded {
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(114, 178, 220, 0.08);
+}
+
+/* Safe clickable wrapper enclosing passive textual info */
+.log-card-clickable-area {
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
 }
 
 .log-card-header {
@@ -241,34 +258,11 @@ body {
     padding-bottom: 6px;
 }
 
-.log-card-id {
-    color: var(--text-color);
-    font-weight: 700;
-}
+.log-card-id { color: var(--text-color); font-weight: 700; }
+.log-card-user { background-color: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 500; }
+.log-card-body { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.log-card-address { font-size: 0.85rem; line-height: 1.4; color: var(--text-color); flex-grow: 1; word-break: break-word; }
 
-.log-card-user {
-    background-color: #f1f5f9;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-weight: 500;
-}
-
-.log-card-body {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 12px;
-}
-
-.log-card-address {
-    font-size: 0.85rem;
-    line-height: 1.4;
-    color: var(--text-color);
-    flex-grow: 1;
-    word-break: break-word;
-}
-
-/* Base style for History Temperature Badges */
 .log-card-temp {
     font-size: 0.85rem;
     font-weight: 700;
@@ -280,19 +274,84 @@ body {
     gap: 6px;
 }
 
-/* Dynamic Weather Stroke & Fill Overrides based on Temperature Contexts */
+/* Animated Action Tray (Accordion Drawer) */
+.log-card-action-tray {
+    max-height: 0;
+    opacity: 0;
+    background-color: #f8fafc;
+    border-top: 1px solid transparent;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+                opacity 0.2s linear, 
+                padding 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Expanded Dynamic Target State overrides via JavaScript */
+.log-card.expanded .log-card-action-tray {
+    max-height: 52px; /* Fixed height accommodating internal action elements */
+    opacity: 1;
+    padding: 10px 14px;
+    border-top-color: var(--border-color);
+}
+
+/* Action Trigger Elements (Option 2 Mini UI Design Engine) */
+.tray-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    background: none;
+    transition: var(--transition);
+}
+
+/* Delete Specific Trigger Styling Rules */
+.btn-action-delete {
+    color: #dc2626;
+    background-color: #fee2e2;
+}
+.btn-action-delete:hover {
+    background-color: #fecaca;
+}
+.btn-action-delete .action-icon {
+    stroke: #dc2626;
+}
+
+.action-icon {
+    width: 14px;
+    height: 14px;
+}
+
+/* Animation trigger class for API completion logic */
+.card-leave-animate {
+    animation: slideOutLeft 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes slideOutLeft {
+    to {
+        transform: translateX(-105%);
+        opacity: 0;
+        margin-bottom: -70px; /* Pulls subsequent logs up nicely while destroying node */
+    }
+}
+
+/* Temperature context badging matching */
 .temp-blue { color: #1d4ed8; background-color: #dbeafe; }
 .temp-blue .embedded-weather-icon { stroke: #1d4ed8; }
-
 .temp-lightblue { color: #1a5f8c; background-color: #e0f2fe; }
 .temp-lightblue .embedded-weather-icon { stroke: #1a5f8c; }
-
 .temp-orange { color: #b45309; background-color: #fef3c7; }
 .temp-orange .embedded-weather-icon { stroke: #b45309; }
-
 .temp-red { color: #b91c1c; background-color: #fee2e2; }
 .temp-red .embedded-weather-icon { stroke: #b91c1c; }
-
 .temp-none { color: var(--text-muted); background-color: #f1f5f9; }
 .temp-none .embedded-weather-icon { stroke: var(--text-muted); }
 
@@ -349,8 +408,5 @@ body {
 .nav-item.active .nav-icon { transform: translateY(-2px); stroke: #1a5f8c; }
 .nav-label { font-size: 0.75rem; font-weight: 500; }
 
-/* ==========================================================================
-   Utilities
-   ========================================================================== */
 .hidden { display: none !important; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }

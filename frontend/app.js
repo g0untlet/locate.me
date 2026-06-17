@@ -28,6 +28,9 @@ function getActiveUserId() {
    Global Helper: Pure, lightweight Inline SVG Weather Icon Renderer
    ========================================================================== */
 function getWeatherIconSvg(code) {
+    if (code === undefined || code === null) {
+        return `<svg class="embedded-weather-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+    }
     if (code === 0) {
         return `<svg class="embedded-weather-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
     }
@@ -109,7 +112,7 @@ document.getElementById('track-btn').addEventListener('click', () => {
                 if (mainIconSvg) mainIconSvg.style.stroke = "#1a5f8c";
 
                 document.getElementById('res-weather').innerText = `Code ${data.weatherCode} (${getWeatherText(data.weatherCode)})`;
-                document.getElementById('res-address').innerText = data.displayName;
+                document.getElementById('res-address').innerText = data.displayName || "Unknown Location";
                 responseCard.classList.remove('hidden');
             })
             .catch(err => showError(`Backend Error: ${err.message}`));
@@ -120,7 +123,7 @@ document.getElementById('track-btn').addEventListener('click', () => {
 });
 
 /* ==========================================================================
-   Page 2: History Engine (Filtered by Active User ID with Dynamic Icons)
+   Page 2: History Engine (Bulletproof Accordion Drawer Implementation)
    ========================================================================== */
 function fetchAndRenderHistory() {
     const listContainer = document.getElementById('history-list');
@@ -136,63 +139,119 @@ function fetchAndRenderHistory() {
         .then(data => {
             listContainer.innerHTML = "";
 
-            if (data.length === 0) {
+            if (!data || !Array.isArray(data) || data.length === 0) {
                 listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">No locations logged yet for user "${activeUserId}".</div>`;
                 return;
             }
 
             data.forEach(pos => {
-                const card = document.createElement('div');
-                card.className = 'log-card';
+                // Try-catch blocks prevent a single broken backend item from destroying the entire list layout
+                try {
+                    if (!pos || pos.id === undefined) return;
 
-                let tempClass = "temp-none";
-                let tempFormatted = "-";
-                let weatherIconSvg = "";
+                    const card = document.createElement('div');
+                    card.className = 'log-card';
+                    card.id = `log-card-${pos.id}`;
 
-                if (pos.temperature !== undefined && pos.temperature !== null) {
-                    const tempVal = parseFloat(pos.temperature);
-                    tempFormatted = `${tempVal.toFixed(1)}°C`;
-                    
-                    if (tempVal <= 0) {
-                        tempClass = "temp-blue";
-                    } else if (tempVal <= 10) {
-                        tempClass = "temp-lightblue";
-                    } else if (tempVal < 25) {
-                        tempClass = "temp-orange";
-                    } else {
-                        tempClass = "temp-red";
+                    let tempClass = "temp-none";
+                    let tempFormatted = "-";
+                    let weatherIconSvg = getWeatherIconSvg(null);
+
+                    if (pos.temperature !== undefined && pos.temperature !== null && !isNaN(parseFloat(pos.temperature))) {
+                        const tempVal = parseFloat(pos.temperature);
+                        tempFormatted = `${tempVal.toFixed(1)}°C`;
+                        
+                        if (tempVal <= 0) tempClass = "temp-blue";
+                        else if (tempVal <= 10) tempClass = "temp-lightblue";
+                        else if (tempVal < 25) tempClass = "temp-orange";
+                        else tempClass = "temp-red";
+                        
+                        const wCode = (pos.weatherCode !== undefined && pos.weatherCode !== null) ? parseInt(pos.weatherCode, 10) : null;
+                        weatherIconSvg = getWeatherIconSvg(wCode);
                     }
-                    
-                    weatherIconSvg = getWeatherIconSvg(pos.weatherCode);
-                }
 
-                let dateFormatted = "-";
-                if (pos.timestamp) {
-                    const dateObj = new Date(pos.timestamp);
-                    dateFormatted = dateObj.toLocaleString('de-DE', {
-                        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                    let dateFormatted = "Unknown Date";
+                    if (pos.timestamp) {
+                        const dateObj = new Date(pos.timestamp);
+                        if (!isNaN(dateObj.getTime())) {
+                            dateFormatted = dateObj.toLocaleString('de-DE', {
+                                day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                            });
+                        }
+                    }
+
+                    const fullAddress = pos.displayName || `Coordinates: ${pos.latitude || '?'}, ${pos.longitude || '?'}`;
+
+                    card.innerHTML = `
+                        <div class="log-card-clickable-area">
+                            <div class="log-card-header">
+                                <div>
+                                    <span class="log-card-id">#${pos.id}</span>
+                                    <span style="margin-left: 6px;">${dateFormatted}</span>
+                                </div>
+                                <span class="log-card-user">${pos.userId || 'unknown'}</span>
+                            </div>
+                            <div class="log-card-body">
+                                <div class="log-card-address">${fullAddress}</div>
+                                <div class="log-card-temp ${tempClass}">
+                                    ${weatherIconSvg}
+                                    <span>${tempFormatted}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="log-card-action-tray">
+                            <button class="tray-action-btn btn-action-delete" data-id="${pos.id}">
+                                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                                Delete
+                            </button>
+                        </div>
+                    `;
+
+                    // Accordion trigger engine handler logic
+                    const clickableArea = card.querySelector('.log-card-clickable-area');
+                    clickableArea.addEventListener('click', () => {
+                        const isExpanded = card.classList.contains('expanded');
+                        
+                        // Close any other open logs to keep the UI clean
+                        document.querySelectorAll('.log-card.expanded').forEach(c => {
+                            if (c !== card) c.classList.remove('expanded');
+                        });
+                        
+                        card.classList.toggle('expanded', !isExpanded);
                     });
+
+                    // REST Deletion API fetch loop handler rules
+                    const deleteBtn = card.querySelector('.btn-action-delete');
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation(); // Avoid firing expansion triggers
+                        
+                        const targetId = deleteBtn.getAttribute('data-id');
+                        if (!targetId) return;
+                        
+                        fetch(`/positions/${targetId}`, { method: 'DELETE' })
+                        .then(response => {
+                            if (!response.ok) throw new Error("Could not process record removal");
+                            
+                            // Trigger smooth sliding CSS transition layout animation routines
+                            card.classList.add('card-leave-animate');
+                            card.addEventListener('animationend', () => {
+                                card.remove();
+                                if (listContainer.children.length === 0) {
+                                    listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">No locations logged yet for user "${activeUserId}".</div>`;
+                                }
+                            });
+                        })
+                        .catch(err => alert(`Error removing entry: ${err.message}`));
+                    });
+
+                    listContainer.appendChild(card);
+
+                } catch (itemError) {
+                    console.error("Skipped rendering corrupted log item:", pos, itemError);
                 }
-
-                const fullAddress = pos.displayName || "Unknown Address Location";
-
-                card.innerHTML = `
-                    <div class="log-card-header">
-                        <div>
-                            <span class="log-card-id">#${pos.id}</span>
-                            <span style="margin-left: 6px;">${dateFormatted}</span>
-                        </div>
-                        <span class="log-card-user">${pos.userId || 'unknown'}</span>
-                    </div>
-                    <div class="log-card-body">
-                        <div class="log-card-address">${fullAddress}</div>
-                        <div class="log-card-temp ${tempClass}">
-                            ${weatherIconSvg}
-                            <span>${tempFormatted}</span>
-                        </div>
-                    </div>
-                `;
-                listContainer.appendChild(card);
             });
         })
         .catch(err => {

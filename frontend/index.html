@@ -70,7 +70,7 @@
                 <div id="settings-status" class="settings-status"></div>
                 
                 <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: 25px; letter-spacing: 0.5px;">
-                    Version 0.0.1
+                    Version 0.1.0
                 </div>
             </div>
         </section>
@@ -103,14 +103,5 @@
     </div>
 
     <script src="app.js" defer></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('Service Worker registered.'))
-                    .catch(err => console.error(err));
-            });
-        }
-    </script>
 </body>
 </html>
