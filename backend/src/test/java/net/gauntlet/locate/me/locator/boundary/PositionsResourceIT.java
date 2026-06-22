@@ -46,7 +46,7 @@ class PositionsResourceIT {
                 .contentType(ContentType.JSON)
                 .body(json.toString())
                 .when()
-                .post("/positions")
+                .post("/positions?userId=validUser")
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
@@ -70,7 +70,7 @@ class PositionsResourceIT {
         // 3. Delete Position
         given()
                 .when()
-                .delete("/positions/" + id)
+                .delete("/positions/" + id + "?userId=validUser")
                 .then()
                 .statusCode(204);
 
@@ -97,7 +97,7 @@ class PositionsResourceIT {
                 .contentType(ContentType.JSON)
                 .body(json.toString())
                 .when()
-                .post("/positions")
+                .post("/positions?userId=" + longUserId)
                 .then()
                 .statusCode(400);
     }
@@ -120,7 +120,7 @@ class PositionsResourceIT {
                 .contentType(ContentType.JSON)
                 .body(json.toString())
                 .when()
-                .post("/positions")
+                .post("/positions?userId=validUser")
                 .then()
                 .statusCode(400);
     }
@@ -138,7 +138,7 @@ class PositionsResourceIT {
                 .contentType(ContentType.JSON)
                 .body(json.toString())
                 .when()
-                .post("/positions")
+                .post("/positions?userId=noAccuracyUser")
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
@@ -149,7 +149,7 @@ class PositionsResourceIT {
         // Cleanup
         given()
                 .when()
-                .delete("/positions/" + id)
+                .delete("/positions/" + id + "?userId=noAccuracyUser")
                 .then()
                 .statusCode(204);
     }
@@ -172,7 +172,7 @@ class PositionsResourceIT {
                 .contentType(ContentType.JSON)
                 .body(json.toString())
                 .when()
-                .post("/positions")
+                .post("/positions?userId=geoUser")
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
@@ -183,7 +183,7 @@ class PositionsResourceIT {
         // Cleanup
         given()
                 .when()
-                .delete("/positions/" + id)
+                .delete("/positions/" + id + "?userId=geoUser")
                 .then()
                 .statusCode(204);
     }
@@ -204,7 +204,7 @@ class PositionsResourceIT {
                 .contentType(ContentType.JSON)
                 .body(json.toString())
                 .when()
-                .post("/positions")
+                .post("/positions?userId=geoFailUser")
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
@@ -215,9 +215,54 @@ class PositionsResourceIT {
         // Cleanup
         given()
                 .when()
-                .delete("/positions/" + id)
+                .delete("/positions/" + id + "?userId=geoFailUser")
                 .then()
                 .statusCode(204);
+    }
+
+    @Test
+    void createWithUnauthorizedUserId() {
+        JsonObject json = Json.createObjectBuilder()
+                .add("userId", "unauth")
+                .add("latitude", 48.1351)
+                .add("longitude", 11.5820)
+                .add("timestamp", Instant.now().toString())
+                .build();
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(json.toString())
+                .when()
+                .post("/positions?userId=unauth")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
+    void createWithNonAlphanumericUserId() {
+        JsonObject json = Json.createObjectBuilder()
+                .add("userId", "user-123")
+                .add("latitude", 48.1351)
+                .add("longitude", 11.5820)
+                .add("timestamp", Instant.now().toString())
+                .build();
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(json.toString())
+                .when()
+                .post("/positions?userId=user-123")
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    void getPositionsWithoutUserId() {
+        given()
+                .when()
+                .get("/positions")
+                .then()
+                .statusCode(400);
     }
 
     @Test

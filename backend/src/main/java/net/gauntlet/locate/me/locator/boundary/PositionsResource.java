@@ -23,8 +23,10 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import net.gauntlet.locate.me.Boundary;
 import net.gauntlet.locate.me.locator.control.Positions;
 import net.gauntlet.locate.me.locator.entity.Position;
@@ -43,11 +45,37 @@ public class PositionsResource {
     @Inject
     Validator validator;
 
+    @Inject
+    @ConfigProperty(name = "allowed.user.ids")
+    List<String> allowedUserIds;
+
+    private void validateAndAuthorize(String userId) {
+        if (userId == null || userId.isBlank()) {
+            throw new BadRequestException("userId is mandatory");
+        }
+        if (userId.length() > 16) {
+            throw new BadRequestException("userId must be at most 16 characters long");
+        }
+        if (!userId.matches("^[a-zA-Z0-9]+$")) {
+            throw new BadRequestException("userId must be alphanumeric");
+        }
+        if (this.allowedUserIds == null || !this.allowedUserIds.contains(userId)) {
+            Response errorResponse = Response.status(Response.Status.UNAUTHORIZED)
+                    .entity(Json.createObjectBuilder()
+                            .add("error", "User is not authorized: " + userId)
+                            .build())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+            throw new WebApplicationException(errorResponse);
+        }
+    }
+
     @POST
     @Transactional
     @PermitAll
-    public Response create(JsonObject json) {
+    public Response create(@QueryParam("userId") String userId, JsonObject json) {
         LOG.log(System.Logger.Level.DEBUG, "Received POST request to create position");
+        validateAndAuthorize(userId);
         if (json == null) {
             throw new BadRequestException("Request body must not be null");
         }
@@ -57,6 +85,8 @@ public class PositionsResource {
         } catch (Exception e) {
             throw new BadRequestException("Invalid JSON format", e);
         }
+        // Force validated userId from query parameter
+        position.userId(userId);
 
         Set<ConstraintViolation<Position>> violations = this.validator.validate(position);
         if (!violations.isEmpty()) {
@@ -74,8 +104,9 @@ public class PositionsResource {
     @Path("/{id}")
     @Transactional
     @PermitAll
-    public Response delete(@PathParam("id") Long id) {
-        LOG.log(System.Logger.Level.DEBUG, "Received DELETE request for id {0}", id);
+    public Response delete(@PathParam("id") Long id, @QueryParam("userId") String userId) {
+        LOG.log(System.Logger.Level.DEBUG, "Received DELETE request for id {0} by user {1}", id, userId);
+        validateAndAuthorize(userId);
         if (id == null) {
             throw new BadRequestException("ID must not be null");
         }
@@ -87,12 +118,8 @@ public class PositionsResource {
     @PermitAll
     public Response getPositions(@QueryParam("userId") String userId) {
         LOG.log(System.Logger.Level.DEBUG, "Received GET request for user {0}", userId);
-        List<Position> list;
-        if (userId != null && !userId.isBlank()) {
-            list = this.positions.findByUserId(userId);
-        } else {
-            list = this.positions.findAll();
-        }
+        validateAndAuthorize(userId);
+        List<Position> list = this.positions.findByUserId(userId);
 
         JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
         list.stream()
