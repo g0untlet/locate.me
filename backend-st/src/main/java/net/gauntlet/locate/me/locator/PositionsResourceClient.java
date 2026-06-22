@@ -23,11 +23,11 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 public interface PositionsResourceClient {
 
     @POST
-    Response create(JsonObject json);
+    Response create(@QueryParam("userId") String userId, JsonObject json);
 
     @DELETE
     @Path("/{id}")
-    Response delete(@PathParam("id") Long id);
+    Response delete(@PathParam("id") Long id, @QueryParam("userId") String userId);
 
     @GET
     Response getPositions(@QueryParam("userId") String userId);

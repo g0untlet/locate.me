@@ -82,7 +82,7 @@ document.getElementById('track-btn').addEventListener('click', () => {
                 timestamp: isoStringTimestamp
             };
 
-            fetch('/positions', {
+            fetch(`/positions?userId=${encodeURIComponent(getActiveUserId())}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -246,7 +246,7 @@ function fetchAndRenderHistory() {
                         const targetId = deleteBtn.getAttribute('data-id');
                         if (!targetId) return;
                         
-                        fetch(`/positions/${targetId}`, { method: 'DELETE' })
+                        fetch(`/positions/${targetId}?userId=${encodeURIComponent(getActiveUserId())}`, { method: 'DELETE' })
                         .then(response => {
                             if (!response.ok) throw new Error("Could not process record removal");
                             

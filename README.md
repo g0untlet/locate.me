@@ -96,7 +96,7 @@ The core domain responsibility of the backend is managed by the **Locator** Busi
 #### Position Entity Attributes
 Each recorded geo-position consists of the following attributes:
 *   `id` (Long, technical primary key): Automatically generated using a database sequence.
-*   `userId` (String, mandatory): Identifier of the user (maximum 32 characters).
+*   `userId` (String, mandatory): Identifier of the user. Formatted as alphanumeric with a maximum of 16 characters. All REST endpoints expect this as a mandatory query parameter (`userId`) and perform authorization checks against a configuration-driven list in `application.properties` (`allowed.user.ids`).
 *   `latitude` (double, mandatory): Latitude coordinate.
 *   `longitude` (double, mandatory): Longitude coordinate.
 *   `accuracy` (Double, optional): Accuracy radius in meters.
@@ -279,12 +279,12 @@ mvn clean verify
 
 #### Tier 4: Manual Testing using cURL
 
-You can manually interact with and test the RESTful API endpoints using `curl` while the backend application is running.
+You can manually interact with and test the RESTful API endpoints using `curl` while the backend application is running. All positions REST endpoints expect a mandatory, authorized `userId` (max 16 characters, alphanumeric) passed as a query parameter.
 
 ##### 1. Record a New Geo-Position (POST)
-Creates a new position entry for a user. If `displayName`, `temperature`, or `weatherCode` are omitted, the backend will automatically resolve them using the geocoding and weather APIs.
+Creates a new position entry for an authorized user. If `displayName`, `temperature`, or `weatherCode` are omitted, the backend will automatically resolve them using the geocoding and weather APIs.
 ```bash
-curl -i -X POST http://localhost:8080/positions \
+curl -i -X POST "http://localhost:8080/positions?userId=user123" \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "user123",
@@ -310,30 +310,24 @@ curl -i -X POST http://localhost:8080/positions \
 ```
 
 ##### 2. Retrieve All Recorded Positions (GET)
-Gets list of all stored user locations sorted by timestamp descending, complete with enriched address and weather metrics.
-```bash
-curl -i -X GET http://localhost:8080/positions
-```
-
-##### 3. Filter Positions by User ID (GET with Query Param)
-Gets recorded locations specifically matching a certain user.
+Gets list of all stored user locations specifically matching the authorized user.
 ```bash
 curl -i -X GET "http://localhost:8080/positions?userId=user123"
 ```
 
-##### 4. Delete a Position (DELETE)
-Removes a recorded position by its generated ID (e.g. ID `1`).
+##### 3. Delete a Position (DELETE)
+Removes a recorded position by its generated ID (e.g. ID `1`) for an authorized user.
 ```bash
-curl -i -X DELETE http://localhost:8080/positions/1
+curl -i -X DELETE "http://localhost:8080/positions/1?userId=user123"
 ```
 
-##### 5. Check MicroProfile Readiness Check (GET)
+##### 4. Check MicroProfile Readiness Check (GET)
 Returns the system status and H2 database availability check.
 ```bash
 curl -i -X GET http://localhost:8080/q/health/ready
 ```
 
-##### 6. Check MicroProfile Liveness Check (GET)
+##### 5. Check MicroProfile Liveness Check (GET)
 Returns the state of the JVM process.
 ```bash
 curl -i -X GET http://localhost:8080/q/health/live

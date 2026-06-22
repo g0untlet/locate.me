@@ -33,7 +33,7 @@ class PositionsSystemIT {
                 .build();
 
         // 1. Create Position via REST Client
-        try (Response response = this.client.create(json)) {
+        try (Response response = this.client.create("stUser", json)) {
             assertThat(response.getStatus()).isEqualTo(201);
             JsonObject created = response.readEntity(JsonObject.class);
             assertThat(created.getString("userId")).isEqualTo("stUser");
@@ -51,7 +51,7 @@ class PositionsSystemIT {
             }
 
             // 3. Delete Position via REST Client
-            try (Response deleteResponse = this.client.delete(id)) {
+            try (Response deleteResponse = this.client.delete(id, "stUser")) {
                 assertThat(deleteResponse.getStatus()).isEqualTo(204);
             }
 
