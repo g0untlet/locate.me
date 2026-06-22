@@ -266,6 +266,62 @@ class PositionsResourceIT {
     }
 
     @Test
+    void getPositionsWithDistanceCalculation() {
+        JsonObject json = Json.createObjectBuilder()
+                .add("userId", "validUser")
+                .add("latitude", 48.1351)
+                .add("longitude", 11.5820)
+                .add("timestamp", Instant.now().toString())
+                .build();
+
+        // 1. Create a position at Munich
+        int id = given()
+                .contentType(ContentType.JSON)
+                .body(json.toString())
+                .when()
+                .post("/positions?userId=validUser")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("id");
+
+        // 2. Fetch passing coordinates (at Munich, expect ~0 km distance)
+        given()
+                .when()
+                .get("/positions?userId=validUser&lat=48.1351&lon=11.5820")
+                .then()
+                .statusCode(200)
+                .body("[0].id", is(id))
+                .body("[0].distance", notNullValue())
+                .body("[0].distance", is(0.0f));
+
+        // 3. Fetch passing coordinates far away (Berlin: 52.5200, 13.4050, expect ~500+ km distance)
+        given()
+                .when()
+                .get("/positions?userId=validUser&lat=52.5200&lon=13.4050")
+                .then()
+                .statusCode(200)
+                .body("[0].id", is(id))
+                .body("[0].distance", notNullValue());
+
+        // 4. Fetch without distance parameters, expect NO distance field in response
+        given()
+                .when()
+                .get("/positions?userId=validUser")
+                .then()
+                .statusCode(200)
+                .body("[0].id", is(id))
+                .body("[0].distance", nullValue());
+
+        // Cleanup
+        given()
+                .when()
+                .delete("/positions/" + id + "?userId=validUser")
+                .then()
+                .statusCode(204);
+    }
+
+    @Test
     void checkHealthEndpoint() {
         given()
                 .when()

@@ -131,146 +131,183 @@ function fetchAndRenderHistory() {
 
     const activeUserId = getActiveUserId();
 
-    fetch(`/positions?userId=${encodeURIComponent(activeUserId)}`)
-        .then(response => {
-            if (!response.ok) throw new Error("Could not fetch history");
-            return response.json();
-        })
-        .then(data => {
-            listContainer.innerHTML = "";
+    const fetchWithCoords = (lat, lon) => {
+        let url = `/positions?userId=${encodeURIComponent(activeUserId)}`;
+        if (lat !== null && lon !== null) {
+            url += `&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
+        }
+        fetch(url)
+            .then(response => {
+                if (!response.ok) throw new Error("Could not fetch history");
+                return response.json();
+            })
+            .then(data => {
+                listContainer.innerHTML = "";
 
-            if (!data || !Array.isArray(data) || data.length === 0) {
-                listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">No locations logged yet for user "${activeUserId}".</div>`;
-                return;
-            }
-
-            data.forEach(pos => {
-                try {
-                    if (!pos || pos.id === undefined) return;
-
-                    const card = document.createElement('div');
-                    card.className = 'log-card';
-                    card.id = `log-card-${pos.id}`;
-
-                    let tempClass = "temp-none";
-                    let tempFormatted = "-";
-                    let weatherIconSvg = getWeatherIconSvg(null);
-
-                    if (pos.temperature !== undefined && pos.temperature !== null && !isNaN(parseFloat(pos.temperature))) {
-                        const tempVal = parseFloat(pos.temperature);
-                        tempFormatted = `${tempVal.toFixed(1)}°C`;
-                        
-                        if (tempVal <= 0) tempClass = "temp-blue";
-                        else if (tempVal <= 10) tempClass = "temp-lightblue";
-                        else if (tempVal < 25) tempClass = "temp-orange";
-                        else tempClass = "temp-red";
-                        
-                        const wCode = (pos.weatherCode !== undefined && pos.weatherCode !== null) ? parseInt(pos.weatherCode, 10) : null;
-                        weatherIconSvg = getWeatherIconSvg(wCode);
-                    }
-
-                    let dateFormatted = "Unknown Date";
-                    if (pos.timestamp) {
-                        const dateObj = new Date(pos.timestamp);
-                        if (!isNaN(dateObj.getTime())) {
-                            dateFormatted = dateObj.toLocaleString('de-DE', {
-                                day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                            });
-                        }
-                    }
-
-                    const fullAddress = pos.displayName || `Coordinates: ${pos.latitude || '?'}, ${pos.longitude || '?'}`;
-
-                    card.innerHTML = `
-                        <div class="log-card-clickable-area">
-                            <div class="log-card-header">
-                                <div>
-                                    <span class="log-card-id">#${pos.id}</span>
-                                    <span style="margin-left: 6px;">${dateFormatted}</span>
-                                </div>
-                                <span class="log-card-user">${pos.userId || 'unknown'}</span>
-                            </div>
-                            <div class="log-card-body">
-                                <div class="log-card-address">${fullAddress}</div>
-                                <div class="log-card-temp ${tempClass}">
-                                    ${weatherIconSvg}
-                                    <span>${tempFormatted}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="log-card-action-tray">
-                            <a href="https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}" 
-                               target="_blank" 
-                               rel="noopener" 
-                               class="tray-action-btn btn-action-maps">
-                                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                                    <circle cx="12" cy="10" r="3"></circle>
-                                </svg>
-                                Maps
-                            </a>
-
-                            <button class="tray-action-btn btn-action-delete" data-id="${pos.id}">
-                                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="3 6 5 6 21 6"></polyline>
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                </svg>
-                                Delete
-                            </button>
-                        </div>
-                    `;
-
-                    // Accordion trigger engine handler logic
-                    const clickableArea = card.querySelector('.log-card-clickable-area');
-                    clickableArea.addEventListener('click', () => {
-                        const isExpanded = card.classList.contains('expanded');
-                        
-                        document.querySelectorAll('.log-card.expanded').forEach(c => {
-                            if (c !== card) c.classList.remove('expanded');
-                        });
-                        
-                        card.classList.toggle('expanded', !isExpanded);
-                    });
-
-                    // Maps link click safety block (prevents unexpected accordion closing toggle)
-                    const mapsBtn = card.querySelector('.btn-action-maps');
-                    mapsBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                    });
-
-                    // REST Deletion API fetch loop handler rules
-                    const deleteBtn = card.querySelector('.btn-action-delete');
-                    deleteBtn.addEventListener('click', (e) => {
-                        e.stopPropagation(); // Avoid firing expansion triggers
-                        
-                        const targetId = deleteBtn.getAttribute('data-id');
-                        if (!targetId) return;
-                        
-                        fetch(`/positions/${targetId}?userId=${encodeURIComponent(getActiveUserId())}`, { method: 'DELETE' })
-                        .then(response => {
-                            if (!response.ok) throw new Error("Could not process record removal");
-                            
-                            card.classList.add('card-leave-animate');
-                            card.addEventListener('animationend', () => {
-                                card.remove();
-                                if (listContainer.children.length === 0) {
-                                    listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">No locations logged yet for user "${activeUserId}".</div>`;
-                                }
-                            });
-                        })
-                        .catch(err => alert(`Error removing entry: ${err.message}`));
-                    });
-
-                    listContainer.appendChild(card);
-
-                } catch (itemError) {
-                    console.error("Skipped rendering corrupted log item:", pos, itemError);
+                if (!data || !Array.isArray(data) || data.length === 0) {
+                    listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">No locations logged yet for user "${activeUserId}".</div>`;
+                    return;
                 }
+
+                data.forEach(pos => {
+                    try {
+                        if (!pos || pos.id === undefined) return;
+
+                        const card = document.createElement('div');
+                        card.className = 'log-card';
+                        card.id = `log-card-${pos.id}`;
+
+                        let tempClass = "temp-none";
+                        let tempFormatted = "-";
+                        let weatherIconSvg = getWeatherIconSvg(null);
+
+                        if (pos.temperature !== undefined && pos.temperature !== null && !isNaN(parseFloat(pos.temperature))) {
+                            const tempVal = parseFloat(pos.temperature);
+                            tempFormatted = `${tempVal.toFixed(1)}°C`;
+                            
+                            if (tempVal <= 0) tempClass = "temp-blue";
+                            else if (tempVal <= 10) tempClass = "temp-lightblue";
+                            else if (tempVal < 25) tempClass = "temp-orange";
+                            else tempClass = "temp-red";
+                            
+                            const wCode = (pos.weatherCode !== undefined && pos.weatherCode !== null) ? parseInt(pos.weatherCode, 10) : null;
+                            weatherIconSvg = getWeatherIconSvg(wCode);
+                        }
+
+                        let distanceHtml = "";
+                        if (pos.distance !== undefined && pos.distance !== null && !isNaN(parseFloat(pos.distance))) {
+                            const distVal = parseFloat(pos.distance);
+                            distanceHtml = `
+                                <div class="log-card-distance" style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                                    <svg class="action-icon" style="stroke: var(--text-muted); width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+                                    </svg>
+                                    <span>${distVal.toFixed(2)} km</span>
+                                </div>
+                            `;
+                        }
+
+                        let dateFormatted = "Unknown Date";
+                        if (pos.timestamp) {
+                            const dateObj = new Date(pos.timestamp);
+                            if (!isNaN(dateObj.getTime())) {
+                                dateFormatted = dateObj.toLocaleString('de-DE', {
+                                    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                                });
+                            }
+                        }
+
+                        const fullAddress = pos.displayName || `Coordinates: ${pos.latitude || '?'}, ${pos.longitude || '?'}`;
+
+                        card.innerHTML = `
+                            <div class="log-card-clickable-area">
+                                <div class="log-card-header">
+                                    <div>
+                                        <span class="log-card-id">#${pos.id}</span>
+                                        <span style="margin-left: 6px;">${dateFormatted}</span>
+                                    </div>
+                                    <span class="log-card-user">${pos.userId || 'unknown'}</span>
+                                </div>
+                                <div class="log-card-body">
+                                    <div class="log-card-address">${fullAddress}</div>
+                                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
+                                        <div class="log-card-temp ${tempClass}">
+                                            ${weatherIconSvg}
+                                            <span>${tempFormatted}</span>
+                                        </div>
+                                        ${distanceHtml}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="log-card-action-tray">
+                                <a href="https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}" 
+                                   target="_blank" 
+                                   rel="noopener" 
+                                   class="tray-action-btn btn-action-maps">
+                                    <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                        <circle cx="12" cy="10" r="3"></circle>
+                                    </svg>
+                                    Maps
+                                </a>
+
+                                <button class="tray-action-btn btn-action-delete" data-id="${pos.id}">
+                                    <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                    Delete
+                                </button>
+                            </div>
+                        `;
+
+                        // Accordion trigger engine handler logic
+                        const clickableArea = card.querySelector('.log-card-clickable-area');
+                        clickableArea.addEventListener('click', () => {
+                            const isExpanded = card.classList.contains('expanded');
+                            
+                            document.querySelectorAll('.log-card.expanded').forEach(c => {
+                                if (c !== card) c.classList.remove('expanded');
+                            });
+                            
+                            card.classList.toggle('expanded', !isExpanded);
+                        });
+
+                        // Maps link click safety block (prevents unexpected accordion closing toggle)
+                        const mapsBtn = card.querySelector('.btn-action-maps');
+                        mapsBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                        });
+
+                        // REST Deletion API fetch loop handler rules
+                        const deleteBtn = card.querySelector('.btn-action-delete');
+                        deleteBtn.addEventListener('click', (e) => {
+                            e.stopPropagation(); // Avoid firing expansion triggers
+                            
+                            const targetId = deleteBtn.getAttribute('data-id');
+                            if (!targetId) return;
+                            
+                            fetch(`/positions/${targetId}?userId=${encodeURIComponent(getActiveUserId())}`, { method: 'DELETE' })
+                            .then(response => {
+                                if (!response.ok) throw new Error("Could not process record removal");
+                                
+                                card.classList.add('card-leave-animate');
+                                card.addEventListener('animationend', () => {
+                                    card.remove();
+                                    if (listContainer.children.length === 0) {
+                                        listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">No locations logged yet for user "${activeUserId}".</div>`;
+                                    }
+                                });
+                            })
+                            .catch(err => alert(`Error removing entry: ${err.message}`));
+                        });
+
+                        listContainer.appendChild(card);
+
+                    } catch (itemError) {
+                        console.error("Skipped rendering corrupted log item:", pos, itemError);
+                    }
+                });
+            })
+            .catch(err => {
+                listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-error); font-size:0.9rem; padding:20px 0;">Error: ${err.message}</div>`;
             });
-        })
-        .catch(err => {
-            listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-error); font-size:0.9rem; padding:20px 0;">Error: ${err.message}</div>`;
-        });
+    };
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                fetchWithCoords(pos.coords.latitude, pos.coords.longitude);
+            },
+            () => {
+                fetchWithCoords(null, null);
+            },
+            { enableHighAccuracy: true, timeout: 2000, maximumAge: 60000 }
+        );
+    } else {
+        fetchWithCoords(null, null);
+    }
 }
 
 /* ==========================================================================
