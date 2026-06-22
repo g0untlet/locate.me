@@ -11,6 +11,7 @@ import jakarta.inject.Inject;
 import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObject;
+import jakarta.json.JsonObjectBuilder;
 import jakarta.transaction.Transactional;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -116,16 +117,43 @@ public class PositionsResource {
 
     @GET
     @PermitAll
-    public Response getPositions(@QueryParam("userId") String userId) {
-        LOG.log(System.Logger.Level.DEBUG, "Received GET request for user {0}", userId);
+    public Response getPositions(
+            @QueryParam("userId") String userId,
+            @QueryParam("lat") Double lat,
+            @QueryParam("lon") Double lon) {
+        LOG.log(System.Logger.Level.DEBUG, "Received GET request for user {0} (lat={1}, lon={2})", userId, lat, lon);
         validateAndAuthorize(userId);
         List<Position> list = this.positions.findByUserId(userId);
 
         JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
+        
+        final boolean calculateDistance = lat != null && lon != null;
+        
         list.stream()
-            .map(Position::toJSON)
+            .map(pos -> {
+                JsonObject json = pos.toJSON();
+                if (calculateDistance) {
+                    double dist = calculateHaversineDistance(lat, lon, pos.latitude(), pos.longitude());
+                    // Re-build json to inject distance
+                    JsonObjectBuilder builder = Json.createObjectBuilder(json)
+                            .add("distance", dist);
+                    return builder.build();
+                }
+                return json;
+            })
             .forEach(arrayBuilder::add);
 
         return Response.ok(arrayBuilder.build()).build();
+    }
+
+    private double calculateHaversineDistance(double lat1, double lon1, double lat2, double lon2) {
+        final double R = 6371.0; // Earth's radius in kilometers
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                   Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                   Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
     }
 }

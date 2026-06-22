@@ -90,7 +90,7 @@ The core domain responsibility of the backend is managed by the **Locator** Busi
 
 #### Domain Capabilities
 *   **Create Geo-Positions**: Ingests new position records, runs strict Bean Validation, enriches them asynchronously/synchronously with external metadata (geocoding via OpenStreetMap Nominatim and current weather conditions via Open-Meteo), and persists them.
-*   **Search/Query Positions**: Supports querying positions globally or filtering them specifically by a given `userId`. Records are returned sorted by timestamp in descending order.
+*   **Search/Query Positions**: Supports querying positions specifically filtered by a given `userId`. If the optional parameters `lat` and `lon` are provided, the system automatically calculates the distance (orthodromic distance via the Haversine formula) in kilometers between the specified reference point and each recorded position. Records are returned sorted by timestamp in descending order.
 *   **Delete Positions**: Safely removes recorded positions by their technical primary key.
 
 #### Position Entity Attributes
@@ -310,24 +310,47 @@ curl -i -X POST "http://localhost:8080/positions?userId=user123" \
 ```
 
 ##### 2. Retrieve All Recorded Positions (GET)
-Gets list of all stored user locations specifically matching the authorized user.
+Gets list of stored user locations matching the authorized user.
 ```bash
 curl -i -X GET "http://localhost:8080/positions?userId=user123"
 ```
 
-##### 3. Delete a Position (DELETE)
+##### 3. Retrieve Positions with Distance Calculation (GET with optional lat/lon)
+Gets user locations and calculates the distance in kilometers from a reference point (e.g., Munich) using the Haversine formula.
+```bash
+curl -i -X GET "http://localhost:8080/positions?userId=user123&lat=48.1351&lon=11.5820"
+```
+*Response payload showing automatic distance calculation in kilometers:*
+```json
+[
+  {
+    "id": 1,
+    "userId": "user123",
+    "latitude": 48.1351,
+    "longitude": 11.5820,
+    "accuracy": 10.5,
+    "displayName": "Marienplatz, Munich, Germany",
+    "temperature": 16.8,
+    "weatherCode": 2,
+    "timestamp": "2026-06-11T22:00:00Z",
+    "distance": 0.0
+  }
+]
+```
+
+##### 4. Delete a Position (DELETE)
 Removes a recorded position by its generated ID (e.g. ID `1`) for an authorized user.
 ```bash
 curl -i -X DELETE "http://localhost:8080/positions/1?userId=user123"
 ```
 
-##### 4. Check MicroProfile Readiness Check (GET)
+##### 5. Check MicroProfile Readiness Check (GET)
 Returns the system status and H2 database availability check.
 ```bash
 curl -i -X GET http://localhost:8080/q/health/ready
 ```
 
-##### 5. Check MicroProfile Liveness Check (GET)
+##### 6. Check MicroProfile Liveness Check (GET)
 Returns the state of the JVM process.
 ```bash
 curl -i -X GET http://localhost:8080/q/health/live

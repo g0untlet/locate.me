@@ -30,5 +30,8 @@ public interface PositionsResourceClient {
     Response delete(@PathParam("id") Long id, @QueryParam("userId") String userId);
 
     @GET
-    Response getPositions(@QueryParam("userId") String userId);
+    Response getPositions(
+            @QueryParam("userId") String userId,
+            @QueryParam("lat") Double lat,
+            @QueryParam("lon") Double lon);
 }

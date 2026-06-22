@@ -40,14 +40,27 @@ class PositionsSystemIT {
             assertThat(created.getString("displayName")).isEqualTo("Berlin Office");
             long id = created.getJsonNumber("id").longValue();
 
-            // 2. Query Position via REST Client
-            try (Response getResponse = this.client.getPositions("stUser")) {
+            // 2. Query Position via REST Client without distance parameters
+            try (Response getResponse = this.client.getPositions("stUser", null, null)) {
                 assertThat(getResponse.getStatus()).isEqualTo(200);
                 JsonArray array = getResponse.readEntity(JsonArray.class);
                 assertThat(array).isNotEmpty();
                 JsonObject queried = array.getJsonObject(0);
                 assertThat(queried.getJsonNumber("id").longValue()).isEqualTo(id);
                 assertThat(queried.getString("displayName")).isEqualTo("Berlin Office");
+                assertThat(queried.containsKey("distance")).isFalse();
+            }
+
+            // 2b. Query Position via REST Client with distance parameters
+            try (Response getResponse = this.client.getPositions("stUser", 52.5200, 13.4050)) {
+                assertThat(getResponse.getStatus()).isEqualTo(200);
+                JsonArray array = getResponse.readEntity(JsonArray.class);
+                assertThat(array).isNotEmpty();
+                JsonObject queried = array.getJsonObject(0);
+                assertThat(queried.getJsonNumber("id").longValue()).isEqualTo(id);
+                assertThat(queried.containsKey("distance")).isTrue();
+                double dist = queried.getJsonNumber("distance").doubleValue();
+                assertThat(dist).isCloseTo(0.0, org.assertj.core.data.Offset.offset(0.1));
             }
 
             // 3. Delete Position via REST Client
@@ -56,7 +69,7 @@ class PositionsSystemIT {
             }
 
             // 4. Verify deletion
-            try (Response getResponse = this.client.getPositions("stUser")) {
+            try (Response getResponse = this.client.getPositions("stUser", null, null)) {
                 assertThat(getResponse.getStatus()).isEqualTo(200);
                 JsonArray array = getResponse.readEntity(JsonArray.class);
                 assertThat(array).isEmpty();
