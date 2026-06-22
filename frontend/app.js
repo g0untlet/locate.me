@@ -145,7 +145,6 @@ function fetchAndRenderHistory() {
             }
 
             data.forEach(pos => {
-                // Try-catch blocks prevent a single broken backend item from destroying the entire list layout
                 try {
                     if (!pos || pos.id === undefined) return;
 
@@ -200,6 +199,17 @@ function fetchAndRenderHistory() {
                             </div>
                         </div>
                         <div class="log-card-action-tray">
+                            <a href="https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}" 
+                               target="_blank" 
+                               rel="noopener" 
+                               class="tray-action-btn btn-action-maps">
+                                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                    <circle cx="12" cy="10" r="3"></circle>
+                                </svg>
+                                Maps
+                            </a>
+
                             <button class="tray-action-btn btn-action-delete" data-id="${pos.id}">
                                 <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="3 6 5 6 21 6"></polyline>
@@ -215,12 +225,17 @@ function fetchAndRenderHistory() {
                     clickableArea.addEventListener('click', () => {
                         const isExpanded = card.classList.contains('expanded');
                         
-                        // Close any other open logs to keep the UI clean
                         document.querySelectorAll('.log-card.expanded').forEach(c => {
                             if (c !== card) c.classList.remove('expanded');
                         });
                         
                         card.classList.toggle('expanded', !isExpanded);
+                    });
+
+                    // Maps link click safety block (prevents unexpected accordion closing toggle)
+                    const mapsBtn = card.querySelector('.btn-action-maps');
+                    mapsBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
                     });
 
                     // REST Deletion API fetch loop handler rules
@@ -235,7 +250,6 @@ function fetchAndRenderHistory() {
                         .then(response => {
                             if (!response.ok) throw new Error("Could not process record removal");
                             
-                            // Trigger smooth sliding CSS transition layout animation routines
                             card.classList.add('card-leave-animate');
                             card.addEventListener('animationend', () => {
                                 card.remove();

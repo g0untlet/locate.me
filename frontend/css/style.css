@@ -283,7 +283,7 @@ body {
     display: flex;
     justify-content: flex-start;
     align-items: center;
-    gap: 10px;
+    gap: 12px; /* Adjusted to hold two triggers cleanly */
     padding: 0 14px;
     transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
                 opacity 0.2s linear, 
@@ -311,6 +311,19 @@ body {
     cursor: pointer;
     background: none;
     transition: var(--transition);
+}
+
+/* Maps Button Styling Rule Setup */
+.btn-action-maps {
+    color: #1a5f8c;
+    background-color: #e0f2fe;
+    text-decoration: none; /* Strips text link underline semantics */
+}
+.btn-action-maps:hover {
+    background-color: #bae6fd;
+}
+.btn-action-maps .action-icon {
+    stroke: #1a5f8c;
 }
 
 /* Delete Specific Trigger Styling Rules */
