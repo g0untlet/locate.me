@@ -11,7 +11,7 @@
     --border-color: #e2e8f0;
     --border-radius: 24px;
     --shadow: 0 20px 40px rgba(0, 0, 0, 0.03);
-    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); /* Smoother expansion curves */
+    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -27,8 +27,9 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
-    padding: 0 10px;
+    /* Nutzt auf Mobilgeräten die exakte dynamische Höhe des sichtbaren viewports */
+    min-height: 100dvh;
+    padding: 0;
 }
 
 /* ==========================================================================
@@ -36,17 +37,33 @@ body {
    ========================================================================== */
 .app-container {
     background-color: var(--card-bg);
-    padding: 30px 20px 90px 20px;
-    border-radius: var(--border-radius);
+    /* Safe Area Insets fangen Display-Notches und obere Statusleisten ab */
+    padding: calc(env(safe-area-inset-top, 20px) + 15px) 20px calc(env(safe-area-inset-bottom, 0px) + 85px) 20px;
     box-shadow: var(--shadow);
     width: 100%;
-    max-width: 360px;
-    min-height: 560px;
+    position: relative;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     align-items: center;
-    position: relative;
-    overflow: hidden;
+    
+    /* Standard-Verhalten für Mobilgeräte: Volle Displaygröße */
+    height: 100dvh;
+    border-radius: 0;
+}
+
+/* Medienabfrage für Desktop-Monitore und Tablets */
+@media (min-width: 480px) {
+    body {
+        padding: 20px;
+    }
+    .app-container {
+        width: 100%;
+        max-width: 380px;
+        height: 640px;
+        border-radius: var(--border-radius);
+        padding: 30px 20px 90px 20px;
+    }
 }
 
 .app-header {
@@ -55,7 +72,7 @@ body {
     align-items: center;
     gap: 14px;
     width: 100%;
-    margin-bottom: 35px;
+    margin-bottom: 25px;
 }
 
 .app-header-icon {
@@ -79,6 +96,8 @@ body {
     flex-direction: column;
     align-items: center;
     animation: fadeIn 0.2s ease-out;
+    flex: 1;
+    overflow-y: auto;
 }
 
 /* ==========================================================================
@@ -99,6 +118,7 @@ body {
     transition: var(--transition);
     box-shadow: 0 4px 6px rgba(114, 178, 220, 0.15);
     margin-bottom: 20px;
+    flex-shrink: 0;
 }
 
 .track-btn:hover {
@@ -200,23 +220,22 @@ body {
 }
 
 /* ==========================================================================
-   History Log Card List (Actionable Expandable Cards Layout)
+   History Log Card List
    ========================================================================== */
 .history-list {
     width: 100%;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    height: 400px; /* Fixed viewport height to guarantee scrolling metrics */
-    overflow-y: auto; /* Active local scrolling behavior */
+    flex: 1;
+    overflow-y: auto;
     padding-right: 4px;
-    padding-bottom: 20px; /* Safe padding anchor at bottom of list */
+    padding-bottom: 20px;
 }
 
 .history-list::-webkit-scrollbar { width: 4px; }
 .history-list::-webkit-scrollbar-thumb { background-color: var(--border-color); border-radius: 4px; }
 
-/* The Accordion Container */
 .log-card {
     background-color: #ffffff;
     border: 1px solid var(--border-color);
@@ -226,20 +245,18 @@ body {
     overflow: hidden;
     transition: var(--transition);
     cursor: pointer;
-    flex-shrink: 0; /* 🔥 CRITICAL FIX: Stops browser from shrinking cards inside flex containers */
+    flex-shrink: 0;
 }
 
 .log-card:hover {
     border-color: var(--primary-color);
 }
 
-/* Active Open Card State Layout tweaks */
 .log-card.expanded {
     border-color: var(--primary-color);
     box-shadow: 0 4px 12px rgba(114, 178, 220, 0.08);
 }
 
-/* Safe clickable wrapper enclosing passive textual info */
 .log-card-clickable-area {
     padding: 12px 14px;
     display: flex;
@@ -274,7 +291,6 @@ body {
     gap: 6px;
 }
 
-/* Animated Action Tray (Accordion Drawer) */
 .log-card-action-tray {
     max-height: 0;
     opacity: 0;
@@ -283,22 +299,20 @@ body {
     display: flex;
     justify-content: flex-start;
     align-items: center;
-    gap: 12px; /* Adjusted to hold two triggers cleanly */
+    gap: 12px;
     padding: 0 14px;
     transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
                 opacity 0.2s linear, 
                 padding 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Expanded Dynamic Target State overrides via JavaScript */
 .log-card.expanded .log-card-action-tray {
-    max-height: 52px; /* Fixed height accommodating internal action elements */
+    max-height: 52px;
     opacity: 1;
     padding: 10px 14px;
     border-top-color: var(--border-color);
 }
 
-/* Action Trigger Elements (Option 2 Mini UI Design Engine) */
 .tray-action-btn {
     display: flex;
     align-items: center;
@@ -313,11 +327,10 @@ body {
     transition: var(--transition);
 }
 
-/* Maps Button Styling Rule Setup */
 .btn-action-maps {
     color: #1a5f8c;
     background-color: #e0f2fe;
-    text-decoration: none; /* Strips text link underline semantics */
+    text-decoration: none;
 }
 .btn-action-maps:hover {
     background-color: #bae6fd;
@@ -326,7 +339,6 @@ body {
     stroke: #1a5f8c;
 }
 
-/* Delete Specific Trigger Styling Rules */
 .btn-action-delete {
     color: #dc2626;
     background-color: #fee2e2;
@@ -343,7 +355,6 @@ body {
     height: 14px;
 }
 
-/* Animation trigger class for API completion logic */
 .card-leave-animate {
     animation: slideOutLeft 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
@@ -352,11 +363,10 @@ body {
     to {
         transform: translateX(-105%);
         opacity: 0;
-        margin-bottom: -70px; /* Pulls subsequent logs up nicely while destroying node */
+        margin-bottom: -70px;
     }
 }
 
-/* Temperature context badging matching */
 .temp-blue { color: #1d4ed8; background-color: #dbeafe; }
 .temp-blue .embedded-weather-icon { stroke: #1d4ed8; }
 .temp-lightblue { color: #1a5f8c; background-color: #e0f2fe; }
@@ -385,15 +395,25 @@ body {
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 70px;
+    /* Dynamisches Padding unten fängt die virtuelle Gesten-Navigationsleiste ab */
+    padding-bottom: env(safe-area-inset-bottom, 5px);
+    height: calc(70px + env(safe-area-inset-bottom, 0px));
     background-color: #f8fafc;
     border-top: 1px solid var(--border-color);
-    border-bottom-left-radius: var(--border-radius);
-    border-bottom-right-radius: var(--border-radius);
     display: flex;
     justify-content: space-around;
     align-items: center;
-    padding-bottom: 5px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+@media (min-width: 480px) {
+    .bottom-nav {
+        border-bottom-left-radius: var(--border-radius);
+        border-bottom-right-radius: var(--border-radius);
+        padding-bottom: 5px;
+        height: 70px;
+    }
 }
 
 .nav-item {
