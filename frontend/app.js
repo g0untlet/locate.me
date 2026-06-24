@@ -303,7 +303,7 @@ function fetchAndRenderHistory() {
             () => {
                 fetchWithCoords(null, null);
             },
-            { enableHighAccuracy: true, timeout: 2000, maximumAge: 60000 }
+            { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
         );
     } else {
         fetchWithCoords(null, null);
@@ -352,4 +352,16 @@ function getWeatherText(code) {
     if (code >= 71 && code <= 75) return "Snow";
     if (code >= 80 && code <= 82) return "Rain showers";
     return "Unknown";
+}
+
+/* ==========================================================================
+   PWA Service Worker Registration
+   ========================================================================== */
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        // Registriert die sw.js, die im Hauptverzeichnis des Frontends liegt
+        navigator.serviceWorker.register('sw.js')
+            .then(reg => console.log('Service Worker successfully registered!', reg.scope))
+            .catch(err => console.error('Service Worker Registration failed:', err));
+    });
 }
