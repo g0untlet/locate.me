@@ -123,7 +123,7 @@ document.getElementById('track-btn').addEventListener('click', () => {
 });
 
 /* ==========================================================================
-   Page 2: History Engine (Bulletproof Accordion Drawer Implementation)
+   Page 2: History Engine (Accordion Drawer Implementation)
    ========================================================================== */
 function fetchAndRenderHistory() {
     const listContainer = document.getElementById('history-list');
@@ -200,6 +200,11 @@ function fetchAndRenderHistory() {
 
                         const fullAddress = pos.displayName || `Coordinates: ${pos.latitude || '?'}, ${pos.longitude || '?'}`;
 
+                        const isLowAccuracy = pos.accuracy && parseFloat(pos.accuracy) > 30;
+                        const badgeBgColor = isLowAccuracy ? '#fef3c7' : '#f1f5f9';
+                        const badgeTextColor = isLowAccuracy ? '#b45309' : 'var(--text-muted)';
+                        const roundedAccuracy = pos.accuracy ? Math.round(pos.accuracy) : '?';
+
                         card.innerHTML = `
                             <div class="log-card-clickable-area">
                                 <div class="log-card-header">
@@ -207,7 +212,16 @@ function fetchAndRenderHistory() {
                                         <span class="log-card-id">#${pos.id}</span>
                                         <span style="margin-left: 6px;">${dateFormatted}</span>
                                     </div>
-                                    <span class="log-card-user">${pos.userId || 'unknown'}</span>
+                                    <span class="log-card-accuracy-badge" style="background-color: ${badgeBgColor}; color: ${badgeTextColor};">
+                                        <svg class="log-accuracy-icon" style="stroke: ${badgeTextColor};" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="7"></circle>
+                                            <line x1="12" y1="1" x2="12" y2="4"></line>
+                                            <line x1="12" y1="20" x2="12" y2="23"></line>
+                                            <line x1="1" y1="12" x2="4" y2="12"></line>
+                                            <line x1="20" y1="12" x2="23" y2="12"></line>
+                                        </svg>
+                                        <span>±${roundedAccuracy}m</span>
+                                    </span>
                                 </div>
                                 <div class="log-card-body">
                                     <div class="log-card-address">${fullAddress}</div>
@@ -221,7 +235,7 @@ function fetchAndRenderHistory() {
                                 </div>
                             </div>
                             <div class="log-card-action-tray">
-                                <a href="https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}" 
+                                <a href="https://maps.google.com/?q=${pos.latitude},${pos.longitude}" 
                                    target="_blank" 
                                    rel="noopener" 
                                    class="tray-action-btn btn-action-maps">
@@ -242,7 +256,6 @@ function fetchAndRenderHistory() {
                             </div>
                         `;
 
-                        // Accordion trigger engine handler logic
                         const clickableArea = card.querySelector('.log-card-clickable-area');
                         clickableArea.addEventListener('click', () => {
                             const isExpanded = card.classList.contains('expanded');
@@ -254,16 +267,14 @@ function fetchAndRenderHistory() {
                             card.classList.toggle('expanded', !isExpanded);
                         });
 
-                        // Maps link click safety block (prevents unexpected accordion closing toggle)
                         const mapsBtn = card.querySelector('.btn-action-maps');
                         mapsBtn.addEventListener('click', (e) => {
                             e.stopPropagation();
                         });
 
-                        // REST Deletion API fetch loop handler rules
                         const deleteBtn = card.querySelector('.btn-action-delete');
                         deleteBtn.addEventListener('click', (e) => {
-                            e.stopPropagation(); // Avoid firing expansion triggers
+                            e.stopPropagation();
                             
                             const targetId = deleteBtn.getAttribute('data-id');
                             if (!targetId) return;
@@ -359,7 +370,6 @@ function getWeatherText(code) {
    ========================================================================== */
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        // Registriert die sw.js, die im Hauptverzeichnis des Frontends liegt
         navigator.serviceWorker.register('sw.js')
             .then(reg => console.log('Service Worker successfully registered!', reg.scope))
             .catch(err => console.error('Service Worker Registration failed:', err));
