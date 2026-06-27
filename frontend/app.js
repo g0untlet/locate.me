@@ -1,4 +1,11 @@
 /* ==========================================================================
+   Global Configuration: Dynamic API Environment Detection (DEV vs PROD)
+   ========================================================================== */
+const API_BASE_URL = window.location.port === '8080'
+    ? 'http://localhost:8080'  // Local Quarkus Backend for local Live Server testing
+    : '';                      // Production/Caddy-Proxy Environment (relative proxy paths)
+
+/* ==========================================================================
    SPA Navigation Framework (Tab Controller)
    ========================================================================== */
 document.querySelectorAll('.nav-item').forEach(button => {
@@ -50,77 +57,130 @@ function getWeatherIconSvg(code) {
 }
 
 /* ==========================================================================
-   Page 1: Geolocation Tracking (Locate Engine)
+   Page 1: Geolocation Tracking (Locate Engine with watchPosition Filter)
    ========================================================================== */
 document.getElementById('track-btn').addEventListener('click', () => {
     const statusText = document.getElementById('status');
     const responseCard = document.getElementById('response-card');
     
-    statusText.innerText = "Locating GPS...";
+    statusText.innerText = "Searching for precise GPS...";
     statusText.className = "status-loading";
     responseCard.classList.add('hidden');
-
-    const geoOptions = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
 
     if (!navigator.geolocation) {
         showError("Geolocation is not supported by your browser.");
         return;
     }
 
-    navigator.geolocation.getCurrentPosition(
+    let watchId = null;
+    let bestPosition = null;
+    
+    // Safety Fallback-Timer: Send the best available location after max 10 seconds
+    const maxWaitTimer = setTimeout(() => {
+        if (watchId) {
+            navigator.geolocation.clearWatch(watchId);
+            if (bestPosition) {
+                statusText.innerText = "Timeout reached. Sending best available location...";
+                sendPositionToBackend(bestPosition);
+            } else {
+                showError("GPS Timeout: No position found.");
+            }
+        }
+    }, 10000);
+
+    const geoOptions = { 
+        enableHighAccuracy: true, 
+        timeout: 9000, 
+        maximumAge: 0 
+    };
+
+    watchId = navigator.geolocation.watchPosition(
         (position) => {
-            statusText.innerText = "Sending to backend...";
-            
-            const clientTimestamp = new Date();
-            const isoStringTimestamp = clientTimestamp.toISOString();
-            
-            const payload = {
-                userId: getActiveUserId(),
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                timestamp: isoStringTimestamp
-            };
+            // Update baseline if we receive a more accurate measurement
+            if (!bestPosition || position.coords.accuracy < bestPosition.coords.accuracy) {
+                bestPosition = position;
+                statusText.innerText = `Improving signal... (Accuracy: ±${Math.round(position.coords.accuracy)}m)`;
+            }
 
-            fetch(`/positions?userId=${encodeURIComponent(getActiveUserId())}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(response => {
-                if (!response.ok) throw new Error(`Server returned status ${response.status}`);
-                return response.json();
-            })
-            .then(data => {
-                statusText.innerText = "Location saved successfully!";
-                statusText.className = "status-success";
-
-                const localTimeFormatted = clientTimestamp.toLocaleString('de-DE', {
-                    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                });
-                document.getElementById('res-time-span').innerText = `at ${localTimeFormatted}`;
-                
-                if (data.temperature !== undefined && data.temperature !== null) {
-                    document.getElementById('res-temp').innerText = `${parseFloat(data.temperature).toFixed(1)} °C`;
-                } else {
-                    document.getElementById('res-temp').innerText = "-";
-                }
-                
-                const iconContainer = document.getElementById('res-weather-icon-container');
-                iconContainer.innerHTML = getWeatherIconSvg(data.weatherCode);
-                const mainIconSvg = iconContainer.querySelector('svg');
-                if (mainIconSvg) mainIconSvg.style.stroke = "#1a5f8c";
-
-                document.getElementById('res-weather').innerText = `Code ${data.weatherCode} (${getWeatherText(data.weatherCode)})`;
-                document.getElementById('res-address').innerText = data.displayName || "Unknown Location";
-                responseCard.classList.remove('hidden');
-            })
-            .catch(err => showError(`Backend Error: ${err.message}`));
+            // Ideal precision threshold achieved (<= 20 meters)?
+            if (position.coords.accuracy <= 20) {
+                clearTimeout(maxWaitTimer);
+                navigator.geolocation.clearWatch(watchId);
+                statusText.innerText = "Precise location locked! Sending...";
+                sendPositionToBackend(position);
+            }
         },
-        (error) => showError(`GPS Error: ${error.message}`),
+        (error) => {
+            // Safe fallback if an error occurs but a decent baseline was already captured
+            clearTimeout(maxWaitTimer);
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+            
+            if (bestPosition) {
+                sendPositionToBackend(bestPosition);
+            } else {
+                showError(`GPS Error: ${error.message}`);
+            }
+        },
         geoOptions
     );
 });
+
+/* ==========================================================================
+   Asynchronous HTTP POST Engine for Position Export
+   ========================================================================== */
+function sendPositionToBackend(position) {
+    const statusText = document.getElementById('status');
+    const responseCard = document.getElementById('response-card');
+    
+    statusText.innerText = "Sending to backend...";
+    
+    const clientTimestamp = new Date();
+    const isoStringTimestamp = clientTimestamp.toISOString();
+    
+    const payload = {
+        userId: getActiveUserId(),
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        timestamp: isoStringTimestamp
+    };
+
+    fetch(`${API_BASE_URL}/positions?userId=${encodeURIComponent(getActiveUserId())}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(response => {
+        if (!response.ok) throw new Error(`Server returned status ${response.status}`);
+        return response.json();
+    })
+    .then(data => {
+        statusText.innerText = "Location saved successfully!";
+        statusText.className = "status-success";
+
+        const localTimeFormatted = clientTimestamp.toLocaleString('de-DE', {
+            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+        document.getElementById('res-time-span').innerText = `at ${localTimeFormatted}`;
+        
+        if (data.temperature !== undefined && data.temperature !== null) {
+            document.getElementById('res-temp').innerText = `${parseFloat(data.temperature).toFixed(1)} °C`;
+        } else {
+            document.getElementById('res-temp').innerText = "-";
+        }
+        
+        const iconContainer = document.getElementById('res-weather-icon-container');
+        iconContainer.innerHTML = getWeatherIconSvg(data.weatherCode);
+        const mainIconSvg = iconContainer.querySelector('svg');
+        if (mainIconSvg) mainIconSvg.style.stroke = "#1a5f8c";
+
+        // Wettercode entfernt - Nur noch Beschreibungstext setzen
+        document.getElementById('res-weather').innerText = getWeatherText(data.weatherCode);
+        document.getElementById('res-address').innerText = data.displayName || "Unknown Location";
+        responseCard.classList.remove('hidden');
+    })
+    .catch(err => showError(`Backend Error: ${err.message}`));
+}
 
 /* ==========================================================================
    Page 2: History Engine (Accordion Drawer Implementation)
@@ -132,7 +192,7 @@ function fetchAndRenderHistory() {
     const activeUserId = getActiveUserId();
 
     const fetchWithCoords = (lat, lon) => {
-        let url = `/positions?userId=${encodeURIComponent(activeUserId)}`;
+        let url = `${API_BASE_URL}/positions?userId=${encodeURIComponent(activeUserId)}`;
         if (lat !== null && lon !== null) {
             url += `&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
         }
@@ -279,7 +339,7 @@ function fetchAndRenderHistory() {
                             const targetId = deleteBtn.getAttribute('data-id');
                             if (!targetId) return;
                             
-                            fetch(`/positions/${targetId}?userId=${encodeURIComponent(getActiveUserId())}`, { method: 'DELETE' })
+                            fetch(`${API_BASE_URL}/positions/${targetId}?userId=${encodeURIComponent(getActiveUserId())}`, { method: 'DELETE' })
                             .then(response => {
                                 if (!response.ok) throw new Error("Could not process record removal");
                                 
