@@ -51,6 +51,38 @@ public class Position {
     @Column(nullable = false)
     Instant timestamp;
 
+    @Size(max = 255)
+    @Column(name = "osm_category", length = 255)
+    String osmCategory;
+
+    @Size(max = 255)
+    @Column(name = "osm_type", length = 255)
+    String osmType;
+
+    @Size(max = 255)
+    @Column(name = "osm_name", length = 255)
+    String osmName;
+
+    @Size(max = 255)
+    @Column(name = "address_type", length = 255)
+    String addressType;
+
+    @Size(max = 255)
+    @Column(name = "house_number", length = 255)
+    String houseNumber;
+
+    @Size(max = 255)
+    @Column(name = "road", length = 255)
+    String road;
+
+    @Size(max = 255)
+    @Column(name = "city", length = 255)
+    String city;
+
+    @Size(max = 255)
+    @Column(name = "country", length = 255)
+    String country;
+
     public Position() {
     }
 
@@ -135,6 +167,78 @@ public class Position {
         return this;
     }
 
+    public String osmCategory() {
+        return this.osmCategory;
+    }
+
+    public Position osmCategory(String osmCategory) {
+        this.osmCategory = osmCategory;
+        return this;
+    }
+
+    public String osmType() {
+        return this.osmType;
+    }
+
+    public Position osmType(String osmType) {
+        this.osmType = osmType;
+        return this;
+    }
+
+    public String osmName() {
+        return this.osmName;
+    }
+
+    public Position osmName(String osmName) {
+        this.osmName = osmName;
+        return this;
+    }
+
+    public String addressType() {
+        return this.addressType;
+    }
+
+    public Position addressType(String addressType) {
+        this.addressType = addressType;
+        return this;
+    }
+
+    public String houseNumber() {
+        return this.houseNumber;
+    }
+
+    public Position houseNumber(String houseNumber) {
+        this.houseNumber = houseNumber;
+        return this;
+    }
+
+    public String road() {
+        return this.road;
+    }
+
+    public Position road(String road) {
+        this.road = road;
+        return this;
+    }
+
+    public String city() {
+        return this.city;
+    }
+
+    public Position city(String city) {
+        this.city = city;
+        return this;
+    }
+
+    public String country() {
+        return this.country;
+    }
+
+    public Position country(String country) {
+        this.country = country;
+        return this;
+    }
+
     public JsonObject toJSON() {
         JsonObjectBuilder builder = Json.createObjectBuilder();
         if (this.id != null) {
@@ -162,6 +266,31 @@ public class Position {
         
         if (this.timestamp != null) {
             builder.add("timestamp", this.timestamp.toString());
+        }
+
+        if (this.osmCategory != null) {
+            builder.add("osmCategory", this.osmCategory);
+        }
+        if (this.osmType != null) {
+            builder.add("osmType", this.osmType);
+        }
+        if (this.osmName != null) {
+            builder.add("osmName", this.osmName);
+        }
+        if (this.addressType != null) {
+            builder.add("addressType", this.addressType);
+        }
+        if (this.houseNumber != null) {
+            builder.add("houseNumber", this.houseNumber);
+        }
+        if (this.road != null) {
+            builder.add("road", this.road);
+        }
+        if (this.city != null) {
+            builder.add("city", this.city);
+        }
+        if (this.country != null) {
+            builder.add("country", this.country);
         }
         
         return builder.build();
@@ -195,6 +324,31 @@ public class Position {
         }
         if (json.containsKey("timestamp") && !json.isNull("timestamp")) {
             position.timestamp(Instant.parse(json.getString("timestamp")));
+        }
+
+        if (json.containsKey("osmCategory") && !json.isNull("osmCategory")) {
+            position.osmCategory(json.getString("osmCategory"));
+        }
+        if (json.containsKey("osmType") && !json.isNull("osmType")) {
+            position.osmType(json.getString("osmType"));
+        }
+        if (json.containsKey("osmName") && !json.isNull("osmName")) {
+            position.osmName(json.getString("osmName"));
+        }
+        if (json.containsKey("addressType") && !json.isNull("addressType")) {
+            position.addressType(json.getString("addressType"));
+        }
+        if (json.containsKey("houseNumber") && !json.isNull("houseNumber")) {
+            position.houseNumber(json.getString("houseNumber"));
+        }
+        if (json.containsKey("road") && !json.isNull("road")) {
+            position.road(json.getString("road"));
+        }
+        if (json.containsKey("city") && !json.isNull("city")) {
+            position.city(json.getString("city"));
+        }
+        if (json.containsKey("country") && !json.isNull("country")) {
+            position.country(json.getString("country"));
         }
         return position;
     }

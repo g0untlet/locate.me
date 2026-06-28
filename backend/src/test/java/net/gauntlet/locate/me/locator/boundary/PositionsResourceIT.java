@@ -3,24 +3,37 @@
 //==============================================================================
 package net.gauntlet.locate.me.locator.boundary;
 
-import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.InjectMock;
-import io.restassured.http.ContentType;
-import java.time.Instant;
-import jakarta.json.Json;
-import jakarta.json.JsonObject;
-import org.junit.jupiter.api.Test;
-import org.eclipse.microprofile.rest.client.inject.RestClient;
-import org.mockito.Mockito;
-import net.gauntlet.locate.me.locator.control.GeocodingClient;
-import net.gauntlet.locate.me.locator.control.WeatherClient;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
+
+import java.time.Instant;
+
+import org.eclipse.microprofile.rest.client.inject.RestClient;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
+import io.quarkus.test.InjectMock;
+import io.quarkus.test.junit.QuarkusTest;
+import io.restassured.http.ContentType;
+import jakarta.inject.Inject;
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
+import net.gauntlet.locate.me.locator.control.GeocodingClient;
+import net.gauntlet.locate.me.locator.control.WeatherClient;
 
 @QuarkusTest
-class PositionsResourceIT {
+public class PositionsResourceIT {
+
+    @Inject
+    EntityManager em;
 
     @InjectMock
     @RestClient
@@ -29,6 +42,18 @@ class PositionsResourceIT {
     @InjectMock
     @RestClient
     WeatherClient weatherClient;
+
+    @BeforeEach
+    @Transactional
+    public void setup() {
+        em.createQuery("DELETE FROM Position").executeUpdate();
+        // Provide a default mock for clients to prevent real calls in tests that don't care about the result
+        when(geocodingClient.reverse(anyDouble(), anyDouble(), anyString()))
+            .thenReturn(Json.createObjectBuilder().add("display_name", "Mocked Location").build());
+        when(weatherClient.forecast(anyDouble(), anyDouble(), anyString()))
+            .thenReturn(Json.createObjectBuilder().build());
+    }
+
 
     @Test
     void createAndLifecyclePosition() {
@@ -46,7 +71,7 @@ class PositionsResourceIT {
                 .contentType(ContentType.JSON)
                 .body(json.toString())
                 .when()
-                .post("/positions?userId=validUser")
+                .post("/api/positions?userId=validUser")
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
@@ -61,7 +86,7 @@ class PositionsResourceIT {
         // 2. Find by User ID
         given()
                 .when()
-                .get("/positions?userId=validUser")
+                .get("/api/positions?userId=validUser")
                 .then()
                 .statusCode(200)
                 .body("[0].id", is(id))
@@ -70,14 +95,14 @@ class PositionsResourceIT {
         // 3. Delete Position
         given()
                 .when()
-                .delete("/positions/" + id + "?userId=validUser")
+                .delete("/api/positions/" + id + "?userId=validUser")
                 .then()
                 .statusCode(204);
 
         // 4. Verify Deleted
         given()
                 .when()
-                .get("/positions?userId=validUser")
+                .get("/api/positions?userId=validUser")
                 .then()
                 .statusCode(200)
                 .body("size()", is(0));
@@ -85,7 +110,7 @@ class PositionsResourceIT {
 
     @Test
     void createWithTooLongUserId() {
-        String longUserId = "thisUserIdIsLongerThan32CharactersToTriggerValidationException";
+        String longUserId = "thisUserIdIsLongerThan16Characters";
         JsonObject json = Json.createObjectBuilder()
                 .add("userId", longUserId)
                 .add("latitude", 48.1351)
@@ -97,7 +122,7 @@ class PositionsResourceIT {
                 .contentType(ContentType.JSON)
                 .body(json.toString())
                 .when()
-                .post("/positions?userId=" + longUserId)
+                .post("/api/positions?userId=" + longUserId)
                 .then()
                 .statusCode(400);
     }
@@ -120,7 +145,7 @@ class PositionsResourceIT {
                 .contentType(ContentType.JSON)
                 .body(json.toString())
                 .when()
-                .post("/positions?userId=validUser")
+                .post("/api/positions?userId=validUser")
                 .then()
                 .statusCode(400);
     }
@@ -138,7 +163,7 @@ class PositionsResourceIT {
                 .contentType(ContentType.JSON)
                 .body(json.toString())
                 .when()
-                .post("/positions?userId=noAccuracyUser")
+                .post("/api/positions?userId=noAccuracyUser")
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
@@ -149,7 +174,7 @@ class PositionsResourceIT {
         // Cleanup
         given()
                 .when()
-                .delete("/positions/" + id + "?userId=noAccuracyUser")
+                .delete("/api/positions/" + id + "?userId=noAccuracyUser")
                 .then()
                 .statusCode(204);
     }
@@ -172,7 +197,7 @@ class PositionsResourceIT {
                 .contentType(ContentType.JSON)
                 .body(json.toString())
                 .when()
-                .post("/positions?userId=geoUser")
+                .post("/api/positions?userId=geoUser")
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
@@ -183,7 +208,7 @@ class PositionsResourceIT {
         // Cleanup
         given()
                 .when()
-                .delete("/positions/" + id + "?userId=geoUser")
+                .delete("/api/positions/" + id + "?userId=geoUser")
                 .then()
                 .statusCode(204);
     }
@@ -204,7 +229,7 @@ class PositionsResourceIT {
                 .contentType(ContentType.JSON)
                 .body(json.toString())
                 .when()
-                .post("/positions?userId=geoFailUser")
+                .post("/api/positions?userId=geoFailUser")
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
@@ -215,7 +240,7 @@ class PositionsResourceIT {
         // Cleanup
         given()
                 .when()
-                .delete("/positions/" + id + "?userId=geoFailUser")
+                .delete("/api/positions/" + id + "?userId=geoFailUser")
                 .then()
                 .statusCode(204);
     }
@@ -233,7 +258,7 @@ class PositionsResourceIT {
                 .contentType(ContentType.JSON)
                 .body(json.toString())
                 .when()
-                .post("/positions?userId=unauth")
+                .post("/api/positions?userId=unauth")
                 .then()
                 .statusCode(401);
     }
@@ -251,7 +276,7 @@ class PositionsResourceIT {
                 .contentType(ContentType.JSON)
                 .body(json.toString())
                 .when()
-                .post("/positions?userId=user-123")
+                .post("/api/positions?userId=user-123")
                 .then()
                 .statusCode(400);
     }
@@ -260,7 +285,7 @@ class PositionsResourceIT {
     void getPositionsWithoutUserId() {
         given()
                 .when()
-                .get("/positions")
+                .get("/api/positions")
                 .then()
                 .statusCode(400);
     }
@@ -279,7 +304,7 @@ class PositionsResourceIT {
                 .contentType(ContentType.JSON)
                 .body(json.toString())
                 .when()
-                .post("/positions?userId=validUser")
+                .post("/api/positions?userId=validUser")
                 .then()
                 .statusCode(201)
                 .extract()
@@ -288,7 +313,7 @@ class PositionsResourceIT {
         // 2. Fetch passing coordinates (at Munich, expect ~0 km distance)
         given()
                 .when()
-                .get("/positions?userId=validUser&lat=48.1351&lon=11.5820")
+                .get("/api/positions?userId=validUser&lat=48.1351&lon=11.5820")
                 .then()
                 .statusCode(200)
                 .body("[0].id", is(id))
@@ -298,7 +323,7 @@ class PositionsResourceIT {
         // 3. Fetch passing coordinates far away (Berlin: 52.5200, 13.4050, expect ~500+ km distance)
         given()
                 .when()
-                .get("/positions?userId=validUser&lat=52.5200&lon=13.4050")
+                .get("/api/positions?userId=validUser&lat=52.5200&lon=13.4050")
                 .then()
                 .statusCode(200)
                 .body("[0].id", is(id))
@@ -307,7 +332,7 @@ class PositionsResourceIT {
         // 4. Fetch without distance parameters, expect NO distance field in response
         given()
                 .when()
-                .get("/positions?userId=validUser")
+                .get("/api/positions?userId=validUser")
                 .then()
                 .statusCode(200)
                 .body("[0].id", is(id))
@@ -316,7 +341,7 @@ class PositionsResourceIT {
         // Cleanup
         given()
                 .when()
-                .delete("/positions/" + id + "?userId=validUser")
+                .delete("/api/positions/" + id + "?userId=validUser")
                 .then()
                 .statusCode(204);
     }
