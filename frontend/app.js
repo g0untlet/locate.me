@@ -4,6 +4,7 @@
 const API_BASE_URL = window.location.port === '8080'
     ? 'http://localhost:8080'  // Local Quarkus Backend for local Live Server testing
     : '';                      // Production/Caddy-Proxy Environment (relative proxy paths)
+const API_PATH = '/api';
 
 /* ==========================================================================
    SPA Navigation Framework (Tab Controller)
@@ -145,7 +146,7 @@ function sendPositionToBackend(position) {
         timestamp: isoStringTimestamp
     };
 
-    fetch(`${API_BASE_URL}/positions?userId=${encodeURIComponent(getActiveUserId())}`, {
+    fetch(`${API_BASE_URL}${API_PATH}/positions?userId=${encodeURIComponent(getActiveUserId())}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -192,7 +193,7 @@ function fetchAndRenderHistory() {
     const activeUserId = getActiveUserId();
 
     const fetchWithCoords = (lat, lon) => {
-        let url = `${API_BASE_URL}/positions?userId=${encodeURIComponent(activeUserId)}`;
+        let url = `${API_BASE_URL}${API_PATH}/positions?userId=${encodeURIComponent(activeUserId)}`;
         if (lat !== null && lon !== null) {
             url += `&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
         }
@@ -339,7 +340,7 @@ function fetchAndRenderHistory() {
                             const targetId = deleteBtn.getAttribute('data-id');
                             if (!targetId) return;
                             
-                            fetch(`${API_BASE_URL}/positions/${targetId}?userId=${encodeURIComponent(getActiveUserId())}`, { method: 'DELETE' })
+                            fetch(`${API_BASE_URL}${API_PATH}/positions/${targetId}?userId=${encodeURIComponent(getActiveUserId())}`, { method: 'DELETE' })
                             .then(response => {
                                 if (!response.ok) throw new Error("Could not process record removal");
                                 
