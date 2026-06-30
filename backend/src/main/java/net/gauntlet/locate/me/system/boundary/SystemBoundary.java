@@ -19,10 +19,13 @@ public class SystemBoundary {
     @Inject
     SystemInfo systemInfo;
 
+    private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger(SystemBoundary.class.getName());
+
     @GET
     @Path("/info")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getInfo() {
+        LOGGER.info("getInfo() called");
         return Response.ok(this.systemInfo.toJSON()).build();
     }
 }
