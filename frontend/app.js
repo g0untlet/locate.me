@@ -41,10 +41,10 @@ function getLocationIconSvg(category, type) {
 
     if (!category) return defaultIcon;
 
-switch (category) {
+    switch (category) {
         case 'building':
             return `<svg ${svgAttrs}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`;
-        
+
         case 'highway':
         case 'railway':
             // 1. Spezialfall: Bus / Bahn / Haltestelle
@@ -53,34 +53,34 @@ switch (category) {
             }
             // 2. Standard: Straße (Zwei Linien, die nach oben zusammenlaufen mit gestrichelter Mittellinie)
             return `<svg ${svgAttrs}><line x1="18" y1="21" x2="14" y2="3"></line><line x1="6" y1="21" x2="10" y2="3"></line><line x1="12" y1="3" x2="12" y2="21" stroke-dasharray="3,3"></line></svg>`;
-        
+
         case 'shop':
         case 'craft':
             return `<svg ${svgAttrs}><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`;
-        
+
         case 'leisure':
         case 'landuse':
         case 'natural':
             // Sauberes Baum-Symbol für Natur/Parks
             return `<svg ${svgAttrs}><path d="M12 19V5M12 5a4 4 0 0 0-4 4c0 2.5 2.5 5 4 7m0-11a4 4 0 0 1 4 4c0 2.5-2.5 5-4 7m-3 3h6"></path></svg>`;
-        
+
         case 'amenity':
             if (['restaurant', 'cafe', 'fast_food', 'bar'].includes(type)) {
                 return `<svg ${svgAttrs}><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>`;
             }
             // Behörden / Banken / Kirchen: Ein klassisches Spalten-Monument/Gebäude (Bank/Architektur)
             return `<svg ${svgAttrs}><path d="M3 21h18M3 10h18M3 7l9-4 9 4M7 10v7M12 10v7M17 10v7"></path></svg>`;
-        
+
         case 'tourism':
         case 'historic':
             return `<svg ${svgAttrs}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
-        
+
         case 'waterway':
             return `<svg ${svgAttrs}><path d="M12 22a7 7 0 0 0 7-7c0-4-7-13-7-13s-7 9-7 13a7 7 0 0 0 7 7z"></path></svg>`;
-        
+
         default:
             return defaultIcon;
-    }    
+    }
 }
 
 /* ==========================================================================
@@ -116,7 +116,7 @@ function formatShortAddress(pos) {
    ========================================================================== */
 function getWeatherIconSvg(code) {
     const svgAttrs = `class="embedded-weather-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`;
-    
+
     // Fallback für ungültige Codes (Info-Icon)
     const fallbackIcon = `<svg ${svgAttrs}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
 
@@ -161,7 +161,7 @@ function getWeatherIconSvg(code) {
 document.getElementById('track-btn').addEventListener('click', () => {
     const statusText = document.getElementById('status');
     const responseCard = document.getElementById('response-card');
-    
+
     statusText.innerText = "Searching for precise GPS...";
     statusText.className = "status-loading";
     responseCard.classList.add('hidden');
@@ -173,7 +173,7 @@ document.getElementById('track-btn').addEventListener('click', () => {
 
     let watchId = null;
     let bestPosition = null;
-    
+
     // Safety Fallback-Timer: Send the best available location after max 10 seconds
     const maxWaitTimer = setTimeout(() => {
         if (watchId) {
@@ -187,10 +187,10 @@ document.getElementById('track-btn').addEventListener('click', () => {
         }
     }, 10000);
 
-    const geoOptions = { 
-        enableHighAccuracy: true, 
-        timeout: 9000, 
-        maximumAge: 0 
+    const geoOptions = {
+        enableHighAccuracy: true,
+        timeout: 9000,
+        maximumAge: 0
     };
 
     watchId = navigator.geolocation.watchPosition(
@@ -213,7 +213,7 @@ document.getElementById('track-btn').addEventListener('click', () => {
             // Safe fallback if an error occurs but a decent baseline was already captured
             clearTimeout(maxWaitTimer);
             if (watchId) navigator.geolocation.clearWatch(watchId);
-            
+
             if (bestPosition) {
                 sendPositionToBackend(bestPosition);
             } else {
@@ -230,12 +230,12 @@ document.getElementById('track-btn').addEventListener('click', () => {
 function sendPositionToBackend(position) {
     const statusText = document.getElementById('status');
     const responseCard = document.getElementById('response-card');
-    
+
     statusText.innerText = "Sending to backend...";
-    
+
     const clientTimestamp = new Date();
     const isoStringTimestamp = clientTimestamp.toISOString();
-    
+
     const payload = {
         userId: getActiveUserId(),
         latitude: position.coords.latitude,
@@ -249,42 +249,42 @@ function sendPositionToBackend(position) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     })
-    .then(response => {
-        if (!response.ok) throw new Error(`Server returned status ${response.status}`);
-        return response.json();
-    })
-    .then(data => {
-        statusText.innerText = "Location saved successfully!";
-        statusText.className = "status-success";
+        .then(response => {
+            if (!response.ok) throw new Error(`Server returned status ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            statusText.innerText = "Location saved successfully!";
+            statusText.className = "status-success";
 
-        const localTimeFormatted = clientTimestamp.toLocaleString('de-DE', {
-            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-        });
-        document.getElementById('res-time-span').innerText = localTimeFormatted;
-        
-        if (data.temperature !== undefined && data.temperature !== null) {
-            document.getElementById('res-temp').innerText = `${parseFloat(data.temperature).toFixed(1)} °C`;
-        } else {
-            document.getElementById('res-temp').innerText = "-";
-        }
-        
-        const iconContainer = document.getElementById('res-weather-icon-container');
-        iconContainer.innerHTML = getWeatherIconSvg(data.weatherCode);
-        const mainIconSvg = iconContainer.querySelector('svg');
-        if (mainIconSvg) mainIconSvg.style.stroke = "#1a5f8c";
+            const localTimeFormatted = clientTimestamp.toLocaleString('de-DE', {
+                day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+            document.getElementById('res-time-span').innerText = localTimeFormatted;
 
-        document.getElementById('res-weather').innerText = getWeatherText(data.weatherCode);
+            if (data.temperature !== undefined && data.temperature !== null) {
+                document.getElementById('res-temp').innerText = `${parseFloat(data.temperature).toFixed(1)} °C`;
+            } else {
+                document.getElementById('res-temp').innerText = "-";
+            }
 
-        const addressContainer = document.getElementById('res-address-container');
-        addressContainer.innerHTML = `
+            const iconContainer = document.getElementById('res-weather-icon-container');
+            iconContainer.innerHTML = getWeatherIconSvg(data.weatherCode);
+            const mainIconSvg = iconContainer.querySelector('svg');
+            if (mainIconSvg) mainIconSvg.style.stroke = "#1a5f8c";
+
+            document.getElementById('res-weather').innerText = getWeatherText(data.weatherCode);
+
+            const addressContainer = document.getElementById('res-address-container');
+            addressContainer.innerHTML = `
             ${getLocationIconSvg(data.osmCategory, data.osmType)}
             <span>${formatShortAddress(data)}</span>
         `;
-        addressContainer.title = data.displayName || "No detailed address available.";
+            addressContainer.title = data.displayName || "No detailed address available.";
 
-        responseCard.classList.remove('hidden');
-    })
-    .catch(err => showError(`Backend Error: ${err.message}`));
+            responseCard.classList.remove('hidden');
+        })
+        .catch(err => showError(`Backend Error: ${err.message}`));
 }
 
 /* ==========================================================================
@@ -329,12 +329,12 @@ function fetchAndRenderHistory() {
                         if (pos.temperature !== undefined && pos.temperature !== null && !isNaN(parseFloat(pos.temperature))) {
                             const tempVal = parseFloat(pos.temperature);
                             tempFormatted = `${tempVal.toFixed(1)}°C`;
-                            
+
                             if (tempVal <= 0) tempClass = "temp-blue";
                             else if (tempVal <= 10) tempClass = "temp-lightblue";
                             else if (tempVal < 25) tempClass = "temp-orange";
                             else tempClass = "temp-red";
-                            
+
                             const wCode = (pos.weatherCode !== undefined && pos.weatherCode !== null) ? parseInt(pos.weatherCode, 10) : null;
                             weatherIconSvg = getWeatherIconSvg(wCode);
                         }
@@ -349,6 +349,20 @@ function fetchAndRenderHistory() {
                                         <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
                                     </svg>
                                     <span>${distVal.toFixed(2)} km</span>
+                                </div>
+                            `;
+                        }
+
+                        let walkingTimeHtml = "";
+                        if (pos.walkingTimeMinutes !== undefined && pos.walkingTimeMinutes !== null && !isNaN(parseFloat(pos.walkingTimeMinutes))) {
+                            const walkingFormatted = formatWalkingTime(parseFloat(pos.walkingTimeMinutes));
+                            walkingTimeHtml = `
+                                <div class="log-card-walking" style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                                    <svg class="action-icon" style="stroke: var(--text-muted); width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                    </svg>
+                                    <span>${walkingFormatted}</span>
                                 </div>
                             `;
                         }
@@ -401,6 +415,7 @@ function fetchAndRenderHistory() {
                                             <span>${tempFormatted}</span>
                                         </div>
                                         ${distanceHtml}
+                                        ${walkingTimeHtml}
                                     </div>
                                 </div>
                             </div>
@@ -429,11 +444,11 @@ function fetchAndRenderHistory() {
                         const clickableArea = card.querySelector('.log-card-clickable-area');
                         clickableArea.addEventListener('click', () => {
                             const isExpanded = card.classList.contains('expanded');
-                            
+
                             document.querySelectorAll('.log-card.expanded').forEach(c => {
                                 if (c !== card) c.classList.remove('expanded');
                             });
-                            
+
                             card.classList.toggle('expanded', !isExpanded);
                         });
 
@@ -445,23 +460,23 @@ function fetchAndRenderHistory() {
                         const deleteBtn = card.querySelector('.btn-action-delete');
                         deleteBtn.addEventListener('click', (e) => {
                             e.stopPropagation();
-                            
+
                             const targetId = deleteBtn.getAttribute('data-id');
                             if (!targetId) return;
-                            
+
                             fetch(`${API_BASE_URL}${API_PATH}/positions/${targetId}?userId=${encodeURIComponent(getActiveUserId())}`, { method: 'DELETE' })
-                            .then(response => {
-                                if (!response.ok) throw new Error("Could not process record removal");
-                                
-                                card.classList.add('card-leave-animate');
-                                card.addEventListener('animationend', () => {
-                                    card.remove();
-                                    if (listContainer.children.length === 0) {
-                                        listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">No locations logged yet for user "${activeUserId}".</div>`;
-                                    }
-                                });
-                            })
-                            .catch(err => alert(`Error removing entry: ${err.message}`));
+                                .then(response => {
+                                    if (!response.ok) throw new Error("Could not process record removal");
+
+                                    card.classList.add('card-leave-animate');
+                                    card.addEventListener('animationend', () => {
+                                        card.remove();
+                                        if (listContainer.children.length === 0) {
+                                            listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">No locations logged yet for user "${activeUserId}".</div>`;
+                                        }
+                                    });
+                                })
+                                .catch(err => alert(`Error removing entry: ${err.message}`));
                         });
 
                         listContainer.appendChild(card);
@@ -518,6 +533,14 @@ document.getElementById('save-settings-btn').addEventListener('click', () => {
 /* ==========================================================================
    Utilities
    ========================================================================== */
+function formatWalkingTime(minutes) {
+    const total = Math.round(minutes);
+    if (total < 60) return `${total} min`;
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
 function showError(message) {
     const statusText = document.getElementById('status');
     statusText.innerText = message;
@@ -532,43 +555,43 @@ function getWeatherText(code) {
     switch (true) {
         case (code === 0):
             return "Clear sky";
-            
+
         case (code >= 1 && code <= 3):
             return "Mainly clear"; // Deckt auch 'partly cloudy' und 'overcast' ab
-            
+
         case (code >= 45 && code <= 48):
             return "Fog"; // Nebel und Reifnebel
-            
+
         case (code >= 51 && code <= 55):
             return "Drizzle"; // Leichter bis dichter Sprühregen
-            
+
         case (code === 56 || code === 57):
             return "Freezing drizzle"; // Gefrierender Sprühregen
-            
+
         case (code >= 61 && code <= 65):
             return "Rain"; // Leichter bis starker Regen
-            
+
         case (code === 66 || code === 67):
             return "Freezing rain"; // Gefrierender Regen
-            
+
         case (code >= 71 && code <= 75):
             return "Snow fall"; // Leichter bis starker Schneefall
-            
+
         case (code === 77):
             return "Snow grains"; // Schneegriesel
-            
+
         case (code >= 80 && code <= 82):
             return "Rain showers"; // Leichte bis heftige Regenschauer
-            
+
         case (code === 85 || code === 86):
             return "Snow showers"; // Schneeschauer
-            
+
         case (code === 95):
             return "Thunderstorm"; // Gewitter ohne Hagel (Dein aktueller Code)
-            
+
         case (code === 96 || code === 99):
             return "Thunderstorm with hail"; // Gewitter mit Hagel
-            
+
         default:
             return "Unknown";
     }

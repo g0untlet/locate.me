@@ -26,7 +26,7 @@ The frontend is a lightweight, mobile-first **Progressive Web App (PWA)** built 
 ### 2.1 Core Components & Structure
 
 *   **`index.html` (Application Shell)**: Defines the minimal HTML structure required to boot the application. It provides the main user interface container, registers the service worker, and includes the action button and status feedback element.
-*   **`app.js` (Core Application Controller)**: Orchestrates device interaction, handles user events, manages state transitions, and handles network communications.
+*   **`app.js` (Core Application Controller)**: Orchestrates device interaction, handles user events, manages state transitions, and handles network communications. When the History view is opened and the device provides GPS coordinates, each history card displays the straight-line distance and estimated walking time (formatted as `"14 min"` or `"1h 15m"`) received from the backend. Both values are rendered conditionally – they are omitted for legacy entries or when no GPS reference is available.
 *   **`sw.js` (Service Worker)**: Implements lifecycle event handling (`install` and `fetch` events) enabling standard Progressive Web App capabilities.
 *   **`manifest.json` (Web App Manifest)**: Controls how the application appears to the user on their device (standalone display mode, theme colors, and icons), allowing it to be installed locally like a native app.
 *   **`css/style.css` (Visual Presentation)**: Styles the mobile-first layouts, ensuring touch targets (like the "Standort senden" tracking button) are prominent and responsive.
@@ -90,7 +90,9 @@ The core domain responsibility of the backend is managed by the **Locator** Busi
 
 #### Domain Capabilities
 *   **Create Geo-Positions**: Ingests new position records, runs strict Bean Validation, enriches them asynchronously/synchronously with external metadata (geocoding via OpenStreetMap Nominatim and current weather conditions via Open-Meteo), and persists them.
-*   **Search/Query Positions**: Supports querying positions specifically filtered by a given `userId`. If the optional parameters `lat` and `lon` are provided, the system automatically calculates the distance (orthodromic distance via the Haversine formula) in kilometers between the specified reference point and each recorded position. Records are returned sorted by timestamp in descending order.
+*   **Search/Query Positions**: Supports querying positions specifically filtered by a given `userId`. If the optional parameters `lat` and `lon` are provided, the system automatically calculates two derived, response-only fields per position entry:
+    *   `distance` (Double): Orthodromic straight-line distance in kilometers between the reference point and the recorded position, computed via the Haversine formula.
+    *   `walkingTimeMinutes` (Double): Estimated pedestrian travel time in minutes, derived from `distance` using a circuity factor of `1.35` (to approximate real street network routing) and an average walking speed of `4.8 km/h`. Both fields are purely computed at query time and are **not persisted** in the database. Records are returned sorted by timestamp in descending order.
 *   **Delete Positions**: Safely removes recorded positions by their technical primary key.
 
 #### Position Entity Attributes
@@ -122,7 +124,7 @@ The backend follows the Boundary-Control-Entity pattern. To ensure loose couplin
 *   **Boundary Layer (`boundary/`)**: 
     Exposes Restful APIs using JAX-RS. The `PositionsResource` and `SystemBoundary` JAX-RS facades are annotated with `@Boundary` (Request-scoped), hold `@Transactional` boundary controls, handle Bean Validation on deserialized entity models, and delegate operations to their controllers.
 *   **Control Layer (`control/`)**: 
-    Zustandslose/Stateless business logic classes. `Positions` BA is annotated with `@Control` (Dependent-scoped) and performs operations using an injected package-private `EntityManager`. It acts as an orchestrator that leverages CDI-injected MicroProfile REST clients (`GeocodingClient` and `WeatherClient`) to automatically query and enrich incoming coordinates with real-time location addresses and weather metrics. `SystemInfo` is an application-scoped bean that manages system-level parameters natively via Quarkus configuration properties.
+    Zustandslose/Stateless business logic classes. `Positions` BA is annotated with `@Control` (Dependent-scoped) and performs operations using an injected package-private `EntityManager`. It acts as an orchestrator that leverages CDI-injected MicroProfile REST clients (`GeocodingClient` and `WeatherClient`) to automatically query and enrich incoming coordinates with real-time location addresses and weather metrics. `DistanceCalculator` is a package-private interface providing pure `static` methods for geodesic distance (`haversine`) and pedestrian travel time (`walkingTimeMinutes`) calculations, encapsulating all related mathematical constants. `SystemInfo` is an application-scoped bean that manages system-level parameters natively via Quarkus configuration properties.
 *   **Entity Layer (`entity/`)**: 
     Represents persistent state and core business logic. The `Position` JPA Entity exposes a record-style getter interface (e.g. `userId()` instead of `getUserId()`) and encapsulates its own JSON-P transformations (`toJSON()` and `fromJSON()`). It maps optional parameters such as `temperature` and `weatherCode`. The weather condition is represented as a structured `WeatherCode` enum, which is persisted to the database via a JPA `AttributeConverter` (`WeatherCodeConverter`).
 
@@ -346,12 +348,12 @@ Gets list of stored user locations matching the authorized user.
 curl -i -X GET "http://localhost:8090/api/positions?userId=user123"
 ```
 
-##### 3. Retrieve Positions with Distance Calculation (GET with optional lat/lon)
-Gets user locations and calculates the distance in kilometers from a reference point (e.g., Munich) using the Haversine formula.
+##### 3. Retrieve Positions with Distance & Walking Time Calculation (GET with optional lat/lon)
+Gets user locations and calculates the straight-line distance in kilometers and estimated walking time in minutes from a reference point (e.g., Munich) to each recorded position.
 ```bash
 curl -i -X GET "http://localhost:8090/api/positions?userId=user123&lat=48.1351&lon=11.5820"
 ```
-*Response payload showing automatic distance calculation in kilometers:*
+*Response payload showing automatic distance and walking time calculation:*
 ```json
 [
   {
@@ -371,10 +373,12 @@ curl -i -X GET "http://localhost:8090/api/positions?userId=user123&lat=48.1351&l
     "temperature": 16.8,
     "weatherCode": 2,
     "timestamp": "2026-06-11T22:00:00Z",
-    "distance": 0.0
+    "distance": 1.23,
+    "walkingTimeMinutes": 20.72
   }
 ]
 ```
+> Both `distance` and `walkingTimeMinutes` are omitted entirely when `lat`/`lon` are not provided.
 
 ##### 4. Delete a Position (DELETE)
 Removes a recorded position by its generated ID (e.g. ID `1`) for an authorized user.

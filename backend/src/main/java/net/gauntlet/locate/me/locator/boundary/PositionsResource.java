@@ -29,6 +29,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import net.gauntlet.locate.me.Boundary;
+import net.gauntlet.locate.me.locator.control.DistanceCalculator;
 import net.gauntlet.locate.me.locator.control.Positions;
 import net.gauntlet.locate.me.locator.entity.Position;
 
@@ -133,11 +134,12 @@ public class PositionsResource {
             .map(pos -> {
                 JsonObject json = pos.toJSON();
                 if (calculateDistance) {
-                    double dist = calculateHaversineDistance(lat, lon, pos.latitude(), pos.longitude());
-                    // Re-build json to inject distance
-                    JsonObjectBuilder builder = Json.createObjectBuilder(json)
-                            .add("distance", dist);
-                    return builder.build();
+                    double dist = DistanceCalculator.haversine(lat, lon, pos.latitude(), pos.longitude());
+                    double walkingTime = DistanceCalculator.walkingTimeMinutes(dist);
+                    return Json.createObjectBuilder(json)
+                            .add("distance", dist)
+                            .add("walkingTimeMinutes", walkingTime)
+                            .build();
                 }
                 return json;
             })
@@ -146,14 +148,4 @@ public class PositionsResource {
         return Response.ok(arrayBuilder.build()).build();
     }
 
-    private double calculateHaversineDistance(double lat1, double lon1, double lat2, double lon2) {
-        final double R = 6371.0; // Earth's radius in kilometers
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLon = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                   Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
-                   Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-    }
 }
