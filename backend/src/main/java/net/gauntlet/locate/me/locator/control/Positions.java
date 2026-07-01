@@ -31,12 +31,25 @@ public class Positions {
         if (position.displayName() == null || position.displayName().isBlank()) {
             try {
                 jakarta.json.JsonObject response = this.geocodingClient.reverse(position.latitude(), position.longitude(), "jsonv2");
-                if (response != null && response.containsKey("display_name") && !response.isNull("display_name")) {
-                    String displayName = response.getString("display_name");
-                    if (displayName != null && displayName.length() > 255) {
-                        displayName = displayName.substring(0, 255);
+                if (response != null) {
+                    if (response.containsKey("display_name") && !response.isNull("display_name")) {
+                        String displayName = response.getString("display_name");
+                        if (displayName != null && displayName.length() > 255) {
+                            displayName = displayName.substring(0, 255);
+                        }
+                        position.displayName(displayName);
                     }
-                    position.displayName(displayName);
+                    position.osmCategory(response.getString("category", null));
+                    position.osmType(response.getString("type", null));
+                    position.osmName(response.getString("name", null));
+                    position.addressType(response.getString("addresstype", null));
+                    if (response.containsKey("address") && !response.isNull("address")) {
+                        jakarta.json.JsonObject address = response.getJsonObject("address");
+                        position.houseNumber(address.getString("house_number", null));
+                        position.road(address.getString("road", null));
+                        position.city(address.getString("city", null));
+                        position.country(address.getString("country", null));
+                    }
                 }
             } catch (Exception e) {
                 LOG.log(System.Logger.Level.WARNING, "Failed to resolve displayName via OSM Nominatim API: {0}", e.getMessage());

@@ -233,6 +233,35 @@ body {
 .value { font-size: 0.95rem; font-weight: 600; color: #000000; }
 .address-text { font-size: 0.85rem; font-weight: 400; line-height: 1.4; }
 
+.address-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.85rem;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--text-color);
+}
+
+.address-container span {
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+.address-container svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    stroke: var(--text-muted);
+}
+
+.log-card-address.address-container svg {
+    width: 16px;
+    height: 16px;
+    margin-top: 1px;
+}
+
 .temp-display-wrapper {
     display: flex;
     align-items: center;

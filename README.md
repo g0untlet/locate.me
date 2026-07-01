@@ -101,6 +101,14 @@ Each recorded geo-position consists of the following attributes:
 *   `longitude` (double, mandatory): Longitude coordinate.
 *   `accuracy` (Double, optional): Accuracy radius in meters.
 *   `displayName` (String, optional): Optional display name/label resolved via OpenStreetMap Nominatim (maximum 255 characters).
+*   `osmCategory` (String, optional): The category of the location (e.g., `"historic"`), resolved via OSM Nominatim `category`.
+*   `osmType` (String, optional): The type of the location (e.g., `"memorial"`), resolved via OSM Nominatim `type`.
+*   `osmName` (String, optional): The name of the specific point of interest (e.g., `"Reichstagsgebäude"`), resolved via OSM Nominatim `name`.
+*   `addressType` (String, optional): The classification of the address (e.g., `"historic"`), resolved via OSM Nominatim `addresstype`.
+*   `houseNumber` (String, optional): Resolved house number from nested OSM Nominatim address payload.
+*   `road` (String, optional): Road/street name resolved from nested OSM Nominatim address payload.
+*   `city` (String, optional): City name resolved from nested OSM Nominatim address payload.
+*   `country` (String, optional): Country name resolved from nested OSM Nominatim address payload.
 *   `temperature` (Float, optional): Current ambient temperature in °C resolved via Open-Meteo API.
 *   `weatherCode` (WeatherCode, optional): Current weather condition classification (mapped via WMO Weather Interpretation Codes).
 *   `timestamp` (Instant, mandatory): Explicit point in time when the position was recorded.
@@ -112,17 +120,17 @@ Each recorded geo-position consists of the following attributes:
 The backend follows the Boundary-Control-Entity pattern. To ensure loose coupling and seamless API evolution, all external communication uses **JSON-P (`jakarta.json.JsonObject`)** instead of exposing direct entity mappings to clients.
 
 *   **Boundary Layer (`boundary/`)**: 
-    Exposes Restful APIs using JAX-RS. The `PositionsResource` JAX-RS facade is annotated with `@Boundary` (Request-scoped), is the exclusive holder of `@Transactional` boundary controls, handles Bean Validation on deserialized entity models, and delegates operations directly to the controller.
+    Exposes Restful APIs using JAX-RS. The `PositionsResource` and `SystemBoundary` JAX-RS facades are annotated with `@Boundary` (Request-scoped), hold `@Transactional` boundary controls, handle Bean Validation on deserialized entity models, and delegate operations to their controllers.
 *   **Control Layer (`control/`)**: 
-    Zustandslose/Stateless business logic classes. `Positions` BA is annotated with `@Control` (Dependent-scoped) and performs operations using an injected package-private `EntityManager`. It acts as an orchestrator that leverages CDI-injected MicroProfile REST clients (`GeocodingClient` and `WeatherClient`) to automatically query and enrich incoming coordinates with real-time location addresses and weather metrics.
+    Zustandslose/Stateless business logic classes. `Positions` BA is annotated with `@Control` (Dependent-scoped) and performs operations using an injected package-private `EntityManager`. It acts as an orchestrator that leverages CDI-injected MicroProfile REST clients (`GeocodingClient` and `WeatherClient`) to automatically query and enrich incoming coordinates with real-time location addresses and weather metrics. `SystemInfo` is an application-scoped bean that manages system-level parameters natively via Quarkus configuration properties.
 *   **Entity Layer (`entity/`)**: 
     Represents persistent state and core business logic. The `Position` JPA Entity exposes a record-style getter interface (e.g. `userId()` instead of `getUserId()`) and encapsulates its own JSON-P transformations (`toJSON()` and `fromJSON()`). It maps optional parameters such as `temperature` and `weatherCode`. The weather condition is represented as a structured `WeatherCode` enum, which is persisted to the database via a JPA `AttributeConverter` (`WeatherCodeConverter`).
 
 ---
 
-### 3.3 Health, Readiness, and Liveness Architecture
+### 3.3 Health, Readiness, Liveness, and System Info Architecture
 
-To ensure high availability and robust container orchestration (e.g., within Kubernetes), the backend implements the **MicroProfile Health** specification through the `quarkus-smallrye-health` extension. This isolates application lifecycle concerns into two distinct standard endpoints:
+To ensure high availability and robust container orchestration (e.g., within Kubernetes), the backend implements the **MicroProfile Health** specification through the `quarkus-smallrye-health` extension. This isolates application lifecycle concerns into distinct endpoints:
 
 #### 3.3.1 Readiness Check (`/q/health/ready`)
 *   **Purpose**: Verifies if the container is currently capable of handling incoming business requests (i.e., whether the database is accessible).
@@ -133,6 +141,14 @@ To ensure high availability and robust container orchestration (e.g., within Kub
 *   **Purpose**: Monitors if the JVM process itself is healthy and running, or if it is stuck in an unrecoverable state (e.g., deadlocks or Out-of-Memory).
 *   **Implementation**: Delegates directly to standard internal JVM and system resource checks. Following cloud-native best practices, it deliberately **does not query database connections** to prevent cascading container restarts during minor database hiccups.
 *   **Orchestration Behavior**: If this check fails, the orchestrator immediately kills and restarts the container to auto-heal the instance.
+
+#### 3.3.3 System Information Endpoint (`/api/system/info`)
+*   **Purpose**: Exposes static and dynamic metadata about the microservice build version and runtime environment.
+*   **Implementation**: Handled by `SystemBoundary.java` and `SystemInfo.java`.
+*   **Attributes Returned**:
+    *   `artifactId`: Resolved at runtime natively from Quarkus config properties (`quarkus.application.name`).
+    *   `version`: Resolved at runtime natively from Quarkus config properties (`quarkus.application.version`).
+    *   `startupTime`: Explicit ISO 8601 timestamp captured dynamically during JVM bootstrap (via `@Observes StartupEvent`).
 
 #### BCE Architectural Flow & Database Layer
 
@@ -145,10 +161,12 @@ graph TD
     subgraph BackendMicroservice [Backend Microservice]
         subgraph BoundaryLayer [Boundary Layer]
             Resource["PositionsResource (Boundary)"]
+            SysBoundary["SystemBoundary (Boundary)"]
         end
 
         subgraph ControlLayer [Control Layer]
             Control["Positions (Control)"]
+            SysInfo["SystemInfo (Control)"]
         end
 
         subgraph EntityLayer [Entity Layer]
@@ -166,8 +184,10 @@ graph TD
     end
 
     Browser --> Resource
+    Browser --> SysBoundary
     Resource --> EntityNode
     Resource --> Control
+    SysBoundary --> SysInfo
     Control --> DB
     Control --> Nominatim
     Control --> OpenMeteo
@@ -232,14 +252,14 @@ mvn clean package
 ### 4.2 Running the Application locally
 
 #### Option A: Dev Mode (Hot Reloading)
-You can start the Quarkus backend in development mode. In this mode, live coding is enabled, and an in-memory database is used automatically.
+You can start the Quarkus backend in development mode. In this mode, live coding is enabled, and an **In-Memory H2 Database** is used automatically (`jdbc:h2:mem:locator_dev`) to avoid file-locking problems.
 
 ```bash
 cd backend
 mvn quarkus:dev
 ```
-*   The application will be accessible at: `http://localhost:8080`
-*   The Swagger UI will be available at: `http://localhost:8080/q/swagger-ui`
+*   The application will be accessible at: `http://localhost:8090`
+*   The Swagger UI will be available at: `http://localhost:8090/q/swagger-ui`
 
 #### Option B: Production Runner
 To build and execute the application with a persistent file-based H2 database (`./data/locator`), run:
@@ -249,16 +269,20 @@ cd backend
 mvn package
 java -jar target/quarkus-app/quarkus-run.jar
 ```
+*   The production application will be accessible at: `http://localhost:8080`
 
 ---
 
 ### 4.3 Running Tests
 
-Tests are divided into three isolated tiers matching corporate guidelines:
+Tests are divided into isolated tiers matching corporate guidelines:
 
 #### Tier 1 & 2: Unit and Local Integration Tests (`backend`)
 *   **Unit Tests (`PositionTest.java`)**: Validates JSON-P serialization, deserialization, and record-style mapping.
-*   **Local Integration Tests (`PositionsResourceIT.java`)**: Spins up a local test environment, activates the H2 database, executes API calls via RestAssured, and tests edge cases and validation rules (e.g., throwing HTTP 400 when user IDs exceed 32 characters).
+*   **Local Integration Tests**:
+    *   `PositionsResourceIT.java`: Spins up a local test environment, activates an in-memory H2 database, executes API calls via RestAssured, and tests edge cases and validation rules. It uses `@BeforeEach` database cleanup to ensure complete test isolation and mocks external REST endpoints via `@InjectMock`.
+    *   `PositionsResourceEnrichmentIT.java`: Verifies the reverse-geocoding enrichment flow. Mocks the Nominatim and Open-Meteo REST clients using `@InjectMock` to validate the extraction of all 8 new metadata fields from the OSM JSON payload.
+    *   `SystemBoundaryIT.java`: Verifies the `/api/system/info` endpoint to ensure the Maven build metadata and startup timestamp are properly retrieved and returned.
 
 To run these tests:
 ```bash
@@ -269,7 +293,7 @@ mvn clean test failsafe:integration-test
 #### Tier 3: Out-of-Process System Integration Tests (`backend-st`)
 *   **System Tests (`PositionsSystemIT.java`)**: Verifies system fidelity using an independent module. It communicates with a running instance of your microservice through a typed MicroProfile REST Client (`PositionsResourceClient`).
 
-To run system tests (make sure the backend is already running on port `8080` via `mvn quarkus:dev` or `java -jar`):
+To run system tests (make sure the backend is already running on port `8090` via `mvn quarkus:dev` or `java -jar`):
 ```bash
 cd backend-st
 mvn clean verify
@@ -284,7 +308,7 @@ You can manually interact with and test the RESTful API endpoints using `curl` w
 ##### 1. Record a New Geo-Position (POST)
 Creates a new position entry for an authorized user. If `displayName`, `temperature`, or `weatherCode` are omitted, the backend will automatically resolve them using the geocoding and weather APIs.
 ```bash
-curl -i -X POST "http://localhost:8080/positions?userId=user123" \
+curl -i -X POST "http://localhost:8090/api/positions?userId=user123" \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "user123",
@@ -294,7 +318,7 @@ curl -i -X POST "http://localhost:8080/positions?userId=user123" \
     "timestamp": "2026-06-11T22:00:00Z"
   }'
 ```
-*Response payload showing automatic address and weather enrichment:*
+*Response payload showing automatic address and weather enrichment (including expanded OpenStreetMap fields):*
 ```json
 {
   "id": 1,
@@ -303,6 +327,13 @@ curl -i -X POST "http://localhost:8080/positions?userId=user123" \
   "longitude": 11.5820,
   "accuracy": 10.5,
   "displayName": "Marienplatz, Altstadt-Lehel, Munich, Upper Bavaria, Bavaria, 80331, Germany",
+  "osmCategory": "historic",
+  "osmType": "memorial",
+  "osmName": "Marienplatz",
+  "addressType": "historic",
+  "road": "Marienplatz",
+  "city": "Munich",
+  "country": "Germany",
   "temperature": 16.8,
   "weatherCode": 2,
   "timestamp": "2026-06-11T22:00:00Z"
@@ -312,13 +343,13 @@ curl -i -X POST "http://localhost:8080/positions?userId=user123" \
 ##### 2. Retrieve All Recorded Positions (GET)
 Gets list of stored user locations matching the authorized user.
 ```bash
-curl -i -X GET "http://localhost:8080/positions?userId=user123"
+curl -i -X GET "http://localhost:8090/api/positions?userId=user123"
 ```
 
 ##### 3. Retrieve Positions with Distance Calculation (GET with optional lat/lon)
 Gets user locations and calculates the distance in kilometers from a reference point (e.g., Munich) using the Haversine formula.
 ```bash
-curl -i -X GET "http://localhost:8080/positions?userId=user123&lat=48.1351&lon=11.5820"
+curl -i -X GET "http://localhost:8090/api/positions?userId=user123&lat=48.1351&lon=11.5820"
 ```
 *Response payload showing automatic distance calculation in kilometers:*
 ```json
@@ -330,6 +361,13 @@ curl -i -X GET "http://localhost:8080/positions?userId=user123&lat=48.1351&lon=1
     "longitude": 11.5820,
     "accuracy": 10.5,
     "displayName": "Marienplatz, Munich, Germany",
+    "osmCategory": "historic",
+    "osmType": "memorial",
+    "osmName": "Marienplatz",
+    "addressType": "historic",
+    "road": "Marienplatz",
+    "city": "Munich",
+    "country": "Germany",
     "temperature": 16.8,
     "weatherCode": 2,
     "timestamp": "2026-06-11T22:00:00Z",
@@ -341,19 +379,33 @@ curl -i -X GET "http://localhost:8080/positions?userId=user123&lat=48.1351&lon=1
 ##### 4. Delete a Position (DELETE)
 Removes a recorded position by its generated ID (e.g. ID `1`) for an authorized user.
 ```bash
-curl -i -X DELETE "http://localhost:8080/positions/1?userId=user123"
+curl -i -X DELETE "http://localhost:8090/api/positions/1?userId=user123"
 ```
 
-##### 5. Check MicroProfile Readiness Check (GET)
+##### 5. Retrieve System Information (GET)
+Gets build properties (artifactId and version) and the JVM startup timestamp.
+```bash
+curl -i -X GET "http://localhost:8090/api/system/info"
+```
+*Response payload:*
+```json
+{
+  "artifactId": "locator-service",
+  "version": "0.2.0",
+  "startupTime": "2026-06-28T15:16:01.966542367Z"
+}
+```
+
+##### 6. Check MicroProfile Readiness Check (GET)
 Returns the system status and H2 database availability check.
 ```bash
-curl -i -X GET http://localhost:8080/q/health/ready
+curl -i -X GET http://localhost:8090/q/health/ready
 ```
 
-##### 6. Check MicroProfile Liveness Check (GET)
+##### 7. Check MicroProfile Liveness Check (GET)
 Returns the state of the JVM process.
 ```bash
-curl -i -X GET http://localhost:8080/q/health/live
+curl -i -X GET http://localhost:8090/q/health/live
 ```
 
 

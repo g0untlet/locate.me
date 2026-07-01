@@ -1,4 +1,12 @@
 /* ==========================================================================
+   Global Configuration: Dynamic API Environment Detection (DEV vs PROD)
+   ========================================================================== */
+const API_BASE_URL = window.location.port === '8080'
+    ? 'http://localhost:8080'  // Local Quarkus Backend for local Live Server testing
+    : '';                      // Production/Caddy-Proxy Environment (relative proxy paths)
+const API_PATH = '/api';
+
+/* ==========================================================================
    SPA Navigation Framework (Tab Controller)
    ========================================================================== */
 document.querySelectorAll('.nav-item').forEach(button => {
@@ -25,102 +33,259 @@ function getActiveUserId() {
 }
 
 /* ==========================================================================
-   Global Helper: Pure, lightweight Inline SVG Weather Icon Renderer
+   Global Helper: Pure, lightweight Inline SVG Location Icon Renderer
    ========================================================================== */
-function getWeatherIconSvg(code) {
-    if (code === undefined || code === null) {
-        return `<svg class="embedded-weather-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
-    }
-    if (code === 0) {
-        return `<svg class="embedded-weather-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
-    }
-    if (code >= 1 && code <= 3) {
-        return `<svg class="embedded-weather-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.42-1.03-1.42-2.5-3.5-2.5a4.5 4.5 0 0 0-4.5 4.5c0 .14 0 .27.02.4A4 4 0 0 0 4 17a3.5 3.5 0 0 0 3.5 3.5h10z"></path></svg>`;
-    }
-    if (code >= 45 && code <= 48) {
-        return `<svg class="embedded-weather-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="8" x2="19" y2="8"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="6" y1="16" x2="18" y2="16"></line></svg>`;
-    }
-    if ((code >= 51 && code <= 55) || (code >= 61 && code <= 65) || (code >= 80 && code <= 82)) {
-        return `<svg class="embedded-weather-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16" y1="13" x2="16" y2="21"></line><line x1="8" y1="13" x2="8" y2="21"></line><line x1="12" y1="15" x2="12" y2="23"></line><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path></svg>`;
-    }
-    if (code >= 71 && code <= 75) {
-        return `<svg class="embedded-weather-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line><line x1="4.93" y1="19.07" x2="19.07" y2="4.93"></line></svg>`;
-    }
-    return `<svg class="embedded-weather-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+function getLocationIconSvg(category, type) {
+    const svgAttrs = `viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"`;
+    const defaultIcon = `<svg ${svgAttrs}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`;
+
+    if (!category) return defaultIcon;
+
+switch (category) {
+        case 'building':
+            return `<svg ${svgAttrs}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`;
+        
+        case 'highway':
+        case 'railway':
+            // 1. Spezialfall: Bus / Bahn / Haltestelle
+            if (['bus_stop', 'platform', 'station'].includes(type)) {
+                return `<svg ${svgAttrs}><rect x="6" y="3" width="12" height="16" rx="2"></rect><line x1="9" y1="19" x2="7" y2="22"></line><line x1="15" y1="19" x2="17" y2="22"></line><circle cx="9" cy="15" r="1"></circle><circle cx="15" cy="15" r="1"></circle><path d="M6 9h12"></path></svg>`;
+            }
+            // 2. Standard: Straße (Zwei Linien, die nach oben zusammenlaufen mit gestrichelter Mittellinie)
+            return `<svg ${svgAttrs}><line x1="18" y1="21" x2="14" y2="3"></line><line x1="6" y1="21" x2="10" y2="3"></line><line x1="12" y1="3" x2="12" y2="21" stroke-dasharray="3,3"></line></svg>`;
+        
+        case 'shop':
+        case 'craft':
+            return `<svg ${svgAttrs}><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`;
+        
+        case 'leisure':
+        case 'landuse':
+        case 'natural':
+            // Sauberes Baum-Symbol für Natur/Parks
+            return `<svg ${svgAttrs}><path d="M12 19V5M12 5a4 4 0 0 0-4 4c0 2.5 2.5 5 4 7m0-11a4 4 0 0 1 4 4c0 2.5-2.5 5-4 7m-3 3h6"></path></svg>`;
+        
+        case 'amenity':
+            if (['restaurant', 'cafe', 'fast_food', 'bar'].includes(type)) {
+                return `<svg ${svgAttrs}><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>`;
+            }
+            // Behörden / Banken / Kirchen: Ein klassisches Spalten-Monument/Gebäude (Bank/Architektur)
+            return `<svg ${svgAttrs}><path d="M3 21h18M3 10h18M3 7l9-4 9 4M7 10v7M12 10v7M17 10v7"></path></svg>`;
+        
+        case 'tourism':
+        case 'historic':
+            return `<svg ${svgAttrs}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+        
+        case 'waterway':
+            return `<svg ${svgAttrs}><path d="M12 22a7 7 0 0 0 7-7c0-4-7-13-7-13s-7 9-7 13a7 7 0 0 0 7 7z"></path></svg>`;
+        
+        default:
+            return defaultIcon;
+    }    
 }
 
 /* ==========================================================================
-   Page 1: Geolocation Tracking (Locate Engine)
+   Global Helper: Semantic Address Formatter
+   ========================================================================== */
+function formatShortAddress(pos) {
+    if (!pos) return "Unknown Location";
+    let shortAddress = '';
+
+    if (pos.osmName && pos.osmName.trim() !== '') {
+        shortAddress = pos.osmName;
+    } else if (pos.road && pos.houseNumber) {
+        shortAddress = `${pos.road} ${pos.houseNumber}`;
+    } else if (pos.road) {
+        shortAddress = pos.road;
+    } else {
+        return pos.displayName || `Lat: ${pos.latitude.toFixed(4)}, Lon: ${pos.longitude.toFixed(4)}`;
+    }
+
+    if (pos.city) {
+        shortAddress += `, ${pos.city}`;
+    }
+
+    if (pos.country) {
+        shortAddress += `, ${pos.country}`;
+    }
+
+    return shortAddress;
+}
+
+/* ==========================================================================
+   Global Helper: Pure, lightweight Inline SVG Weather Icon Renderer
+   ========================================================================== */
+function getWeatherIconSvg(code) {
+    const svgAttrs = `class="embedded-weather-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`;
+    
+    // Fallback für ungültige Codes (Info-Icon)
+    const fallbackIcon = `<svg ${svgAttrs}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+
+    if (code === undefined || code === null) {
+        return fallbackIcon;
+    }
+
+    switch (true) {
+        // 0: Klarer Himmel (Sonne)
+        case (code === 0):
+            return `<svg class="embedded-weather-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+
+        // 1-3: Leicht bewölkt bis bedeckt (Wolke)
+        case (code >= 1 && code <= 3):
+            return `<svg ${svgAttrs}><path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.42-1.03-1.42-2.5-3.5-2.5a4.5 4.5 0 0 0-4.5 4.5c0 .14 0 .27.02.4A4 4 0 0 0 4 17a3.5 3.5 0 0 0 3.5 3.5h10z"></path></svg>`;
+
+        // 45-48: Nebel und Reifnebel (Horizontale Linien)
+        case (code >= 45 && code <= 48):
+            return `<svg ${svgAttrs}><line x1="5" y1="8" x2="19" y2="8"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="6" y1="16" x2="18" y2="16"></line></svg>`;
+
+        // 51-55, 61-65, 80-82: Sprühregen, Regen und Regenschauer (Wolke mit Regenlinien)
+        case ((code >= 51 && code <= 55) || (code >= 61 && code <= 65) || (code >= 80 && code <= 82)):
+            return `<svg ${svgAttrs}><line x1="16" y1="13" x2="16" y2="21"></line><line x1="8" y1="13" x2="8" y2="21"></line><line x1="12" y1="15" x2="12" y2="23"></line><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path></svg>`;
+
+        // 71-75, 77, 85, 86: Schneefall, Schneegriesel und Schneeschauer (Schneeflocke)
+        case ((code >= 71 && code <= 75) || code === 77 || code === 85 || code === 86):
+            return `<svg ${svgAttrs}><line x1="12" y1="2" x2="12" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line><line x1="4.93" y1="19.07" x2="19.07" y2="4.93"></line></svg>`;
+
+        // 95, 96, 99: Gewitter mit/ohne Hagel (Wolke mit Blitz)
+        case (code === 95 || code === 96 || code === 99):
+            return `<svg ${svgAttrs}><path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 8.58"></path><polyline points="13 11 9 17 12 17 11 23 15 17 12 17 13 11"></polyline></svg>`;
+
+        // Fallback für alle anderen unbesetzten Codes
+        default:
+            return fallbackIcon;
+    }
+}
+
+/* ==========================================================================
+   Page 1: Geolocation Tracking (Locate Engine with watchPosition Filter)
    ========================================================================== */
 document.getElementById('track-btn').addEventListener('click', () => {
     const statusText = document.getElementById('status');
     const responseCard = document.getElementById('response-card');
     
-    statusText.innerText = "Locating GPS...";
+    statusText.innerText = "Searching for precise GPS...";
     statusText.className = "status-loading";
     responseCard.classList.add('hidden');
-
-    const geoOptions = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
 
     if (!navigator.geolocation) {
         showError("Geolocation is not supported by your browser.");
         return;
     }
 
-    navigator.geolocation.getCurrentPosition(
+    let watchId = null;
+    let bestPosition = null;
+    
+    // Safety Fallback-Timer: Send the best available location after max 10 seconds
+    const maxWaitTimer = setTimeout(() => {
+        if (watchId) {
+            navigator.geolocation.clearWatch(watchId);
+            if (bestPosition) {
+                statusText.innerText = "Timeout reached. Sending best available location...";
+                sendPositionToBackend(bestPosition);
+            } else {
+                showError("GPS Timeout: No position found.");
+            }
+        }
+    }, 10000);
+
+    const geoOptions = { 
+        enableHighAccuracy: true, 
+        timeout: 9000, 
+        maximumAge: 0 
+    };
+
+    watchId = navigator.geolocation.watchPosition(
         (position) => {
-            statusText.innerText = "Sending to backend...";
-            
-            const clientTimestamp = new Date();
-            const isoStringTimestamp = clientTimestamp.toISOString();
-            
-            const payload = {
-                userId: getActiveUserId(),
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                timestamp: isoStringTimestamp
-            };
+            // Update baseline if we receive a more accurate measurement
+            if (!bestPosition || position.coords.accuracy < bestPosition.coords.accuracy) {
+                bestPosition = position;
+                statusText.innerText = `Improving signal... (Accuracy: ±${Math.round(position.coords.accuracy)}m)`;
+            }
 
-            fetch(`/positions?userId=${encodeURIComponent(getActiveUserId())}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(response => {
-                if (!response.ok) throw new Error(`Server returned status ${response.status}`);
-                return response.json();
-            })
-            .then(data => {
-                statusText.innerText = "Location saved successfully!";
-                statusText.className = "status-success";
-
-                const localTimeFormatted = clientTimestamp.toLocaleString('de-DE', {
-                    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                });
-                document.getElementById('res-time-span').innerText = `at ${localTimeFormatted}`;
-                
-                if (data.temperature !== undefined && data.temperature !== null) {
-                    document.getElementById('res-temp').innerText = `${parseFloat(data.temperature).toFixed(1)} °C`;
-                } else {
-                    document.getElementById('res-temp').innerText = "-";
-                }
-                
-                const iconContainer = document.getElementById('res-weather-icon-container');
-                iconContainer.innerHTML = getWeatherIconSvg(data.weatherCode);
-                const mainIconSvg = iconContainer.querySelector('svg');
-                if (mainIconSvg) mainIconSvg.style.stroke = "#1a5f8c";
-
-                document.getElementById('res-weather').innerText = `Code ${data.weatherCode} (${getWeatherText(data.weatherCode)})`;
-                document.getElementById('res-address').innerText = data.displayName || "Unknown Location";
-                responseCard.classList.remove('hidden');
-            })
-            .catch(err => showError(`Backend Error: ${err.message}`));
+            // Ideal precision threshold achieved (<= 20 meters)?
+            if (position.coords.accuracy <= 20) {
+                clearTimeout(maxWaitTimer);
+                navigator.geolocation.clearWatch(watchId);
+                statusText.innerText = "Precise location locked! Sending...";
+                sendPositionToBackend(position);
+            }
         },
-        (error) => showError(`GPS Error: ${error.message}`),
+        (error) => {
+            // Safe fallback if an error occurs but a decent baseline was already captured
+            clearTimeout(maxWaitTimer);
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+            
+            if (bestPosition) {
+                sendPositionToBackend(bestPosition);
+            } else {
+                showError(`GPS Error: ${error.message}`);
+            }
+        },
         geoOptions
     );
 });
+
+/* ==========================================================================
+   Asynchronous HTTP POST Engine for Position Export
+   ========================================================================== */
+function sendPositionToBackend(position) {
+    const statusText = document.getElementById('status');
+    const responseCard = document.getElementById('response-card');
+    
+    statusText.innerText = "Sending to backend...";
+    
+    const clientTimestamp = new Date();
+    const isoStringTimestamp = clientTimestamp.toISOString();
+    
+    const payload = {
+        userId: getActiveUserId(),
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        timestamp: isoStringTimestamp
+    };
+
+    fetch(`${API_BASE_URL}${API_PATH}/positions?userId=${encodeURIComponent(getActiveUserId())}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(response => {
+        if (!response.ok) throw new Error(`Server returned status ${response.status}`);
+        return response.json();
+    })
+    .then(data => {
+        statusText.innerText = "Location saved successfully!";
+        statusText.className = "status-success";
+
+        const localTimeFormatted = clientTimestamp.toLocaleString('de-DE', {
+            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+        document.getElementById('res-time-span').innerText = localTimeFormatted;
+        
+        if (data.temperature !== undefined && data.temperature !== null) {
+            document.getElementById('res-temp').innerText = `${parseFloat(data.temperature).toFixed(1)} °C`;
+        } else {
+            document.getElementById('res-temp').innerText = "-";
+        }
+        
+        const iconContainer = document.getElementById('res-weather-icon-container');
+        iconContainer.innerHTML = getWeatherIconSvg(data.weatherCode);
+        const mainIconSvg = iconContainer.querySelector('svg');
+        if (mainIconSvg) mainIconSvg.style.stroke = "#1a5f8c";
+
+        document.getElementById('res-weather').innerText = getWeatherText(data.weatherCode);
+
+        const addressContainer = document.getElementById('res-address-container');
+        addressContainer.innerHTML = `
+            ${getLocationIconSvg(data.osmCategory, data.osmType)}
+            <span>${formatShortAddress(data)}</span>
+        `;
+        addressContainer.title = data.displayName || "No detailed address available.";
+
+        responseCard.classList.remove('hidden');
+    })
+    .catch(err => showError(`Backend Error: ${err.message}`));
+}
 
 /* ==========================================================================
    Page 2: History Engine (Accordion Drawer Implementation)
@@ -132,7 +297,7 @@ function fetchAndRenderHistory() {
     const activeUserId = getActiveUserId();
 
     const fetchWithCoords = (lat, lon) => {
-        let url = `/positions?userId=${encodeURIComponent(activeUserId)}`;
+        let url = `${API_BASE_URL}${API_PATH}/positions?userId=${encodeURIComponent(activeUserId)}`;
         if (lat !== null && lon !== null) {
             url += `&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
         }
@@ -198,7 +363,9 @@ function fetchAndRenderHistory() {
                             }
                         }
 
-                        const fullAddress = pos.displayName || `Coordinates: ${pos.latitude || '?'}, ${pos.longitude || '?'}`;
+                        const shortAddress = formatShortAddress(pos);
+                        const locationIcon = getLocationIconSvg(pos.osmCategory, pos.osmType);
+                        const fullAddressForTitle = pos.displayName || 'No detailed address available.';
 
                         const isLowAccuracy = pos.accuracy && parseFloat(pos.accuracy) > 30;
                         const badgeBgColor = isLowAccuracy ? '#fef3c7' : '#f1f5f9';
@@ -224,7 +391,10 @@ function fetchAndRenderHistory() {
                                     </span>
                                 </div>
                                 <div class="log-card-body">
-                                    <div class="log-card-address">${fullAddress}</div>
+                                    <div class="log-card-address address-container" title="${fullAddressForTitle}">
+                                        ${locationIcon}
+                                        <span>${shortAddress}</span>
+                                    </div>
                                     <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
                                         <div class="log-card-temp ${tempClass}">
                                             ${weatherIconSvg}
@@ -279,7 +449,7 @@ function fetchAndRenderHistory() {
                             const targetId = deleteBtn.getAttribute('data-id');
                             if (!targetId) return;
                             
-                            fetch(`/positions/${targetId}?userId=${encodeURIComponent(getActiveUserId())}`, { method: 'DELETE' })
+                            fetch(`${API_BASE_URL}${API_PATH}/positions/${targetId}?userId=${encodeURIComponent(getActiveUserId())}`, { method: 'DELETE' })
                             .then(response => {
                                 if (!response.ok) throw new Error("Could not process record removal");
                                 
@@ -355,14 +525,53 @@ function showError(message) {
 }
 
 function getWeatherText(code) {
-    if (code === 0) return "Clear sky";
-    if (code >= 1 && code <= 3) return "Mainly clear";
-    if (code >= 45 && code <= 48) return "Fog";
-    if (code >= 51 && code <= 55) return "Drizzle";
-    if (code >= 61 && code <= 65) return "Rain";
-    if (code >= 71 && code <= 75) return "Snow";
-    if (code >= 80 && code <= 82) return "Rain showers";
-    return "Unknown";
+    if (code === undefined || code === null) {
+        return "Unknown";
+    }
+
+    switch (true) {
+        case (code === 0):
+            return "Clear sky";
+            
+        case (code >= 1 && code <= 3):
+            return "Mainly clear"; // Deckt auch 'partly cloudy' und 'overcast' ab
+            
+        case (code >= 45 && code <= 48):
+            return "Fog"; // Nebel und Reifnebel
+            
+        case (code >= 51 && code <= 55):
+            return "Drizzle"; // Leichter bis dichter Sprühregen
+            
+        case (code === 56 || code === 57):
+            return "Freezing drizzle"; // Gefrierender Sprühregen
+            
+        case (code >= 61 && code <= 65):
+            return "Rain"; // Leichter bis starker Regen
+            
+        case (code === 66 || code === 67):
+            return "Freezing rain"; // Gefrierender Regen
+            
+        case (code >= 71 && code <= 75):
+            return "Snow fall"; // Leichter bis starker Schneefall
+            
+        case (code === 77):
+            return "Snow grains"; // Schneegriesel
+            
+        case (code >= 80 && code <= 82):
+            return "Rain showers"; // Leichte bis heftige Regenschauer
+            
+        case (code === 85 || code === 86):
+            return "Snow showers"; // Schneeschauer
+            
+        case (code === 95):
+            return "Thunderstorm"; // Gewitter ohne Hagel (Dein aktueller Code)
+            
+        case (code === 96 || code === 99):
+            return "Thunderstorm with hail"; // Gewitter mit Hagel
+            
+        default:
+            return "Unknown";
+    }
 }
 
 /* ==========================================================================
