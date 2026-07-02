@@ -11,7 +11,6 @@ import jakarta.inject.Inject;
 import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObject;
-import jakarta.json.JsonObjectBuilder;
 import jakarta.transaction.Transactional;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -96,7 +95,7 @@ public class PositionsResource {
             throw new BadRequestException("Validation failed: " + violations.iterator().next().getMessage());
         }
 
-        Position created = this.positions.create(position);
+        Position created = this.positions.create(position, true);
         return Response.created(URI.create("/positions/" + created.id()))
                 .entity(created.toJSON())
                 .build();
@@ -146,6 +145,40 @@ public class PositionsResource {
             .forEach(arrayBuilder::add);
 
         return Response.ok(arrayBuilder.build()).build();
+    }
+
+    @GET
+    @Path("/current")
+    @PermitAll
+    public Response fetchCurrentPosition(
+            @QueryParam("userId") String userId,
+            @QueryParam("lat") Double lat,
+            @QueryParam("lon") Double lon) {
+        LOG.log(System.Logger.Level.DEBUG, "Received GET current position request for user {0} (lat={1}, lon={2})", userId, lat, lon);
+        validateAndAuthorize(userId);
+
+        if(lat == null || lon == null) {
+            throw new BadRequestException("Both lat and lon query parameters are required");
+        }
+
+        Position position;
+        position = new Position();
+        position.userId(userId);
+        position.latitude(lat);
+        position.longitude(lon);
+        position.timestamp(java.time.Instant.now());
+
+        Set<ConstraintViolation<Position>> violations = this.validator.validate(position);
+        if (!violations.isEmpty()) {
+            LOG.log(System.Logger.Level.WARNING, "Validation failed for position creation");
+            throw new BadRequestException("Validation failed: " + violations.iterator().next().getMessage());
+        }
+
+        Position current = this.positions.create(position, false);
+        return Response.ok(URI.create("/positions/current"))
+                .entity(current.toJSON())
+                .build();
+
     }
 
 }

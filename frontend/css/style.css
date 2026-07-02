@@ -513,3 +513,52 @@ body {
 
 .hidden { display: none !important; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ==========================================================================
+   Locate Page: 2-Step Action Group
+   ========================================================================== */
+.locate-action-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 280px;
+    margin-bottom: 14px;
+}
+
+/* Kein eigenes margin-bottom, da gap im Parent das Spacing übernimmt */
+.locate-action-group .track-btn {
+    margin-bottom: 0;
+}
+
+/* Sekundär-Stil für "Send Location" (Speichern-Button) */
+.track-btn--save {
+    background-color: #ffffff;
+    color: #1a5f8c;
+    border: 1.5px solid var(--primary-color);
+    box-shadow: none;
+}
+
+.track-btn--save:hover {
+    background-color: #e0f2fe;
+}
+
+/* ==========================================================================
+   Preview Badge (Info-Hinweis Vorschau-Modus)
+   ========================================================================== */
+.preview-badge {
+    width: 100%;
+    max-width: 280px;
+    background-color: #fef9c3;
+    color: #92400e;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-align: center;
+    letter-spacing: 0.1px;
+    margin-bottom: 14px;
+    animation: fadeIn 0.2s ease-out;
+}
