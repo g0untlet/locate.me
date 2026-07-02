@@ -26,7 +26,7 @@ public class Positions {
     @RestClient
     WeatherClient weatherClient;
 
-    public Position create(Position position) {
+    public Position create(Position position, boolean persist) {
         LOG.log(System.Logger.Level.DEBUG, "Creating position for user {0}", position.userId());
         if (position.displayName() == null || position.displayName().isBlank()) {
             try {
@@ -72,7 +72,9 @@ public class Positions {
             LOG.log(System.Logger.Level.WARNING, "Failed to resolve weather via Open-Meteo API: {0}", e.getMessage());
         }
 
-        this.em.persist(position);
+        if (persist) {
+            this.em.persist(position);
+        }
         return position;
     }
 
