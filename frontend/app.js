@@ -156,15 +156,159 @@ function getWeatherIconSvg(code) {
 }
 
 /* ==========================================================================
-   Page 1: Geolocation Tracking (Locate Engine with watchPosition Filter)
+   Locate Page: Cached GPS Position (shared between Fetch and Send step)
    ========================================================================== */
-document.getElementById('track-btn').addEventListener('click', () => {
+let _cachedLocatePosition = null;
+
+/* ==========================================================================
+   Locate Page: UI State Controller
+   ========================================================================== */
+function resetLocatePage() {
+    document.getElementById('btn-fetch-location').textContent = '\uD83D\uDCCD FETCH LOCATION';
+    document.getElementById('track-btn').style.display = 'none';
+    document.getElementById('preview-badge').style.display = 'none';
+    _cachedLocatePosition = null;
+}
+
+/* ==========================================================================
+   Page 1 – Step 1: Fetch Location (GPS + GET /api/positions/current)
+   ========================================================================== */
+document.getElementById('btn-fetch-location').addEventListener('click', () => {
     const statusText = document.getElementById('status');
     const responseCard = document.getElementById('response-card');
 
-    statusText.innerText = "Searching for precise GPS...";
+    statusText.innerText = "Searching for GPS signal...";
     statusText.className = "status-loading";
     responseCard.classList.add('hidden');
+
+    // Reset Step-2 UI bei erneutem Fetch
+    document.getElementById('preview-badge').style.display = 'none';
+    document.getElementById('track-btn').style.display = 'none';
+    _cachedLocatePosition = null;
+
+    if (!navigator.geolocation) {
+        showError("Geolocation is not supported by your browser.");
+        return;
+    }
+
+    let watchId = null;
+    let bestPosition = null;
+
+    const maxWaitTimer = setTimeout(() => {
+        if (watchId) {
+            navigator.geolocation.clearWatch(watchId);
+            if (bestPosition) {
+                statusText.innerText = "Timeout reached. Fetching best available...";
+                fetchCurrentPosition(bestPosition);
+            } else {
+                showError("GPS Timeout: No position found.");
+            }
+        }
+    }, 10000);
+
+    const geoOptions = {
+        enableHighAccuracy: true,
+        timeout: 9000,
+        maximumAge: 0
+    };
+
+    watchId = navigator.geolocation.watchPosition(
+        (position) => {
+            if (!bestPosition || position.coords.accuracy < bestPosition.coords.accuracy) {
+                bestPosition = position;
+                statusText.innerText = `Improving signal... (\u00B1${Math.round(position.coords.accuracy)}m)`;
+            }
+            if (position.coords.accuracy <= 20) {
+                clearTimeout(maxWaitTimer);
+                navigator.geolocation.clearWatch(watchId);
+                fetchCurrentPosition(position);
+            }
+        },
+        (error) => {
+            clearTimeout(maxWaitTimer);
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+            if (bestPosition) {
+                fetchCurrentPosition(bestPosition);
+            } else {
+                showError(`GPS Error: ${error.message}`);
+            }
+        },
+        geoOptions
+    );
+});
+
+/* ==========================================================================
+   GET /api/positions/current – Read-Only Preview Renderer
+   ========================================================================== */
+function fetchCurrentPosition(position) {
+    const statusText = document.getElementById('status');
+    const responseCard = document.getElementById('response-card');
+    const fetchBtn = document.getElementById('btn-fetch-location');
+
+    statusText.innerText = "Fetching location data...";
+    statusText.className = "status-loading";
+
+    const { latitude, longitude } = position.coords;
+    const url = `${API_BASE_URL}${API_PATH}/positions/current?userId=${encodeURIComponent(getActiveUserId())}&lat=${latitude}&lon=${longitude}`;
+
+    fetch(url)
+        .then(response => {
+            if (!response.ok) throw new Error(`Server returned status ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            statusText.innerText = "Preview loaded. Save to history?";
+            statusText.className = "status-success";
+
+            // Response-Card befüllen (identische Felder wie sendPositionToBackend)
+            const now = new Date();
+            document.getElementById('res-time-span').innerText = now.toLocaleString('de-DE', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+
+            document.getElementById('res-temp').innerText =
+                (data.temperature != null) ? `${parseFloat(data.temperature).toFixed(1)} \u00B0C` : '-';
+
+            const iconContainer = document.getElementById('res-weather-icon-container');
+            iconContainer.innerHTML = getWeatherIconSvg(data.weatherCode);
+            const mainIconSvg = iconContainer.querySelector('svg');
+            if (mainIconSvg) mainIconSvg.style.stroke = "#1a5f8c";
+
+            document.getElementById('res-weather').innerText = getWeatherText(data.weatherCode);
+
+            const addressContainer = document.getElementById('res-address-container');
+            addressContainer.innerHTML = `
+                ${getLocationIconSvg(data.osmCategory, data.osmType)}
+                <span>${formatShortAddress(data)}</span>
+            `;
+            addressContainer.title = data.displayName || "No detailed address available.";
+
+            responseCard.classList.remove('hidden');
+
+            // Step-2 UI freischalten: Position cachen, Badge + Save-Button einblenden
+            _cachedLocatePosition = position;
+            fetchBtn.textContent = 'Refresh';
+            document.getElementById('preview-badge').style.display = 'block';
+            document.getElementById('track-btn').style.display = 'block';
+        })
+        .catch(err => showError(`Fetch Error: ${err.message}`));
+}
+
+/* ==========================================================================
+   Page 1 – Step 2: Send Location (POST – frische GPS-Abfrage, Cache nur als Guard)
+   ========================================================================== */
+document.getElementById('track-btn').addEventListener('click', () => {
+    // Guard: Nur erlaubt, wenn zuvor ein Fetch erfolgreich war
+    if (!_cachedLocatePosition) {
+        showError("No position available. Please fetch first.");
+        return;
+    }
+
+    const statusText = document.getElementById('status');
+
+    statusText.innerText = "Searching for precise GPS...";
+    statusText.className = "status-loading";
 
     if (!navigator.geolocation) {
         showError("Geolocation is not supported by your browser.");
@@ -195,13 +339,10 @@ document.getElementById('track-btn').addEventListener('click', () => {
 
     watchId = navigator.geolocation.watchPosition(
         (position) => {
-            // Update baseline if we receive a more accurate measurement
             if (!bestPosition || position.coords.accuracy < bestPosition.coords.accuracy) {
                 bestPosition = position;
-                statusText.innerText = `Improving signal... (Accuracy: ±${Math.round(position.coords.accuracy)}m)`;
+                statusText.innerText = `Improving signal... (\u00B1${Math.round(position.coords.accuracy)}m)`;
             }
-
-            // Ideal precision threshold achieved (<= 20 meters)?
             if (position.coords.accuracy <= 20) {
                 clearTimeout(maxWaitTimer);
                 navigator.geolocation.clearWatch(watchId);
@@ -210,10 +351,8 @@ document.getElementById('track-btn').addEventListener('click', () => {
             }
         },
         (error) => {
-            // Safe fallback if an error occurs but a decent baseline was already captured
             clearTimeout(maxWaitTimer);
             if (watchId) navigator.geolocation.clearWatch(watchId);
-
             if (bestPosition) {
                 sendPositionToBackend(bestPosition);
             } else {
@@ -283,6 +422,15 @@ function sendPositionToBackend(position) {
             addressContainer.title = data.displayName || "No detailed address available.";
 
             responseCard.classList.remove('hidden');
+
+            // Step-2 UI zurücksetzen: Doppel-Saves verhindern, Fetch-Button zurücksetzen
+            document.getElementById('preview-badge').style.display = 'none';
+            document.getElementById('track-btn').style.display = 'none';
+            document.getElementById('btn-fetch-location').textContent = 'FETCH LOCATION';
+            _cachedLocatePosition = null;
+
+            statusText.innerText = "Successfully saved to history!";
+            statusText.className = "status-success";
         })
         .catch(err => showError(`Backend Error: ${err.message}`));
 }
@@ -491,19 +639,33 @@ function fetchAndRenderHistory() {
             });
     };
 
+
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 fetchWithCoords(pos.coords.latitude, pos.coords.longitude);
             },
-            () => {
+            (err) => {
+                console.warn(`Geolocation Error (${err.code}): ${err.message}`);
+
+                // Special handling for timeouts: log it clearly for debugging
+                if (err.code === err.TIMEOUT) {
+                    console.error("GPS retrieval took too long (Timeout expired).");
+                }
+
+                // Fallback to null, null as before
                 fetchWithCoords(null, null);
             },
-            { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
+            {
+                enableHighAccuracy: false,
+                timeout: 15000,         // Increased to 15 seconds (crucial for ChromeOS wake-up)
+                maximumAge: 60000       // Reduced cache to 1 minute to ensure fresh data on subsequent clicks
+            }
         );
     } else {
         fetchWithCoords(null, null);
     }
+
 }
 
 /* ==========================================================================

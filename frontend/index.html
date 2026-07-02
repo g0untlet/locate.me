@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>locate.me</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=0.2.0">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
@@ -19,10 +19,19 @@
         </header>
         
         <section id="page-locate" class="app-page">
-            <button id="track-btn" class="track-btn">
-                SEND LOCATION
-            </button>
-            
+            <div class="locate-action-group">
+                <button id="btn-fetch-location" class="track-btn">
+                    FETCH LOCATION
+                </button>
+                <button id="track-btn" class="track-btn track-btn--save" style="display: none;">
+                    SAVE LOCATION
+                </button>
+            </div>
+
+            <div id="preview-badge" class="preview-badge" style="display: none;">
+                Preview: The position has not yet been saved.
+            </div>
+
             <div class="status-container">
                 <div id="status" class="status-ready">Ready</div>
             </div>
@@ -72,7 +81,7 @@
                 <div id="settings-status" class="settings-status"></div>
                 
                 <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: 25px; letter-spacing: 0.5px;">
-                    Version 0.2.0 (20260701)
+                    Version 0.2.0 (20260702)
                 </div>
             </div>
         </section>
@@ -104,6 +113,6 @@
         </nav>
     </div>
 
-    <script src="app.js" defer></script>
+    <script src="app.js?v=0.2.0" defer></script>
 </body>
 </html>
