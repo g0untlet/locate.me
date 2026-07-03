@@ -62,7 +62,7 @@ body {
 }
 
 /* ==========================================================================
-   Header Design (Option 3: Brand-Only mit Status-Dot)
+   Header Design & Dynamic Status Indicator
    ========================================================================== */
 .app-header {
     display: flex;
@@ -94,28 +94,34 @@ body {
 }
 
 .status-dot {
-    width: 8px;
-    height: 8px;
-    background-color: #16a34a;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    position: relative;
+    background-color: #64748b; /* Neutral fallback before check */
+    transition: background-color 0.3s ease;
 }
 
-.status-dot::after {
-    content: '';
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    background-color: #16a34a;
-    border-radius: 50%;
-    animation: ripple 2s infinite ease-out;
+/* Dynamic status classes with clean box-shadow pulse loops */
+.status-dot.online {
+    background-color: #10b981;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulse-green 2s infinite;
 }
 
-@keyframes ripple {
-    0% { transform: scale(1); opacity: 0.7; }
-    100% { transform: scale(3.5); opacity: 0; }
+.status-dot.offline {
+    background-color: #ef4444;
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-green {
+    70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+@keyframes pulse-red {
+    70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
 .app-page {
@@ -527,12 +533,10 @@ body {
     margin-bottom: 14px;
 }
 
-/* Kein eigenes margin-bottom, da gap im Parent das Spacing übernimmt */
 .locate-action-group .track-btn {
     margin-bottom: 0;
 }
 
-/* Sekundär-Stil für "Send Location" (Speichern-Button) */
 .track-btn--save {
     background-color: #ffffff;
     color: #1a5f8c;
@@ -577,18 +581,18 @@ body {
     position: absolute;
     top: -4px;
     right: -8px;
-    background-color: #ef4444; /* Knalliges Signalrot */
+    background-color: #ef4444;
     color: #ffffff;
     font-size: 0.65rem;
     font-weight: 700;
     min-width: 16px;
     height: 16px;
     padding: 0 4px;
-    border-radius: 9999px; /* Perfekter Kreis */
+    border-radius: 9999px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1.5px solid #f8fafc; /* Kontrastkante zur Navigationsleiste */
+    border: 1.5px solid #f8fafc;
     box-shadow: 0 1px 3px rgba(0,0,0,0.15);
     z-index: 10;
     animation: badgePop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);

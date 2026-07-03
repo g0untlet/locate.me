@@ -7,6 +7,37 @@ const API_BASE_URL = window.location.port === '8080'
 const API_PATH = '/api';
 
 /* ==========================================================================
+   Backend Health & Status Indicator Logic
+   ========================================================================== */
+async function checkBackendStatus() {
+    const statusDot = document.querySelector('.status-dot');
+    if (!statusDot) return;
+
+    try {
+        // Enforce a strict timeout to avoid endless hangs on slow mobile networks
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+        const response = await fetch(`${API_BASE_URL}${API_PATH}/system/info`, {
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+            statusDot.classList.remove('offline');
+            statusDot.classList.add('online');
+            statusDot.parentElement.title = "Application Online";
+        } else {
+            throw new Error("Backend answered with error status code");
+        }
+    } catch (error) {
+        statusDot.classList.remove('online');
+        statusDot.classList.add('offline');
+        statusDot.parentElement.title = "Backend unreachable";
+    }
+}
+
+/* ==========================================================================
    SPA Navigation Framework (Tab Controller)
    ========================================================================== */
 document.querySelectorAll('.nav-item').forEach(button => {
@@ -61,7 +92,10 @@ function silentBadgeSync() {
                 updateHistoryBadge(data.length);
             }
         })
-        .catch(() => console.log("Silent badge sync paused. Offline or server unreachable."));
+        .catch(() => {
+            console.log("Silent badge sync paused. Offline or server unreachable.");
+            checkBackendStatus(); // Trigger 4: Reactive switch on background sync failure
+        });
 }
 
 /* ==========================================================================
@@ -79,11 +113,9 @@ function getLocationIconSvg(category, type) {
 
         case 'highway':
         case 'railway':
-            // 1. Spezialfall: Bus / Bahn / Haltestelle
             if (['bus_stop', 'platform', 'station'].includes(type)) {
                 return `<svg ${svgAttrs}><rect x="6" y="3" width="12" height="16" rx="2"></rect><line x1="9" y1="19" x2="7" y2="22"></line><line x1="15" y1="19" x2="17" y2="22"></line><circle cx="9" cy="15" r="1"></circle><circle cx="15" cy="15" r="1"></circle><path d="M6 9h12"></path></svg>`;
             }
-            // 2. Standard: Straße (Zwei Linien, die nach oben zusammenlaufen mit gestrichelter Mittellinie)
             return `<svg ${svgAttrs}><line x1="18" y1="21" x2="14" y2="3"></line><line x1="6" y1="21" x2="10" y2="3"></line><line x1="12" y1="3" x2="12" y2="21" stroke-dasharray="3,3"></line></svg>`;
 
         case 'shop':
@@ -93,14 +125,12 @@ function getLocationIconSvg(category, type) {
         case 'leisure':
         case 'landuse':
         case 'natural':
-            // Sauberes Baum-Symbol für Natur/Parks
             return `<svg ${svgAttrs}><path d="M12 19V5M12 5a4 4 0 0 0-4 4c0 2.5 2.5 5 4 7m0-11a4 4 0 0 1 4 4c0 2.5-2.5 5-4 7m-3 3h6"></path></svg>`;
 
         case 'amenity':
             if (['restaurant', 'cafe', 'fast_food', 'bar'].includes(type)) {
                 return `<svg ${svgAttrs}><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>`;
             }
-            // Behörden / Banken / Kirchen: Ein klassisches Spalten-Monument/Gebäude (Bank/Architektur)
             return `<svg ${svgAttrs}><path d="M3 21h18M3 10h18M3 7l9-4 9 4M7 10v7M12 10v7M17 10v7"></path></svg>`;
 
         case 'tourism':
@@ -132,13 +162,8 @@ function formatShortAddress(pos) {
         return pos.displayName || `Lat: ${pos.latitude.toFixed(4)}, Lon: ${pos.longitude.toFixed(4)}`;
     }
 
-    if (pos.city) {
-        shortAddress += `, ${pos.city}`;
-    }
-
-    if (pos.country) {
-        shortAddress += `, ${pos.country}`;
-    }
+    if (pos.city) shortAddress += `, ${pos.city}`;
+    if (pos.country) shortAddress += `, ${pos.country}`;
 
     return shortAddress;
 }
@@ -148,53 +173,33 @@ function formatShortAddress(pos) {
    ========================================================================== */
 function getWeatherIconSvg(code) {
     const svgAttrs = `class="embedded-weather-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`;
-
-    // Fallback für ungültige Codes (Info-Icon)
     const fallbackIcon = `<svg ${svgAttrs}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
 
-    if (code === undefined || code === null) {
-        return fallbackIcon;
-    }
+    if (code === undefined || code === null) return fallbackIcon;
 
     switch (true) {
-        // 0: Klarer Himmel (Sonne)
         case (code === 0):
             return `<svg class="embedded-weather-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
-
-        // 1-3: Leicht bewölkt bis bedeckt (Wolke)
         case (code >= 1 && code <= 3):
             return `<svg ${svgAttrs}><path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.42-1.03-1.42-2.5-3.5-2.5a4.5 4.5 0 0 0-4.5 4.5c0 .14 0 .27.02.4A4 4 0 0 0 4 17a3.5 3.5 0 0 0 3.5 3.5h10z"></path></svg>`;
-
-        // 45-48: Nebel und Reifnebel (Horizontale Linien)
         case (code >= 45 && code <= 48):
             return `<svg ${svgAttrs}><line x1="5" y1="8" x2="19" y2="8"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="6" y1="16" x2="18" y2="16"></line></svg>`;
-
-        // 51-55, 61-65, 80-82: Sprühregen, Regen und Regenschauer (Wolke mit Regenlinien)
         case ((code >= 51 && code <= 55) || (code >= 61 && code <= 65) || (code >= 80 && code <= 82)):
             return `<svg ${svgAttrs}><line x1="16" y1="13" x2="16" y2="21"></line><line x1="8" y1="13" x2="8" y2="21"></line><line x1="12" y1="15" x2="12" y2="23"></line><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path></svg>`;
-
-        // 71-75, 77, 85, 86: Schneefall, Schneegriesel und Schneeschauer (Schneeflocke)
         case ((code >= 71 && code <= 75) || code === 77 || code === 85 || code === 86):
             return `<svg ${svgAttrs}><line x1="12" y1="2" x2="12" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line><line x1="4.93" y1="19.07" x2="19.07" y2="4.93"></line></svg>`;
-
-        // 95, 96, 99: Gewitter mit/ohne Hagel (Wolke mit Blitz)
         case (code === 95 || code === 96 || code === 99):
             return `<svg ${svgAttrs}><path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 8.58"></path><polyline points="13 11 9 17 12 17 11 23 15 17 12 17 13 11"></polyline></svg>`;
-
-        // Fallback für alle anderen unbesetzten Codes
         default:
             return fallbackIcon;
     }
 }
 
 /* ==========================================================================
-   Locate Page: Cached GPS Position (shared between Fetch and Send step)
+   Locate Page: Cached GPS Position & UI Reset
    ========================================================================== */
 let _cachedLocatePosition = null;
 
-/* ==========================================================================
-   Locate Page: UI State Controller
-   ========================================================================== */
 function resetLocatePage() {
     document.getElementById('btn-fetch-location').textContent = '\uD83D\uDCCD FETCH LOCATION';
     document.getElementById('track-btn').style.display = 'none';
@@ -213,7 +218,6 @@ document.getElementById('btn-fetch-location').addEventListener('click', () => {
     statusText.className = "status-loading";
     responseCard.classList.add('hidden');
 
-    // Reset Step-2 UI bei erneutem Fetch
     document.getElementById('preview-badge').style.display = 'none';
     document.getElementById('track-btn').style.display = 'none';
     _cachedLocatePosition = null;
@@ -250,7 +254,7 @@ document.getElementById('btn-fetch-location').addEventListener('click', () => {
                 bestPosition = position;
                 statusText.innerText = `Improving signal... (\u00B1${Math.round(position.coords.accuracy)}m)`;
             }
-            if (position.coords.accuracy <= 20) {
+            if (position.coords.accuracy <= 18) {
                 clearTimeout(maxWaitTimer);
                 navigator.geolocation.clearWatch(watchId);
                 fetchCurrentPosition(position);
@@ -292,11 +296,9 @@ function fetchCurrentPosition(position) {
             statusText.innerText = "Preview loaded. Save to history?";
             statusText.className = "status-success";
 
-            // Response-Card befüllen (identische Felder wie sendPositionToBackend)
             const now = new Date();
             document.getElementById('res-time-span').innerText = now.toLocaleString('de-DE', {
-                day: '2-digit', month: '2-digit', year: 'numeric',
-                hour: '2-digit', minute: '2-digit'
+                day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
             });
 
             document.getElementById('res-temp').innerText =
@@ -318,27 +320,29 @@ function fetchCurrentPosition(position) {
 
             responseCard.classList.remove('hidden');
 
-            // Step-2 UI freischalten: Position cachen, Badge + Save-Button einblenden
             _cachedLocatePosition = position;
             fetchBtn.textContent = 'Refresh';
             document.getElementById('preview-badge').style.display = 'block';
             document.getElementById('track-btn').style.display = 'block';
+            
+            checkBackendStatus(); // Proactively ensure indicator syncs back on success
         })
-        .catch(err => showError(`Fetch Error: ${err.message}`));
+        .catch(err => {
+            showError(`Fetch Error: ${err.message}`);
+            checkBackendStatus(); // Trigger 4: Reactive status switch on API error
+        });
 }
 
 /* ==========================================================================
-   Page 1 – Step 2: Send Location (POST – frische GPS-Abfrage, Cache nur als Guard)
+   Page 1 – Step 2: Send Location (POST – Fresh GPS Poll)
    ========================================================================== */
 document.getElementById('track-btn').addEventListener('click', () => {
-    // Guard: Nur erlaubt, wenn zuvor ein Fetch erfolgreich war
     if (!_cachedLocatePosition) {
         showError("No position available. Please fetch first.");
         return;
     }
 
     const statusText = document.getElementById('status');
-
     statusText.innerText = "Searching for precise GPS...";
     statusText.className = "status-loading";
 
@@ -350,7 +354,6 @@ document.getElementById('track-btn').addEventListener('click', () => {
     let watchId = null;
     let bestPosition = null;
 
-    // Safety Fallback-Timer: Send the best available location after max 10 seconds
     const maxWaitTimer = setTimeout(() => {
         if (watchId) {
             navigator.geolocation.clearWatch(watchId);
@@ -375,7 +378,7 @@ document.getElementById('track-btn').addEventListener('click', () => {
                 bestPosition = position;
                 statusText.innerText = `Improving signal... (\u00B1${Math.round(position.coords.accuracy)}m)`;
             }
-            if (position.coords.accuracy <= 20) {
+            if (position.coords.accuracy <= 18) {
                 clearTimeout(maxWaitTimer);
                 navigator.geolocation.clearWatch(watchId);
                 statusText.innerText = "Precise location locked! Sending...";
@@ -405,14 +408,12 @@ function sendPositionToBackend(position) {
     statusText.innerText = "Sending to backend...";
 
     const clientTimestamp = new Date();
-    const isoStringTimestamp = clientTimestamp.toISOString();
-
     const payload = {
         userId: getActiveUserId(),
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
         accuracy: position.coords.accuracy,
-        timestamp: isoStringTimestamp
+        timestamp: clientTimestamp.toISOString()
     };
 
     fetch(`${API_BASE_URL}${API_PATH}/positions?userId=${encodeURIComponent(getActiveUserId())}`, {
@@ -448,14 +449,13 @@ function sendPositionToBackend(position) {
 
             const addressContainer = document.getElementById('res-address-container');
             addressContainer.innerHTML = `
-            ${getLocationIconSvg(data.osmCategory, data.osmType)}
-            <span>${formatShortAddress(data)}</span>
-        `;
+                ${getLocationIconSvg(data.osmCategory, data.osmType)}
+                <span>${formatShortAddress(data)}</span>
+            `;
             addressContainer.title = data.displayName || "No detailed address available.";
 
             responseCard.classList.remove('hidden');
 
-            // Step-2 UI zurücksetzen: Doppel-Saves verhindern, Fetch-Button zurücksetzen
             document.getElementById('preview-badge').style.display = 'none';
             document.getElementById('track-btn').style.display = 'none';
             document.getElementById('btn-fetch-location').textContent = 'FETCH LOCATION';
@@ -464,10 +464,13 @@ function sendPositionToBackend(position) {
             statusText.innerText = "Successfully saved to history!";
             statusText.className = "status-success";
 
-            // Trigger silent update to increase the badge counter immediately
             silentBadgeSync();
+            checkBackendStatus(); // Proactively ensure indicator syncs back on success
         })
-        .catch(err => showError(`Backend Error: ${err.message}`));
+        .catch(err => {
+            showError(`Backend Error: ${err.message}`);
+            checkBackendStatus(); // Trigger 4: Reactive switch on network loss/timeout
+        });
 }
 
 /* ==========================================================================
@@ -498,7 +501,6 @@ function fetchAndRenderHistory() {
                     return;
                 }
 
-                // Update dynamic Nav Badge count
                 updateHistoryBadge(data.length);
 
                 data.forEach(pos => {
@@ -607,7 +609,7 @@ function fetchAndRenderHistory() {
                                 </div>
                             </div>
                             <div class="log-card-action-tray">
-                                <a href="https://maps.google.com/?q=${pos.latitude},${pos.longitude}" 
+                                <a href="https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}" 
                                    target="_blank" 
                                    rel="noopener" 
                                    class="tray-action-btn btn-action-maps">
@@ -631,23 +633,17 @@ function fetchAndRenderHistory() {
                         const clickableArea = card.querySelector('.log-card-clickable-area');
                         clickableArea.addEventListener('click', () => {
                             const isExpanded = card.classList.contains('expanded');
-
                             document.querySelectorAll('.log-card.expanded').forEach(c => {
                                 if (c !== card) c.classList.remove('expanded');
                             });
-
                             card.classList.toggle('expanded', !isExpanded);
                         });
 
-                        const mapsBtn = card.querySelector('.btn-action-maps');
-                        mapsBtn.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                        });
+                        card.querySelector('.btn-action-maps').addEventListener('click', e => e.stopPropagation());
 
                         const deleteBtn = card.querySelector('.btn-action-delete');
                         deleteBtn.addEventListener('click', (e) => {
                             e.stopPropagation();
-
                             const targetId = deleteBtn.getAttribute('data-id');
                             if (!targetId) return;
 
@@ -658,8 +654,6 @@ function fetchAndRenderHistory() {
                                     card.classList.add('card-leave-animate');
                                     card.addEventListener('animationend', () => {
                                         card.remove();
-                                        
-                                        // Dynamically re-calculate the badge based on remaining DOM elements
                                         const remainingCards = listContainer.querySelectorAll('.log-card').length;
                                         updateHistoryBadge(remainingCards);
 
@@ -667,22 +661,26 @@ function fetchAndRenderHistory() {
                                             listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">No locations logged yet for user "${activeUserId}".</div>`;
                                         }
                                     });
+                                    checkBackendStatus(); // Proactively sync indicator on success
                                 })
-                                .catch(err => alert(`Error removing entry: ${err.message}`));
+                                .catch(err => {
+                                    alert(`Error removing entry: ${err.message}`);
+                                    checkBackendStatus(); // Trigger 4: Reactive switch on DELETE failure
+                                });
                         });
 
                         listContainer.appendChild(card);
-
                     } catch (itemError) {
                         console.error("Skipped rendering corrupted log item:", pos, itemError);
                     }
                 });
+                checkBackendStatus(); // Proactively sync indicator on successful history rendering
             })
             .catch(err => {
                 listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-error); font-size:0.9rem; padding:20px 0;">Error: ${err.message}</div>`;
+                checkBackendStatus(); // Trigger 4: Reactive switch on history network crash
             });
     };
-
 
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -691,37 +689,38 @@ function fetchAndRenderHistory() {
             },
             (err) => {
                 console.warn(`Geolocation Error (${err.code}): ${err.message}`);
-
-                // Special handling for timeouts: log it clearly for debugging
-                if (err.code === err.TIMEOUT) {
-                    console.error("GPS retrieval took too long (Timeout expired).");
-                }
-
-                // Fallback to null, null as before
                 fetchWithCoords(null, null);
             },
             {
                 enableHighAccuracy: false,
-                timeout: 15000,         // Increased to 15 seconds (crucial for ChromeOS wake-up)
-                maximumAge: 60000       // Reduced cache to 1 minute to ensure fresh data on subsequent clicks
+                timeout: 15000,
+                maximumAge: 60000
             }
         );
     } else {
         fetchWithCoords(null, null);
     }
-
 }
 
 /* ==========================================================================
-   Page 3: LocalStorage Settings Engine
+   Page 3: LocalStorage Settings Engine & Lifecycle Lifecycle Hooks
    ========================================================================== */
 document.addEventListener('DOMContentLoaded', () => {
     const savedId = localStorage.getItem('userId');
     if (savedId) {
         document.getElementById('username-input').value = savedId;
     }
-    // Initial silent sync to fetch history count and display badge immediately on load
+    
+    // Trigger 1: Core Startup Sequence
     silentBadgeSync();
+    checkBackendStatus();
+});
+
+// Trigger 3: Event-driven recovery when app moves back into foreground
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        checkBackendStatus();
+    }
 });
 
 document.getElementById('save-settings-btn').addEventListener('click', () => {
@@ -733,7 +732,6 @@ document.getElementById('save-settings-btn').addEventListener('click', () => {
     statusDiv.style.color = "#16a34a";
     statusDiv.innerText = "Settings saved successfully!";
 
-    // Sync badge for newly loaded username context
     silentBadgeSync();
 
     setTimeout(() => {
@@ -759,52 +757,23 @@ function showError(message) {
 }
 
 function getWeatherText(code) {
-    if (code === undefined || code === null) {
-        return "Unknown";
-    }
+    if (code === undefined || code === null) return "Unknown";
 
     switch (true) {
-        case (code === 0):
-            return "Clear sky";
-
-        case (code >= 1 && code <= 3):
-            return "Mainly clear"; // Deckt auch 'partly cloudy' und 'overcast' ab
-
-        case (code >= 45 && code <= 48):
-            return "Fog"; // Nebel und Reifnebel
-
-        case (code >= 51 && code <= 55):
-            return "Drizzle"; // Leichter bis dichter Sprühregen
-
-        case (code === 56 || code === 57):
-            return "Freezing drizzle"; // Gefrierender Sprühregen
-
-        case (code >= 61 && code <= 65):
-            return "Rain"; // Leichter bis starker Regen
-
-        case (code === 66 || code === 67):
-            return "Freezing rain"; // Gefrierender Regen
-
-        case (code >= 71 && code <= 75):
-            return "Snow fall"; // Leichter bis starker Schneefall
-
-        case (code === 77):
-            return "Snow grains"; // Schneegriesel
-
-        case (code >= 80 && code <= 82):
-            return "Rain showers"; // Leichte bis heftige Regenschauer
-
-        case (code === 85 || code === 86):
-            return "Snow showers"; // Schneeschauer
-
-        case (code === 95):
-            return "Thunderstorm"; // Gewitter ohne Hagel (Dein aktueller Code)
-
-        case (code === 96 || code === 99):
-            return "Thunderstorm with hail"; // Gewitter mit Hagel
-
-        default:
-            return "Unknown";
+        case (code === 0): return "Clear sky";
+        case (code >= 1 && code <= 3): return "Mainly clear";
+        case (code >= 45 && code <= 48): return "Fog";
+        case (code >= 51 && code <= 55): return "Drizzle";
+        case (code === 56 || code === 57): return "Freezing drizzle";
+        case (code >= 61 && code <= 65): return "Rain";
+        case (code === 66 || code === 67): return "Freezing rain";
+        case (code >= 71 && code <= 75): return "Snow fall";
+        case (code === 77): return "Snow grains";
+        case (code >= 80 && code <= 82): return "Rain showers";
+        case (code === 85 || code === 86): return "Snow showers";
+        case (code === 95): return "Thunderstorm";
+        case (code === 96 || code === 99): return "Thunderstorm with hail";
+        default: return "Unknown";
     }
 }
 
