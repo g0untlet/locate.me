@@ -33,6 +33,38 @@ function getActiveUserId() {
 }
 
 /* ==========================================================================
+   Global Helper: History Badge State Controller
+   ========================================================================== */
+function updateHistoryBadge(count) {
+    const badge = document.getElementById('history-badge');
+    if (!badge) return;
+    
+    if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+/* ==========================================================================
+   Global Helper: Background Silent Badge Sync (for initialization)
+   ========================================================================== */
+function silentBadgeSync() {
+    fetch(`${API_BASE_URL}${API_PATH}/positions?userId=${encodeURIComponent(getActiveUserId())}`)
+        .then(response => {
+            if (response.ok) return response.json();
+            throw new Error();
+        })
+        .then(data => {
+            if (Array.isArray(data)) {
+                updateHistoryBadge(data.length);
+            }
+        })
+        .catch(() => console.log("Silent badge sync paused. Offline or server unreachable."));
+}
+
+/* ==========================================================================
    Global Helper: Pure, lightweight Inline SVG Location Icon Renderer
    ========================================================================== */
 function getLocationIconSvg(category, type) {
@@ -431,6 +463,9 @@ function sendPositionToBackend(position) {
 
             statusText.innerText = "Successfully saved to history!";
             statusText.className = "status-success";
+
+            // Trigger silent update to increase the badge counter immediately
+            silentBadgeSync();
         })
         .catch(err => showError(`Backend Error: ${err.message}`));
 }
@@ -459,8 +494,12 @@ function fetchAndRenderHistory() {
 
                 if (!data || !Array.isArray(data) || data.length === 0) {
                     listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">No locations logged yet for user "${activeUserId}".</div>`;
+                    updateHistoryBadge(0);
                     return;
                 }
+
+                // Update dynamic Nav Badge count
+                updateHistoryBadge(data.length);
 
                 data.forEach(pos => {
                     try {
@@ -619,7 +658,12 @@ function fetchAndRenderHistory() {
                                     card.classList.add('card-leave-animate');
                                     card.addEventListener('animationend', () => {
                                         card.remove();
-                                        if (listContainer.children.length === 0) {
+                                        
+                                        // Dynamically re-calculate the badge based on remaining DOM elements
+                                        const remainingCards = listContainer.querySelectorAll('.log-card').length;
+                                        updateHistoryBadge(remainingCards);
+
+                                        if (remainingCards === 0) {
                                             listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">No locations logged yet for user "${activeUserId}".</div>`;
                                         }
                                     });
@@ -676,6 +720,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedId) {
         document.getElementById('username-input').value = savedId;
     }
+    // Initial silent sync to fetch history count and display badge immediately on load
+    silentBadgeSync();
 });
 
 document.getElementById('save-settings-btn').addEventListener('click', () => {
@@ -686,6 +732,9 @@ document.getElementById('save-settings-btn').addEventListener('click', () => {
 
     statusDiv.style.color = "#16a34a";
     statusDiv.innerText = "Settings saved successfully!";
+
+    // Sync badge for newly loaded username context
+    silentBadgeSync();
 
     setTimeout(() => {
         statusDiv.innerText = "";

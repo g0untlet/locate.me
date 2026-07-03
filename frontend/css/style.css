@@ -562,3 +562,39 @@ body {
     margin-bottom: 14px;
     animation: fadeIn 0.2s ease-out;
 }
+
+/* ==========================================================================
+   Navigation History Badge additions
+   ========================================================================== */
+.nav-icon-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-badge {
+    position: absolute;
+    top: -4px;
+    right: -8px;
+    background-color: #ef4444; /* Knalliges Signalrot */
+    color: #ffffff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 9999px; /* Perfekter Kreis */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid #f8fafc; /* Kontrastkante zur Navigationsleiste */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    z-index: 10;
+    animation: badgePop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes badgePop {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
