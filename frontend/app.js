@@ -620,6 +620,17 @@ function fetchAndRenderHistory() {
                                     Maps
                                 </a>
 
+                                <button class="tray-action-btn btn-action-share" data-lat="${pos.latitude}" data-lon="${pos.longitude}" data-address="${shortAddress.replace(/"/g, '&quot;')}">
+                                    <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="18" cy="5" r="3"></circle>
+                                        <circle cx="6" cy="12" r="3"></circle>
+                                        <circle cx="18" cy="19" r="3"></circle>
+                                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                    </svg>
+                                    Share
+                                </button>
+
                                 <button class="tray-action-btn btn-action-delete" data-id="${pos.id}">
                                     <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                         <polyline points="3 6 5 6 21 6"></polyline>
@@ -640,6 +651,36 @@ function fetchAndRenderHistory() {
                         });
 
                         card.querySelector('.btn-action-maps').addEventListener('click', e => e.stopPropagation());
+
+                        const shareBtn = card.querySelector('.btn-action-share');
+                        shareBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const lat = shareBtn.getAttribute('data-lat');
+                            const lon = shareBtn.getAttribute('data-lon');
+                            const address = shareBtn.getAttribute('data-address');
+                            const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+
+                            if (navigator.share) {
+                                navigator.share({
+                                    title: 'locate.me',
+                                    text: address,
+                                    url: mapsUrl
+                                }).catch(err => {
+                                    // User cancelled or share failed silently – no alert needed
+                                    console.log('Share cancelled or failed:', err.message);
+                                });
+                            } else {
+                                // Fallback: copy Maps link to clipboard
+                                navigator.clipboard.writeText(mapsUrl).then(() => {
+                                    shareBtn.textContent = 'Copied!';
+                                    setTimeout(() => {
+                                        shareBtn.innerHTML = `<svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg> Share`;
+                                    }, 1500);
+                                }).catch(() => {
+                                    // Clipboard also unavailable – nothing to do
+                                });
+                            }
+                        });
 
                         const deleteBtn = card.querySelector('.btn-action-delete');
                         deleteBtn.addEventListener('click', (e) => {

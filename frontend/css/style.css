@@ -386,7 +386,7 @@ body {
 }
 
 .log-card.expanded .log-card-action-tray {
-    max-height: 52px;
+    max-height: 60px;
     opacity: 1;
     padding: 10px 14px;
     border-top-color: var(--border-color);
@@ -416,6 +416,17 @@ body {
 }
 .btn-action-maps .action-icon {
     stroke: #1a5f8c;
+}
+
+.btn-action-share {
+    color: #047857;
+    background-color: #d1fae5;
+}
+.btn-action-share:hover {
+    background-color: #a7f3d0;
+}
+.btn-action-share .action-icon {
+    stroke: #047857;
 }
 
 .btn-action-delete {
