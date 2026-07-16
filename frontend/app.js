@@ -111,8 +111,117 @@ document.querySelectorAll('.nav-item').forEach(button => {
 
         if (targetPageId === 'page-history') {
             fetchAndRenderHistory();
+        } else {
+            // Leaving history page: reset to list view so next visit starts fresh
+            setHistoryView('list');
         }
     });
+});
+
+/* ==========================================================================
+   History View Toggle (List <-> Map)
+   ========================================================================== */
+let _historyMap = null;         // Leaflet map instance (lazy init)
+let _historyMapData = [];       // Last fetched positions, shared with map renderer
+let _currentHistoryView = 'list';
+
+function setHistoryView(view) {
+    _currentHistoryView = view;
+    const listEl   = document.getElementById('history-list');
+    const mapEl    = document.getElementById('history-map');
+    const listBtn  = document.getElementById('toggle-list-btn');
+    const mapBtn   = document.getElementById('toggle-map-btn');
+    if (!listEl || !mapEl || !listBtn || !mapBtn) return;
+
+    if (view === 'map') {
+        listEl.classList.add('hidden');
+        mapEl.classList.remove('hidden');
+        listBtn.classList.remove('view-toggle-btn--active');
+        mapBtn.classList.add('view-toggle-btn--active');
+        initOrRefreshMap();
+    } else {
+        mapEl.classList.add('hidden');
+        listEl.classList.remove('hidden');
+        mapBtn.classList.remove('view-toggle-btn--active');
+        listBtn.classList.add('view-toggle-btn--active');
+    }
+}
+
+function initOrRefreshMap() {
+    const mapEl = document.getElementById('history-map');
+    if (!mapEl) return;
+
+    if (!_historyMap) {
+        // First init: create Leaflet instance
+        _historyMap = L.map('history-map', { zoomControl: true });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(_historyMap);
+    }
+
+    // invalidateSize fixes rendering in previously hidden containers
+    setTimeout(() => {
+        _historyMap.invalidateSize();
+        renderMapMarkers();
+    }, 50);
+}
+
+function renderMapMarkers() {
+    if (!_historyMap) return;
+
+    // Clear existing markers
+    _historyMap.eachLayer(layer => {
+        if (layer instanceof L.Marker) _historyMap.removeLayer(layer);
+    });
+
+    if (!_historyMapData || _historyMapData.length === 0) return;
+
+    const bounds = [];
+
+    _historyMapData.forEach((pos, index) => {
+        if (!pos.latitude || !pos.longitude) return;
+
+        const lat = parseFloat(pos.latitude);
+        const lon = parseFloat(pos.longitude);
+        if (isNaN(lat) || isNaN(lon)) return;
+
+        const shortAddr = formatShortAddress(pos);
+        let dateFormatted = '–';
+        if (pos.timestamp) {
+            const d = new Date(pos.timestamp);
+            if (!isNaN(d.getTime())) {
+                dateFormatted = d.toLocaleString('de-DE', {
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+            }
+        }
+
+        const marker = L.marker([lat, lon]).addTo(_historyMap);
+        marker.bindPopup(
+            `<div class="map-popup">` +
+            `<span class="map-popup-index">#${index + 1}</span>` +
+            `<span class="map-popup-address">${shortAddr}</span>` +
+            `<span class="map-popup-date">${dateFormatted}</span>` +
+            `</div>`,
+            { maxWidth: 220 }
+        );
+        bounds.push([lat, lon]);
+    });
+
+    if (bounds.length === 1) {
+        _historyMap.setView(bounds[0], 15);
+    } else if (bounds.length > 1) {
+        _historyMap.fitBounds(bounds, { padding: [24, 24] });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const listBtn = document.getElementById('toggle-list-btn');
+    const mapBtn  = document.getElementById('toggle-map-btn');
+    if (listBtn) listBtn.addEventListener('click', () => setHistoryView('list'));
+    if (mapBtn)  mapBtn.addEventListener('click',  () => setHistoryView('map'));
 });
 
 /* ==========================================================================
@@ -259,12 +368,43 @@ function getWeatherIconSvg(code) {
    Locate Page: Cached GPS Position & UI Reset
    ========================================================================== */
 let _cachedLocatePosition = null;
+let _locateMap = null;          // Leaflet map instance for Locate page (lazy init)
+let _locateMarker = null;       // Single marker on the Locate map
 
 function resetLocatePage() {
     document.getElementById('btn-fetch-location').textContent = '\uD83D\uDCCD FETCH LOCATION';
     document.getElementById('track-btn').style.display = 'none';
     document.getElementById('preview-badge').style.display = 'none';
     _cachedLocatePosition = null;
+}
+
+/* ==========================================================================
+   Locate Page Map: Show single marker at given coordinates
+   ========================================================================== */
+function showLocateMap(lat, lon) {
+    const mapEl = document.getElementById('locate-map');
+    if (!mapEl) return;
+
+    if (!_locateMap) {
+        _locateMap = L.map('locate-map', { zoomControl: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(_locateMap);
+    }
+
+    // Update or create marker
+    if (_locateMarker) {
+        _locateMarker.setLatLng([lat, lon]);
+    } else {
+        _locateMarker = L.marker([lat, lon]).addTo(_locateMap);
+    }
+
+    // Delay to let the container finish its CSS transition before sizing
+    setTimeout(() => {
+        _locateMap.invalidateSize();
+        _locateMap.setView([lat, lon], 15);
+    }, 50);
 }
 
 /* ==========================================================================
@@ -353,8 +493,8 @@ function fetchCurrentPosition(position) {
             return response.json();
         })
         .then(data => {
-            statusText.innerText = "Preview loaded. Save to history?";
-            statusText.className = "status-success";
+            statusText.innerText = "Ready";
+            statusText.className = "status-ready";
 
             const now = new Date();
             document.getElementById('res-time-span').innerText = now.toLocaleString('de-DE', {
@@ -384,6 +524,8 @@ function fetchCurrentPosition(position) {
             fetchBtn.textContent = 'Refresh';
             document.getElementById('preview-badge').style.display = 'block';
             document.getElementById('track-btn').style.display = 'block';
+
+            showLocateMap(latitude, longitude);
             
             checkBackendStatus(); // Proactively ensure indicator syncs back on success
         })
@@ -486,8 +628,7 @@ function sendPositionToBackend(position) {
             return response.json();
         })
         .then(data => {
-            statusText.innerText = "Location saved successfully!";
-            statusText.className = "status-success";
+
 
             const localTimeFormatted = clientTimestamp.toLocaleString('de-DE', {
                 day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -521,8 +662,10 @@ function sendPositionToBackend(position) {
             document.getElementById('btn-fetch-location').textContent = 'FETCH LOCATION';
             _cachedLocatePosition = null;
 
-            statusText.innerText = "Successfully saved to history!";
-            statusText.className = "status-success";
+            statusText.innerText = "Ready";
+            statusText.className = "status-ready";
+
+            showLocateMap(payload.latitude, payload.longitude);
 
             silentBadgeSync();
             checkBackendStatus(); // Proactively ensure indicator syncs back on success
@@ -558,10 +701,19 @@ function fetchAndRenderHistory() {
                 if (!data || !Array.isArray(data) || data.length === 0) {
                     listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">No locations logged yet for user "${activeUserId}".</div>`;
                     updateHistoryBadge(0);
+                    _historyMapData = [];
                     return;
                 }
 
                 updateHistoryBadge(data.length);
+
+                // Store for map renderer
+                _historyMapData = data;
+
+                // If map view is active, re-render markers with fresh data
+                if (_currentHistoryView === 'map') {
+                    renderMapMarkers();
+                }
 
                 data.forEach((pos, index) => {
                     try {
