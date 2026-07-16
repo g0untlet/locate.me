@@ -691,3 +691,38 @@ body {
     color: #dc2626;
     border: 1px solid #fecaca;
 }
+/* ==========================================================================
+   Backend Info Block (Settings Page)
+   ========================================================================== */
+.backend-info-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    margin-top: 12px;
+    min-height: 36px;
+}
+
+.backend-info-label {
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.backend-info-value {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.backend-info-since {
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
+.backend-info-offline {
+    color: #dc2626;
+}

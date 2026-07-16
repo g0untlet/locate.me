@@ -28,6 +28,8 @@ async function checkBackendStatus(showToast = false) {
             statusDot.classList.add('online');
             statusDot.parentElement.title = "Application Online";
             if (showToast) showStatusToast('online');
+            const info = await response.json();
+            renderBackendInfo(info);
         } else {
             throw new Error("Backend answered with error status code");
         }
@@ -36,7 +38,37 @@ async function checkBackendStatus(showToast = false) {
         statusDot.classList.add('offline');
         statusDot.parentElement.title = "Backend unreachable";
         if (showToast) showStatusToast('offline');
+        renderBackendInfo(null);
     }
+}
+
+/* ==========================================================================
+   Backend Info Renderer (Settings Page)
+   ========================================================================== */
+function renderBackendInfo(info) {
+    const el = document.getElementById('backend-info');
+    if (!el) return;
+
+    if (!info) {
+        el.innerHTML = `<span class="backend-info-label">BACKEND</span>
+                        <span class="backend-info-value backend-info-offline">Not reachable</span>`;
+        return;
+    }
+
+    let onlineSince = '–';
+    if (info.startupTime) {
+        const d = new Date(info.startupTime);
+        if (!isNaN(d.getTime())) {
+            onlineSince = d.toLocaleString('de-DE', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+    }
+
+    el.innerHTML = `<span class="backend-info-label">BACKEND</span>
+                    <span class="backend-info-value">${info.artifactId || '–'} ${info.version || ''}</span>
+                    <span class="backend-info-since">Online since ${onlineSince}</span>`;
 }
 
 /* ==========================================================================
