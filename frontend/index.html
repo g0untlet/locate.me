@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>locate.me</title>
     <link rel="stylesheet" href="css/style.css?v=0.2.1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" crossorigin="anonymous"></script>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
@@ -61,13 +63,38 @@
                             <div id="res-address-container" class="value address-container">-</div>
                         </div>
                     </div>
+                    <div class="row-full">
+                        <div id="locate-map" class="locate-map"></div>
+                    </div>
                 </div>
             </div>
         </section>
 
         <section id="page-history" class="app-page hidden">
+            <div class="history-view-toggle">
+                <button id="toggle-list-btn" class="view-toggle-btn view-toggle-btn--active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="8" y1="6" x2="21" y2="6"></line>
+                        <line x1="8" y1="12" x2="21" y2="12"></line>
+                        <line x1="8" y1="18" x2="21" y2="18"></line>
+                        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                    </svg>
+                    List
+                </button>
+                <button id="toggle-map-btn" class="view-toggle-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon>
+                        <line x1="9" y1="3" x2="9" y2="18"></line>
+                        <line x1="15" y1="6" x2="15" y2="21"></line>
+                    </svg>
+                    Map
+                </button>
+            </div>
             <div id="history-list" class="history-list">
             </div>
+            <div id="history-map" class="history-map hidden"></div>
         </section>
 
         <section id="page-settings" class="app-page hidden">
