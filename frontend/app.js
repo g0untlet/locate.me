@@ -254,7 +254,7 @@ document.getElementById('btn-fetch-location').addEventListener('click', () => {
                 bestPosition = position;
                 statusText.innerText = `Improving signal... (\u00B1${Math.round(position.coords.accuracy)}m)`;
             }
-            if (position.coords.accuracy <= 18) {
+            if (position.coords.accuracy <= 15) {
                 clearTimeout(maxWaitTimer);
                 navigator.geolocation.clearWatch(watchId);
                 fetchCurrentPosition(position);
@@ -378,7 +378,7 @@ document.getElementById('track-btn').addEventListener('click', () => {
                 bestPosition = position;
                 statusText.innerText = `Improving signal... (\u00B1${Math.round(position.coords.accuracy)}m)`;
             }
-            if (position.coords.accuracy <= 18) {
+            if (position.coords.accuracy <= 15) {
                 clearTimeout(maxWaitTimer);
                 navigator.geolocation.clearWatch(watchId);
                 statusText.innerText = "Precise location locked! Sending...";
@@ -738,6 +738,33 @@ document.getElementById('save-settings-btn').addEventListener('click', () => {
         statusDiv.innerText = "";
     }, 3000);
 });
+
+/* ==========================================================================
+   Page 3: User ID Masking / Toggle Visibility Logic
+   ========================================================================== */
+const togglePasswordBtn = document.getElementById('toggle-password-btn');
+if (togglePasswordBtn) {
+    togglePasswordBtn.addEventListener('click', () => {
+        const usernameInput = document.getElementById('username-input');
+        const eyeVisible = document.getElementById('eye-icon-visible');
+        const eyeHidden = document.getElementById('eye-icon-hidden');
+        
+        if (!usernameInput) return;
+
+        // Toggle the input element type
+        if (usernameInput.type === 'password') {
+            usernameInput.type = 'text';
+            // Update icon visibility
+            eyeVisible.classList.add('hidden');
+            eyeHidden.classList.remove('hidden');
+        } else {
+            usernameInput.type = 'password';
+            // Update icon visibility
+            eyeVisible.classList.remove('hidden');
+            eyeHidden.classList.add('hidden');
+        }
+    });
+}
 
 /* ==========================================================================
    Utilities

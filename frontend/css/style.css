@@ -602,3 +602,44 @@ body {
     from { transform: scale(0); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
 }
+
+/* ==========================================================================
+   Input with Toggle Icon (User ID Masking)
+   ========================================================================== */
+.input-with-icon {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+/* Make space on the right of the input so text doesn't slide under the icon */
+.input-with-icon .settings-input {
+    padding-right: 44px;
+}
+
+.toggle-password-trigger {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    padding: 4px;
+    border-radius: 50%;
+    transition: var(--transition);
+}
+
+.toggle-password-trigger:hover {
+    color: var(--primary-color);
+    background-color: #f1f5f9;
+}
+
+.eye-icon {
+    width: 20px;
+    height: 20px;
+    pointer-events: none; /* Prevents click issues inside SVG */
+}
