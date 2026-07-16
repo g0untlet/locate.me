@@ -9,7 +9,7 @@ const API_PATH = '/api';
 /* ==========================================================================
    Backend Health & Status Indicator Logic
    ========================================================================== */
-async function checkBackendStatus() {
+async function checkBackendStatus(showToast = false) {
     const statusDot = document.querySelector('.status-dot');
     if (!statusDot) return;
 
@@ -27,6 +27,7 @@ async function checkBackendStatus() {
             statusDot.classList.remove('offline');
             statusDot.classList.add('online');
             statusDot.parentElement.title = "Application Online";
+            if (showToast) showStatusToast('online');
         } else {
             throw new Error("Backend answered with error status code");
         }
@@ -34,7 +35,34 @@ async function checkBackendStatus() {
         statusDot.classList.remove('online');
         statusDot.classList.add('offline');
         statusDot.parentElement.title = "Backend unreachable";
+        if (showToast) showStatusToast('offline');
     }
+}
+
+/* ==========================================================================
+   Status Toast Notification
+   ========================================================================== */
+function showStatusToast(state) {
+    // Remove any existing toast to avoid stacking
+    const existing = document.getElementById('status-toast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'status-toast';
+    toast.className = `status-toast status-toast--${state}`;
+    toast.textContent = state === 'online' ? '✓ Backend online' : '✗ Backend not reachable';
+
+    document.querySelector('.app-container').appendChild(toast);
+
+    // Trigger reflow to enable CSS transition
+    toast.getBoundingClientRect();
+    toast.classList.add('status-toast--visible');
+
+    const duration = state === 'online' ? 2000 : 3000;
+    setTimeout(() => {
+        toast.classList.remove('status-toast--visible');
+        toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+    }, duration);
 }
 
 /* ==========================================================================
@@ -503,7 +531,7 @@ function fetchAndRenderHistory() {
 
                 updateHistoryBadge(data.length);
 
-                data.forEach(pos => {
+                data.forEach((pos, index) => {
                     try {
                         if (!pos || pos.id === undefined) return;
 
@@ -579,7 +607,7 @@ function fetchAndRenderHistory() {
                             <div class="log-card-clickable-area">
                                 <div class="log-card-header">
                                     <div>
-                                        <span class="log-card-id">#${pos.id}</span>
+                                        <span class="log-card-id">#${index + 1}</span>
                                         <span style="margin-left: 6px;">${dateFormatted}</span>
                                     </div>
                                     <span class="log-card-accuracy-badge" style="background-color: ${badgeBgColor}; color: ${badgeTextColor};">
@@ -695,10 +723,14 @@ function fetchAndRenderHistory() {
                                     card.classList.add('card-leave-animate');
                                     card.addEventListener('animationend', () => {
                                         card.remove();
-                                        const remainingCards = listContainer.querySelectorAll('.log-card').length;
-                                        updateHistoryBadge(remainingCards);
+                                        const remainingCards = listContainer.querySelectorAll('.log-card');
+                                        remainingCards.forEach((remainingCard, i) => {
+                                            const idSpan = remainingCard.querySelector('.log-card-id');
+                                            if (idSpan) idSpan.textContent = `#${i + 1}`;
+                                        });
+                                        updateHistoryBadge(remainingCards.length);
 
-                                        if (remainingCards === 0) {
+                                        if (remainingCards.length === 0) {
                                             listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">No locations logged yet for user "${activeUserId}".</div>`;
                                         }
                                     });
@@ -751,7 +783,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedId) {
         document.getElementById('username-input').value = savedId;
     }
-    
+
+    // Tap on status indicator: re-check backend and show toast
+    const statusIndicator = document.querySelector('.header-status-indicator');
+    if (statusIndicator) {
+        statusIndicator.style.cursor = 'pointer';
+        statusIndicator.addEventListener('click', () => checkBackendStatus(true));
+    }
+
     // Trigger 1: Core Startup Sequence
     silentBadgeSync();
     checkBackendStatus();
