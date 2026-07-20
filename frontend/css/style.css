@@ -190,6 +190,7 @@ body {
 }
 
 .status-ready { color: #0284c7; }
+.status-preview { color: #0284c7; }
 .status-loading { color: #d97706; animation: pulse 1.5s infinite; }
 .status-success { color: #16a34a; }
 .status-error { color: #dc2626; }
