@@ -7,6 +7,32 @@ const API_BASE_URL = window.location.port === '8080'
 const API_PATH = '/api';
 
 /* ==========================================================================
+   Date Formatting Utility
+   ========================================================================== */
+function formatRelativeDate(timestamp) {
+    if (!timestamp) return 'Unknown Date';
+    const d = new Date(timestamp);
+    if (isNaN(d.getTime())) return 'Unknown Date';
+
+    const now = new Date();
+    const todayStart     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+
+    const timeStr = d.toLocaleString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+    if (d >= todayStart) {
+        return `Today, ${timeStr}`;
+    } else if (d >= yesterdayStart) {
+        return `Yesterday, ${timeStr}`;
+    } else {
+        return d.toLocaleString('de-DE', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+    }
+}
+
+/* ==========================================================================
    Backend Health & Status Indicator Logic
    ========================================================================== */
 async function checkBackendStatus(showToast = false) {
@@ -187,16 +213,7 @@ function renderMapMarkers() {
         if (isNaN(lat) || isNaN(lon)) return;
 
         const shortAddr = formatShortAddress(pos);
-        let dateFormatted = '–';
-        if (pos.timestamp) {
-            const d = new Date(pos.timestamp);
-            if (!isNaN(d.getTime())) {
-                dateFormatted = d.toLocaleString('de-DE', {
-                    day: '2-digit', month: '2-digit', year: 'numeric',
-                    hour: '2-digit', minute: '2-digit'
-                });
-            }
-        }
+        const dateFormatted = formatRelativeDate(pos.timestamp);
 
         const marker = L.marker([lat, lon]).addTo(_historyMap);
         marker.bindPopup(
@@ -374,7 +391,6 @@ let _locateMarker = null;       // Single marker on the Locate map
 function resetLocatePage() {
     document.getElementById('btn-fetch-location').textContent = '\uD83D\uDCCD FETCH LOCATION';
     document.getElementById('track-btn').style.display = 'none';
-    document.getElementById('preview-badge').style.display = 'none';
     _cachedLocatePosition = null;
 }
 
@@ -418,7 +434,6 @@ document.getElementById('btn-fetch-location').addEventListener('click', () => {
     statusText.className = "status-loading";
     responseCard.classList.add('hidden');
 
-    document.getElementById('preview-badge').style.display = 'none';
     document.getElementById('track-btn').style.display = 'none';
     _cachedLocatePosition = null;
 
@@ -522,8 +537,9 @@ function fetchCurrentPosition(position) {
 
             _cachedLocatePosition = position;
             fetchBtn.textContent = 'Refresh';
-            document.getElementById('preview-badge').style.display = 'block';
             document.getElementById('track-btn').style.display = 'block';
+            statusText.innerText = "Preview: Position not yet saved.";
+            statusText.className = "status-preview";
 
             showLocateMap(latitude, longitude);
             
@@ -657,13 +673,12 @@ function sendPositionToBackend(position) {
 
             responseCard.classList.remove('hidden');
 
-            document.getElementById('preview-badge').style.display = 'none';
             document.getElementById('track-btn').style.display = 'none';
             document.getElementById('btn-fetch-location').textContent = 'FETCH LOCATION';
             _cachedLocatePosition = null;
 
-            statusText.innerText = "Ready";
-            statusText.className = "status-ready";
+            statusText.innerText = "Location successfully saved.";
+            statusText.className = "status-success";
 
             showLocateMap(payload.latitude, payload.longitude);
 
@@ -768,15 +783,7 @@ function fetchAndRenderHistory() {
                             `;
                         }
 
-                        let dateFormatted = "Unknown Date";
-                        if (pos.timestamp) {
-                            const dateObj = new Date(pos.timestamp);
-                            if (!isNaN(dateObj.getTime())) {
-                                dateFormatted = dateObj.toLocaleString('de-DE', {
-                                    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                                });
-                            }
-                        }
+                        const dateFormatted = formatRelativeDate(pos.timestamp);
 
                         const shortAddress = formatShortAddress(pos);
                         const locationIcon = getLocationIconSvg(pos.osmCategory, pos.osmType);
