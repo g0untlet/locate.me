@@ -815,6 +815,34 @@ body {
     margin-top: 2px;
 }
 
+.map-popup-share {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 8px;
+    padding: 5px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #047857;
+    background-color: #d1fae5;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    font-family: inherit;
+}
+
+.map-popup-share:hover {
+    background-color: #a7f3d0;
+}
+
+.map-popup-share svg {
+    width: 12px;
+    height: 12px;
+    stroke: #047857;
+    flex-shrink: 0;
+}
+
 /* ==========================================================================
    Locate Page Map
    ========================================================================== */
