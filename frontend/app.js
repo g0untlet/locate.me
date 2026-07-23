@@ -27,84 +27,13 @@ import {
     getLocateMarker, setLocateMarker
 } from './js/state.js';
 
+import { showStatusToast } from './js/ui/toast.js';
 
-/* ==========================================================================
-   Backend Health & Status Indicator Logic
-   ========================================================================== */
-async function checkBackendStatus(showToast = false) {
-    const statusDot = document.querySelector('.status-dot');
-    if (!statusDot) return;
+import { updateHistoryBadge, silentBadgeSync } from './js/ui/badge.js';
 
-    try {
-        const info = await apiGetSystemInfo(); 
-        statusDot.classList.remove('offline');
-        statusDot.classList.add('online');
-        statusDot.parentElement.title = "Application Online";
-        if (showToast) showStatusToast('online');
-        renderBackendInfo(info);
-    } catch (error) {
-        statusDot.classList.remove('online');
-        statusDot.classList.add('offline');
-        statusDot.parentElement.title = "Backend unreachable";
-        if (showToast) showStatusToast('offline');
-        renderBackendInfo(null);
-    }
-}
+import { checkBackendStatus, showError } from './js/ui/status.js';
 
-/* ==========================================================================
-   Backend Info Renderer (Settings Page)
-   ========================================================================== */
-function renderBackendInfo(info) {
-    const el = document.getElementById('backend-info');
-    if (!el) return;
 
-    if (!info) {
-        el.innerHTML = `<span class="backend-info-label">BACKEND</span>
-                        <span class="backend-info-value backend-info-offline">Not reachable</span>`;
-        return;
-    }
-
-    let onlineSince = '–';
-    if (info.startupTime) {
-        const d = new Date(info.startupTime);
-        if (!isNaN(d.getTime())) {
-            onlineSince = d.toLocaleString('de-DE', {
-                day: '2-digit', month: '2-digit', year: 'numeric',
-                hour: '2-digit', minute: '2-digit'
-            });
-        }
-    }
-
-    el.innerHTML = `<span class="backend-info-label">BACKEND</span>
-                    <span class="backend-info-value">${info.artifactId || '–'} ${info.version || ''}</span>
-                    <span class="backend-info-since">Online since ${onlineSince}</span>`;
-}
-
-/* ==========================================================================
-   Status Toast Notification
-   ========================================================================== */
-function showStatusToast(state) {
-    // Remove any existing toast to avoid stacking
-    const existing = document.getElementById('status-toast');
-    if (existing) existing.remove();
-
-    const toast = document.createElement('div');
-    toast.id = 'status-toast';
-    toast.className = `status-toast status-toast--${state}`;
-    toast.textContent = state === 'online' ? '✓ Backend online' : '✗ Backend not reachable';
-
-    document.querySelector('.app-container').appendChild(toast);
-
-    // Trigger reflow to enable CSS transition
-    toast.getBoundingClientRect();
-    toast.classList.add('status-toast--visible');
-
-    const duration = state === 'online' ? 2000 : 3000;
-    setTimeout(() => {
-        toast.classList.remove('status-toast--visible');
-        toast.addEventListener('transitionend', () => toast.remove(), { once: true });
-    }, duration);
-}
 
 /* ==========================================================================
    SPA Navigation Framework (Tab Controller)
@@ -260,37 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
 function getActiveUserId() {
     const savedId = localStorage.getItem('userId');
     return (savedId && savedId.trim() !== "") ? savedId.trim() : "user123";
-}
-
-/* ==========================================================================
-   Global Helper: History Badge State Controller
-   ========================================================================== */
-function updateHistoryBadge(count) {
-    const badge = document.getElementById('history-badge');
-    if (!badge) return;
-    
-    if (count > 0) {
-        badge.textContent = count;
-        badge.style.display = 'flex';
-    } else {
-        badge.style.display = 'none';
-    }
-}
-
-/* ==========================================================================
-   Global Helper: Background Silent Badge Sync (for initialization)
-   ========================================================================== */
-function silentBadgeSync() {
-    apiGetPositions(getActiveUserId()) 
-        .then(data => {
-            if (Array.isArray(data)) {
-                updateHistoryBadge(data.length);
-            }
-        })
-        .catch(() => {
-            console.log("Silent badge sync paused. Offline or server unreachable.");
-            checkBackendStatus();
-        });
 }
 
 /* ==========================================================================
@@ -577,7 +475,7 @@ function sendPositionToBackend(position) {
 
             showLocateMap(payload.latitude, payload.longitude);
 
-            silentBadgeSync();
+            silentBadgeSync(getActiveUserId(), checkBackendStatus);
             checkBackendStatus(); // Proactively ensure indicator syncs back on success
         })
         .catch(err => {
@@ -867,7 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Trigger 1: Core Startup Sequence
-    silentBadgeSync();
+    silentBadgeSync(getActiveUserId(), checkBackendStatus);
     checkBackendStatus();
 });
 
@@ -887,7 +785,7 @@ document.getElementById('save-settings-btn').addEventListener('click', () => {
     statusDiv.style.color = "#16a34a";
     statusDiv.innerText = "Settings saved successfully!";
 
-    silentBadgeSync();
+    silentBadgeSync(getActiveUserId(), checkBackendStatus);
 
     setTimeout(() => {
         statusDiv.innerText = "";
@@ -919,15 +817,6 @@ if (togglePasswordBtn) {
             eyeHidden.classList.add('hidden');
         }
     });
-}
-
-/* ==========================================================================
-   Utilities
-   ========================================================================== */
-function showError(message) {
-    const statusText = document.getElementById('status');
-    statusText.innerText = message;
-    statusText.className = "status-error";
 }
 
 
