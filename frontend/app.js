@@ -1,7 +1,6 @@
 /* ==========================================================================
-   Global Configuration: Dynamic API Environment Detection (DEV vs PROD)
+   imports
    ========================================================================== */
-import { API_BASE_URL, API_PATH } from './js/config.js';
 import {
     formatRelativeDate,
     formatShortAddress,
@@ -10,6 +9,14 @@ import {
     getWeatherIconSvg,
     getLocationIconSvg
 } from './js/utils.js';
+
+import {
+    apiGetSystemInfo,
+    apiGetPositions,
+    apiGetCurrentPosition,
+    apiPostPosition,
+    apiDeletePosition
+} from './js/api.js';
 
 
 /* ==========================================================================
@@ -20,25 +27,12 @@ async function checkBackendStatus(showToast = false) {
     if (!statusDot) return;
 
     try {
-        // Enforce a strict timeout to avoid endless hangs on slow mobile networks
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000);
-
-        const response = await fetch(`${API_BASE_URL}${API_PATH}/system/info`, {
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-            statusDot.classList.remove('offline');
-            statusDot.classList.add('online');
-            statusDot.parentElement.title = "Application Online";
-            if (showToast) showStatusToast('online');
-            const info = await response.json();
-            renderBackendInfo(info);
-        } else {
-            throw new Error("Backend answered with error status code");
-        }
+        const info = await apiGetSystemInfo(); 
+        statusDot.classList.remove('offline');
+        statusDot.classList.add('online');
+        statusDot.parentElement.title = "Application Online";
+        if (showToast) showStatusToast('online');
+        renderBackendInfo(info);
     } catch (error) {
         statusDot.classList.remove('online');
         statusDot.classList.add('offline');
@@ -283,11 +277,7 @@ function updateHistoryBadge(count) {
    Global Helper: Background Silent Badge Sync (for initialization)
    ========================================================================== */
 function silentBadgeSync() {
-    fetch(`${API_BASE_URL}${API_PATH}/positions?userId=${encodeURIComponent(getActiveUserId())}`)
-        .then(response => {
-            if (response.ok) return response.json();
-            throw new Error();
-        })
+    apiGetPositions(getActiveUserId()) 
         .then(data => {
             if (Array.isArray(data)) {
                 updateHistoryBadge(data.length);
@@ -295,10 +285,9 @@ function silentBadgeSync() {
         })
         .catch(() => {
             console.log("Silent badge sync paused. Offline or server unreachable.");
-            checkBackendStatus(); // Trigger 4: Reactive switch on background sync failure
+            checkBackendStatus();
         });
 }
-
 
 /* ==========================================================================
    Locate Page: Cached GPS Position & UI Reset
@@ -419,13 +408,8 @@ function fetchCurrentPosition(position) {
     statusText.className = "status-loading";
 
     const { latitude, longitude } = position.coords;
-    const url = `${API_BASE_URL}${API_PATH}/positions/current?userId=${encodeURIComponent(getActiveUserId())}&lat=${latitude}&lon=${longitude}`;
 
-    fetch(url)
-        .then(response => {
-            if (!response.ok) throw new Error(`Server returned status ${response.status}`);
-            return response.json();
-        })
+    apiGetCurrentPosition(getActiveUserId(), latitude, longitude)
         .then(data => {
             statusText.innerText = "Ready";
             statusText.className = "status-ready";
@@ -553,17 +537,8 @@ function sendPositionToBackend(position) {
         timestamp: clientTimestamp.toISOString()
     };
 
-    fetch(`${API_BASE_URL}${API_PATH}/positions?userId=${encodeURIComponent(getActiveUserId())}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
-        .then(response => {
-            if (!response.ok) throw new Error(`Server returned status ${response.status}`);
-            return response.json();
-        })
+    apiPostPosition(getActiveUserId(), payload)
         .then(data => {
-
 
             const localTimeFormatted = clientTimestamp.toLocaleString('de-DE', {
                 day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -620,15 +595,7 @@ function fetchAndRenderHistory() {
     const activeUserId = getActiveUserId();
 
     const fetchWithCoords = (lat, lon) => {
-        let url = `${API_BASE_URL}${API_PATH}/positions?userId=${encodeURIComponent(activeUserId)}`;
-        if (lat !== null && lon !== null) {
-            url += `&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
-        }
-        fetch(url)
-            .then(response => {
-                if (!response.ok) throw new Error("Could not fetch history");
-                return response.json();
-            })
+        apiGetPositions(activeUserId, lat, lon)
             .then(data => {
                 listContainer.innerHTML = "";
 
@@ -826,10 +793,8 @@ function fetchAndRenderHistory() {
                             const targetId = deleteBtn.getAttribute('data-id');
                             if (!targetId) return;
 
-                            fetch(`${API_BASE_URL}${API_PATH}/positions/${targetId}?userId=${encodeURIComponent(getActiveUserId())}`, { method: 'DELETE' })
-                                .then(response => {
-                                    if (!response.ok) throw new Error("Could not process record removal");
-
+                            apiDeletePosition(getActiveUserId(), targetId) 
+                                .then(() => {
                                     card.classList.add('card-leave-animate');
                                     card.addEventListener('animationend', () => {
                                         card.remove();
@@ -841,17 +806,16 @@ function fetchAndRenderHistory() {
                                         updateHistoryBadge(remainingCards.length);
 
                                         if (remainingCards.length === 0) {
-                                            listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">No locations logged yet for user "${activeUserId}".</div>`;
+                                            listContainer.innerHTML = `<div style="...">No locations logged yet...</div>`;
                                         }
                                     });
-                                    checkBackendStatus(); // Proactively sync indicator on success
+                                    checkBackendStatus();
                                 })
                                 .catch(err => {
                                     alert(`Error removing entry: ${err.message}`);
-                                    checkBackendStatus(); // Trigger 4: Reactive switch on DELETE failure
+                                    checkBackendStatus();
                                 });
                         });
-
                         listContainer.appendChild(card);
                     } catch (itemError) {
                         console.error("Skipped rendering corrupted log item:", pos, itemError);
