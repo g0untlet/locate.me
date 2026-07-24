@@ -35,6 +35,8 @@ import { checkBackendStatus, showError } from './js/ui/status.js';
 
 import { setHistoryView, renderMapMarkers, showLocateMap, initMapListeners } from './js/ui/map.js';
 
+import { initSettingsPage } from './js/pages/settings.js';
+
 
 /* ==========================================================================
    SPA Navigation Framework (Tab Controller)
@@ -600,10 +602,10 @@ function fetchAndRenderHistory() {
 document.addEventListener('DOMContentLoaded', () => {
     initMapListeners();
     
-    const savedId = localStorage.getItem('userId');
-    if (savedId) {
-        document.getElementById('username-input').value = savedId;
-    }
+    initSettingsPage({  
+        onSave: (userId) => silentBadgeSync(userId, checkBackendStatus),
+        getActiveUserId
+    });
 
     // Tap on status indicator: re-check backend and show toast
     const statusIndicator = document.querySelector('.header-status-indicator');
@@ -624,48 +626,6 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-document.getElementById('save-settings-btn').addEventListener('click', () => {
-    const inputVal = document.getElementById('username-input').value.trim();
-    const statusDiv = document.getElementById('settings-status');
-
-    localStorage.setItem('userId', inputVal);
-
-    statusDiv.style.color = "#16a34a";
-    statusDiv.innerText = "Settings saved successfully!";
-
-    silentBadgeSync(getActiveUserId(), checkBackendStatus);
-
-    setTimeout(() => {
-        statusDiv.innerText = "";
-    }, 3000);
-});
-
-/* ==========================================================================
-   Page 3: User ID Masking / Toggle Visibility Logic
-   ========================================================================== */
-const togglePasswordBtn = document.getElementById('toggle-password-btn');
-if (togglePasswordBtn) {
-    togglePasswordBtn.addEventListener('click', () => {
-        const usernameInput = document.getElementById('username-input');
-        const eyeVisible = document.getElementById('eye-icon-visible');
-        const eyeHidden = document.getElementById('eye-icon-hidden');
-        
-        if (!usernameInput) return;
-
-        // Toggle the input element type
-        if (usernameInput.type === 'password') {
-            usernameInput.type = 'text';
-            // Update icon visibility
-            eyeVisible.classList.add('hidden');
-            eyeHidden.classList.remove('hidden');
-        } else {
-            usernameInput.type = 'password';
-            // Update icon visibility
-            eyeVisible.classList.remove('hidden');
-            eyeHidden.classList.add('hidden');
-        }
-    });
-}
 
 
 /* ==========================================================================
