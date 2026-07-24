@@ -1,127 +1,40 @@
 /* ==========================================================================
-   Global Configuration: Dynamic API Environment Detection (DEV vs PROD)
+   imports
    ========================================================================== */
-const API_BASE_URL = window.location.port === '8080'
-    ? 'http://localhost:8080'  // Local Quarkus Backend for local Live Server testing
-    : '';                      // Production/Caddy-Proxy Environment (relative proxy paths)
-const API_PATH = '/api';
+import {
+    formatRelativeDate,
+    formatShortAddress,
+    formatWalkingTime,
+    getWeatherText,
+    getWeatherIconSvg,
+    getLocationIconSvg
+} from './js/utils.js';
 
-/* ==========================================================================
-   Date Formatting Utility
-   ========================================================================== */
-function formatRelativeDate(timestamp) {
-    if (!timestamp) return 'Unknown Date';
-    const d = new Date(timestamp);
-    if (isNaN(d.getTime())) return 'Unknown Date';
+import {
+    apiGetSystemInfo,
+    apiGetPositions,
+    apiGetCurrentPosition,
+    apiPostPosition,
+    apiDeletePosition
+} from './js/api.js';
 
-    const now = new Date();
-    const todayStart     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+import {
+    getHistoryMap, setHistoryMap,
+    getHistoryMapData, setHistoryMapData,
+    getCurrentHistoryView, setCurrentHistoryView,
+    getCachedLocatePosition, setCachedLocatePosition,
+    getLocateMap, setLocateMap,
+    getLocateMarker, setLocateMarker
+} from './js/state.js';
 
-    const timeStr = d.toLocaleString('de-DE', { hour: '2-digit', minute: '2-digit' });
+import { showStatusToast } from './js/ui/toast.js';
 
-    if (d >= todayStart) {
-        return `Today, ${timeStr}`;
-    } else if (d >= yesterdayStart) {
-        return `Yesterday, ${timeStr}`;
-    } else {
-        return d.toLocaleString('de-DE', {
-            day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit'
-        });
-    }
-}
+import { updateHistoryBadge, silentBadgeSync } from './js/ui/badge.js';
 
-/* ==========================================================================
-   Backend Health & Status Indicator Logic
-   ========================================================================== */
-async function checkBackendStatus(showToast = false) {
-    const statusDot = document.querySelector('.status-dot');
-    if (!statusDot) return;
+import { checkBackendStatus, showError } from './js/ui/status.js';
 
-    try {
-        // Enforce a strict timeout to avoid endless hangs on slow mobile networks
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000);
+import { setHistoryView, renderMapMarkers, showLocateMap, initMapListeners } from './js/ui/map.js';
 
-        const response = await fetch(`${API_BASE_URL}${API_PATH}/system/info`, {
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-            statusDot.classList.remove('offline');
-            statusDot.classList.add('online');
-            statusDot.parentElement.title = "Application Online";
-            if (showToast) showStatusToast('online');
-            const info = await response.json();
-            renderBackendInfo(info);
-        } else {
-            throw new Error("Backend answered with error status code");
-        }
-    } catch (error) {
-        statusDot.classList.remove('online');
-        statusDot.classList.add('offline');
-        statusDot.parentElement.title = "Backend unreachable";
-        if (showToast) showStatusToast('offline');
-        renderBackendInfo(null);
-    }
-}
-
-/* ==========================================================================
-   Backend Info Renderer (Settings Page)
-   ========================================================================== */
-function renderBackendInfo(info) {
-    const el = document.getElementById('backend-info');
-    if (!el) return;
-
-    if (!info) {
-        el.innerHTML = `<span class="backend-info-label">BACKEND</span>
-                        <span class="backend-info-value backend-info-offline">Not reachable</span>`;
-        return;
-    }
-
-    let onlineSince = '–';
-    if (info.startupTime) {
-        const d = new Date(info.startupTime);
-        if (!isNaN(d.getTime())) {
-            onlineSince = d.toLocaleString('de-DE', {
-                day: '2-digit', month: '2-digit', year: 'numeric',
-                hour: '2-digit', minute: '2-digit'
-            });
-        }
-    }
-
-    el.innerHTML = `<span class="backend-info-label">BACKEND</span>
-                    <span class="backend-info-value">${info.artifactId || '–'} ${info.version || ''}</span>
-                    <span class="backend-info-since">Online since ${onlineSince}</span>`;
-}
-
-/* ==========================================================================
-   Status Toast Notification
-   ========================================================================== */
-function showStatusToast(state) {
-    // Remove any existing toast to avoid stacking
-    const existing = document.getElementById('status-toast');
-    if (existing) existing.remove();
-
-    const toast = document.createElement('div');
-    toast.id = 'status-toast';
-    toast.className = `status-toast status-toast--${state}`;
-    toast.textContent = state === 'online' ? '✓ Backend online' : '✗ Backend not reachable';
-
-    document.querySelector('.app-container').appendChild(toast);
-
-    // Trigger reflow to enable CSS transition
-    toast.getBoundingClientRect();
-    toast.classList.add('status-toast--visible');
-
-    const duration = state === 'online' ? 2000 : 3000;
-    setTimeout(() => {
-        toast.classList.remove('status-toast--visible');
-        toast.addEventListener('transitionend', () => toast.remove(), { once: true });
-    }, duration);
-}
 
 /* ==========================================================================
    SPA Navigation Framework (Tab Controller)
@@ -144,137 +57,6 @@ document.querySelectorAll('.nav-item').forEach(button => {
     });
 });
 
-/* ==========================================================================
-   History View Toggle (List <-> Map)
-   ========================================================================== */
-let _historyMap = null;         // Leaflet map instance (lazy init)
-let _historyMapData = [];       // Last fetched positions, shared with map renderer
-let _currentHistoryView = 'list';
-
-function setHistoryView(view) {
-    _currentHistoryView = view;
-    const listEl   = document.getElementById('history-list');
-    const mapEl    = document.getElementById('history-map');
-    const listBtn  = document.getElementById('toggle-list-btn');
-    const mapBtn   = document.getElementById('toggle-map-btn');
-    if (!listEl || !mapEl || !listBtn || !mapBtn) return;
-
-    if (view === 'map') {
-        listEl.classList.add('hidden');
-        mapEl.classList.remove('hidden');
-        listBtn.classList.remove('view-toggle-btn--active');
-        mapBtn.classList.add('view-toggle-btn--active');
-        initOrRefreshMap();
-    } else {
-        mapEl.classList.add('hidden');
-        listEl.classList.remove('hidden');
-        mapBtn.classList.remove('view-toggle-btn--active');
-        listBtn.classList.add('view-toggle-btn--active');
-    }
-}
-
-function initOrRefreshMap() {
-    const mapEl = document.getElementById('history-map');
-    if (!mapEl) return;
-
-    if (!_historyMap) {
-        // First init: create Leaflet instance
-        _historyMap = L.map('history-map', { zoomControl: true });
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19
-        }).addTo(_historyMap);
-    }
-
-    // invalidateSize fixes rendering in previously hidden containers
-    setTimeout(() => {
-        _historyMap.invalidateSize();
-        renderMapMarkers();
-    }, 50);
-}
-
-function renderMapMarkers() {
-    if (!_historyMap) return;
-
-    // Clear existing markers
-    _historyMap.eachLayer(layer => {
-        if (layer instanceof L.Marker) _historyMap.removeLayer(layer);
-    });
-
-    if (!_historyMapData || _historyMapData.length === 0) return;
-
-    const bounds = [];
-
-    _historyMapData.forEach((pos, index) => {
-        if (!pos.latitude || !pos.longitude) return;
-
-        const lat = parseFloat(pos.latitude);
-        const lon = parseFloat(pos.longitude);
-        if (isNaN(lat) || isNaN(lon)) return;
-
-        const shortAddr = formatShortAddress(pos);
-        const dateFormatted = formatRelativeDate(pos.timestamp);
-
-        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
-        const escapedAddr = shortAddr.replace(/"/g, '&quot;');
-
-        const marker = L.marker([lat, lon]).addTo(_historyMap);
-        marker.bindPopup(
-            `<div class="map-popup">` +
-            `<span class="map-popup-index">#${index + 1}</span>` +
-            `<span class="map-popup-address">${shortAddr}</span>` +
-            `<span class="map-popup-date">${dateFormatted}</span>` +
-            `<button class="map-popup-share" data-lat="${lat}" data-lon="${lon}" data-address="${escapedAddr}" data-maps-url="${mapsUrl}">` +
-            `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>` +
-            `Share</button>` +
-            `</div>`,
-            { maxWidth: 220 }
-        );
-        bounds.push([lat, lon]);
-    });
-
-    if (bounds.length === 1) {
-        _historyMap.setView(bounds[0], 15);
-    } else if (bounds.length > 1) {
-        _historyMap.fitBounds(bounds, { padding: [24, 24] });
-    }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    const listBtn = document.getElementById('toggle-list-btn');
-    const mapBtn  = document.getElementById('toggle-map-btn');
-    if (listBtn) listBtn.addEventListener('click', () => setHistoryView('list'));
-    if (mapBtn)  mapBtn.addEventListener('click',  () => setHistoryView('map'));
-
-    // Event delegation for share buttons inside Leaflet popups.
-    // Popup DOM is only present after opening, so we delegate from the stable container.
-    const historyMapEl = document.getElementById('history-map');
-    if (historyMapEl) {
-        historyMapEl.addEventListener('click', (e) => {
-            const btn = e.target.closest('.map-popup-share');
-            if (!btn) return;
-
-            const mapsUrl = btn.getAttribute('data-maps-url');
-            const address = btn.getAttribute('data-address');
-
-            if (navigator.share) {
-                navigator.share({
-                    title: 'locate.me',
-                    text: address,
-                    url: mapsUrl
-                }).catch(err => {
-                    console.log('Share cancelled or failed:', err.message);
-                });
-            } else {
-                navigator.clipboard.writeText(mapsUrl).then(() => {
-                    const originalHTML = btn.innerHTML;
-                    btn.textContent = 'Copied!';
-                    setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
-                }).catch(() => {});
-            }
-        });
-    }
-});
 
 /* ==========================================================================
    Global Helper: Dynamically extract active User ID from LocalStorage
@@ -285,178 +67,14 @@ function getActiveUserId() {
 }
 
 /* ==========================================================================
-   Global Helper: History Badge State Controller
-   ========================================================================== */
-function updateHistoryBadge(count) {
-    const badge = document.getElementById('history-badge');
-    if (!badge) return;
-    
-    if (count > 0) {
-        badge.textContent = count;
-        badge.style.display = 'flex';
-    } else {
-        badge.style.display = 'none';
-    }
-}
-
-/* ==========================================================================
-   Global Helper: Background Silent Badge Sync (for initialization)
-   ========================================================================== */
-function silentBadgeSync() {
-    fetch(`${API_BASE_URL}${API_PATH}/positions?userId=${encodeURIComponent(getActiveUserId())}`)
-        .then(response => {
-            if (response.ok) return response.json();
-            throw new Error();
-        })
-        .then(data => {
-            if (Array.isArray(data)) {
-                updateHistoryBadge(data.length);
-            }
-        })
-        .catch(() => {
-            console.log("Silent badge sync paused. Offline or server unreachable.");
-            checkBackendStatus(); // Trigger 4: Reactive switch on background sync failure
-        });
-}
-
-/* ==========================================================================
-   Global Helper: Pure, lightweight Inline SVG Location Icon Renderer
-   ========================================================================== */
-function getLocationIconSvg(category, type) {
-    const svgAttrs = `viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"`;
-    const defaultIcon = `<svg ${svgAttrs}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`;
-
-    if (!category) return defaultIcon;
-
-    switch (category) {
-        case 'building':
-            return `<svg ${svgAttrs}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`;
-
-        case 'highway':
-        case 'railway':
-            if (['bus_stop', 'platform', 'station'].includes(type)) {
-                return `<svg ${svgAttrs}><rect x="6" y="3" width="12" height="16" rx="2"></rect><line x1="9" y1="19" x2="7" y2="22"></line><line x1="15" y1="19" x2="17" y2="22"></line><circle cx="9" cy="15" r="1"></circle><circle cx="15" cy="15" r="1"></circle><path d="M6 9h12"></path></svg>`;
-            }
-            return `<svg ${svgAttrs}><line x1="18" y1="21" x2="14" y2="3"></line><line x1="6" y1="21" x2="10" y2="3"></line><line x1="12" y1="3" x2="12" y2="21" stroke-dasharray="3,3"></line></svg>`;
-
-        case 'shop':
-        case 'craft':
-            return `<svg ${svgAttrs}><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`;
-
-        case 'leisure':
-        case 'landuse':
-        case 'natural':
-            return `<svg ${svgAttrs}><path d="M12 19V5M12 5a4 4 0 0 0-4 4c0 2.5 2.5 5 4 7m0-11a4 4 0 0 1 4 4c0 2.5-2.5 5-4 7m-3 3h6"></path></svg>`;
-
-        case 'amenity':
-            if (['restaurant', 'cafe', 'fast_food', 'bar'].includes(type)) {
-                return `<svg ${svgAttrs}><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>`;
-            }
-            return `<svg ${svgAttrs}><path d="M3 21h18M3 10h18M3 7l9-4 9 4M7 10v7M12 10v7M17 10v7"></path></svg>`;
-
-        case 'tourism':
-        case 'historic':
-            return `<svg ${svgAttrs}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
-
-        case 'waterway':
-            return `<svg ${svgAttrs}><path d="M12 22a7 7 0 0 0 7-7c0-4-7-13-7-13s-7 9-7 13a7 7 0 0 0 7 7z"></path></svg>`;
-
-        default:
-            return defaultIcon;
-    }
-}
-
-/* ==========================================================================
-   Global Helper: Semantic Address Formatter
-   ========================================================================== */
-function formatShortAddress(pos) {
-    if (!pos) return "Unknown Location";
-    let shortAddress = '';
-
-    if (pos.osmName && pos.osmName.trim() !== '') {
-        shortAddress = pos.osmName;
-    } else if (pos.road && pos.houseNumber) {
-        shortAddress = `${pos.road} ${pos.houseNumber}`;
-    } else if (pos.road) {
-        shortAddress = pos.road;
-    } else {
-        return pos.displayName || `Lat: ${pos.latitude.toFixed(4)}, Lon: ${pos.longitude.toFixed(4)}`;
-    }
-
-    if (pos.city) shortAddress += `, ${pos.city}`;
-    if (pos.country) shortAddress += `, ${pos.country}`;
-
-    return shortAddress;
-}
-
-/* ==========================================================================
-   Global Helper: Pure, lightweight Inline SVG Weather Icon Renderer
-   ========================================================================== */
-function getWeatherIconSvg(code) {
-    const svgAttrs = `class="embedded-weather-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`;
-    const fallbackIcon = `<svg ${svgAttrs}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
-
-    if (code === undefined || code === null) return fallbackIcon;
-
-    switch (true) {
-        case (code === 0):
-            return `<svg class="embedded-weather-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
-        case (code >= 1 && code <= 3):
-            return `<svg ${svgAttrs}><path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.42-1.03-1.42-2.5-3.5-2.5a4.5 4.5 0 0 0-4.5 4.5c0 .14 0 .27.02.4A4 4 0 0 0 4 17a3.5 3.5 0 0 0 3.5 3.5h10z"></path></svg>`;
-        case (code >= 45 && code <= 48):
-            return `<svg ${svgAttrs}><line x1="5" y1="8" x2="19" y2="8"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="6" y1="16" x2="18" y2="16"></line></svg>`;
-        case ((code >= 51 && code <= 55) || (code >= 61 && code <= 65) || (code >= 80 && code <= 82)):
-            return `<svg ${svgAttrs}><line x1="16" y1="13" x2="16" y2="21"></line><line x1="8" y1="13" x2="8" y2="21"></line><line x1="12" y1="15" x2="12" y2="23"></line><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path></svg>`;
-        case ((code >= 71 && code <= 75) || code === 77 || code === 85 || code === 86):
-            return `<svg ${svgAttrs}><line x1="12" y1="2" x2="12" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line><line x1="4.93" y1="19.07" x2="19.07" y2="4.93"></line></svg>`;
-        case (code === 95 || code === 96 || code === 99):
-            return `<svg ${svgAttrs}><path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 8.58"></path><polyline points="13 11 9 17 12 17 11 23 15 17 12 17 13 11"></polyline></svg>`;
-        default:
-            return fallbackIcon;
-    }
-}
-
-/* ==========================================================================
    Locate Page: Cached GPS Position & UI Reset
    ========================================================================== */
-let _cachedLocatePosition = null;
-let _locateMap = null;          // Leaflet map instance for Locate page (lazy init)
-let _locateMarker = null;       // Single marker on the Locate map
-
 function resetLocatePage() {
     document.getElementById('btn-fetch-location').textContent = '\uD83D\uDCCD FETCH LOCATION';
     document.getElementById('track-btn').style.display = 'none';
-    _cachedLocatePosition = null;
+    setCachedLocatePosition(null); 
 }
 
-/* ==========================================================================
-   Locate Page Map: Show single marker at given coordinates
-   ========================================================================== */
-function showLocateMap(lat, lon) {
-    const mapEl = document.getElementById('locate-map');
-    if (!mapEl) return;
-
-    if (!_locateMap) {
-        _locateMap = L.map('locate-map', { zoomControl: false });
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19
-        }).addTo(_locateMap);
-    }
-
-    // Update or create marker
-    if (_locateMarker) {
-        _locateMarker.setLatLng([lat, lon]);
-    } else {
-        _locateMarker = L.marker([lat, lon]).addTo(_locateMap);
-    }
-
-    // Delay to let the container finish its CSS transition before sizing
-    setTimeout(() => {
-        _locateMap.invalidateSize();
-        _locateMap.setView([lat, lon], 15);
-    }, 50);
-}
 
 /* ==========================================================================
    Page 1 – Step 1: Fetch Location (GPS + GET /api/positions/current)
@@ -470,7 +88,7 @@ document.getElementById('btn-fetch-location').addEventListener('click', () => {
     responseCard.classList.add('hidden');
 
     document.getElementById('track-btn').style.display = 'none';
-    _cachedLocatePosition = null;
+    setCachedLocatePosition(null);
 
     if (!navigator.geolocation) {
         showError("Geolocation is not supported by your browser.");
@@ -535,13 +153,8 @@ function fetchCurrentPosition(position) {
     statusText.className = "status-loading";
 
     const { latitude, longitude } = position.coords;
-    const url = `${API_BASE_URL}${API_PATH}/positions/current?userId=${encodeURIComponent(getActiveUserId())}&lat=${latitude}&lon=${longitude}`;
 
-    fetch(url)
-        .then(response => {
-            if (!response.ok) throw new Error(`Server returned status ${response.status}`);
-            return response.json();
-        })
+    apiGetCurrentPosition(getActiveUserId(), latitude, longitude)
         .then(data => {
             statusText.innerText = "Ready";
             statusText.className = "status-ready";
@@ -570,7 +183,7 @@ function fetchCurrentPosition(position) {
 
             responseCard.classList.remove('hidden');
 
-            _cachedLocatePosition = position;
+            setCachedLocatePosition(position);
             fetchBtn.textContent = 'Refresh';
             document.getElementById('track-btn').style.display = 'block';
             statusText.innerText = "Preview: Position not yet saved.";
@@ -590,7 +203,7 @@ function fetchCurrentPosition(position) {
    Page 1 – Step 2: Send Location (POST – Fresh GPS Poll)
    ========================================================================== */
 document.getElementById('track-btn').addEventListener('click', () => {
-    if (!_cachedLocatePosition) {
+    if (!getCachedLocatePosition()) {
         showError("No position available. Please fetch first.");
         return;
     }
@@ -669,17 +282,8 @@ function sendPositionToBackend(position) {
         timestamp: clientTimestamp.toISOString()
     };
 
-    fetch(`${API_BASE_URL}${API_PATH}/positions?userId=${encodeURIComponent(getActiveUserId())}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
-        .then(response => {
-            if (!response.ok) throw new Error(`Server returned status ${response.status}`);
-            return response.json();
-        })
+    apiPostPosition(getActiveUserId(), payload)
         .then(data => {
-
 
             const localTimeFormatted = clientTimestamp.toLocaleString('de-DE', {
                 day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -710,14 +314,14 @@ function sendPositionToBackend(position) {
 
             document.getElementById('track-btn').style.display = 'none';
             document.getElementById('btn-fetch-location').textContent = 'FETCH LOCATION';
-            _cachedLocatePosition = null;
+            setCachedLocatePosition(null);
 
             statusText.innerText = "Location successfully saved.";
             statusText.className = "status-success";
 
             showLocateMap(payload.latitude, payload.longitude);
 
-            silentBadgeSync();
+            silentBadgeSync(getActiveUserId(), checkBackendStatus);
             checkBackendStatus(); // Proactively ensure indicator syncs back on success
         })
         .catch(err => {
@@ -736,32 +340,24 @@ function fetchAndRenderHistory() {
     const activeUserId = getActiveUserId();
 
     const fetchWithCoords = (lat, lon) => {
-        let url = `${API_BASE_URL}${API_PATH}/positions?userId=${encodeURIComponent(activeUserId)}`;
-        if (lat !== null && lon !== null) {
-            url += `&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
-        }
-        fetch(url)
-            .then(response => {
-                if (!response.ok) throw new Error("Could not fetch history");
-                return response.json();
-            })
+        apiGetPositions(activeUserId, lat, lon)
             .then(data => {
                 listContainer.innerHTML = "";
 
                 if (!data || !Array.isArray(data) || data.length === 0) {
                     listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">No locations logged yet for user "${activeUserId}".</div>`;
                     updateHistoryBadge(0);
-                    _historyMapData = [];
+                    setHistoryMapData([]);
                     return;
                 }
 
                 updateHistoryBadge(data.length);
 
                 // Store for map renderer
-                _historyMapData = data;
+                setHistoryMapData(data);
 
                 // If map view is active, re-render markers with fresh data
-                if (_currentHistoryView === 'map') {
+                if (getCurrentHistoryView() === 'map') {
                     renderMapMarkers();
                 }
 
@@ -942,10 +538,8 @@ function fetchAndRenderHistory() {
                             const targetId = deleteBtn.getAttribute('data-id');
                             if (!targetId) return;
 
-                            fetch(`${API_BASE_URL}${API_PATH}/positions/${targetId}?userId=${encodeURIComponent(getActiveUserId())}`, { method: 'DELETE' })
-                                .then(response => {
-                                    if (!response.ok) throw new Error("Could not process record removal");
-
+                            apiDeletePosition(getActiveUserId(), targetId) 
+                                .then(() => {
                                     card.classList.add('card-leave-animate');
                                     card.addEventListener('animationend', () => {
                                         card.remove();
@@ -957,17 +551,16 @@ function fetchAndRenderHistory() {
                                         updateHistoryBadge(remainingCards.length);
 
                                         if (remainingCards.length === 0) {
-                                            listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">No locations logged yet for user "${activeUserId}".</div>`;
+                                            listContainer.innerHTML = `<div style="...">No locations logged yet...</div>`;
                                         }
                                     });
-                                    checkBackendStatus(); // Proactively sync indicator on success
+                                    checkBackendStatus();
                                 })
                                 .catch(err => {
                                     alert(`Error removing entry: ${err.message}`);
-                                    checkBackendStatus(); // Trigger 4: Reactive switch on DELETE failure
+                                    checkBackendStatus();
                                 });
                         });
-
                         listContainer.appendChild(card);
                     } catch (itemError) {
                         console.error("Skipped rendering corrupted log item:", pos, itemError);
@@ -1005,6 +598,8 @@ function fetchAndRenderHistory() {
    Page 3: LocalStorage Settings Engine & Lifecycle Lifecycle Hooks
    ========================================================================== */
 document.addEventListener('DOMContentLoaded', () => {
+    initMapListeners();
+    
     const savedId = localStorage.getItem('userId');
     if (savedId) {
         document.getElementById('username-input').value = savedId;
@@ -1018,7 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Trigger 1: Core Startup Sequence
-    silentBadgeSync();
+    silentBadgeSync(getActiveUserId(), checkBackendStatus);
     checkBackendStatus();
 });
 
@@ -1038,7 +633,7 @@ document.getElementById('save-settings-btn').addEventListener('click', () => {
     statusDiv.style.color = "#16a34a";
     statusDiv.innerText = "Settings saved successfully!";
 
-    silentBadgeSync();
+    silentBadgeSync(getActiveUserId(), checkBackendStatus);
 
     setTimeout(() => {
         statusDiv.innerText = "";
@@ -1072,43 +667,6 @@ if (togglePasswordBtn) {
     });
 }
 
-/* ==========================================================================
-   Utilities
-   ========================================================================== */
-function formatWalkingTime(minutes) {
-    const total = Math.round(minutes);
-    if (total < 60) return `${total} min`;
-    const h = Math.floor(total / 60);
-    const m = total % 60;
-    return m === 0 ? `${h}h` : `${h}h ${m}m`;
-}
-
-function showError(message) {
-    const statusText = document.getElementById('status');
-    statusText.innerText = message;
-    statusText.className = "status-error";
-}
-
-function getWeatherText(code) {
-    if (code === undefined || code === null) return "Unknown";
-
-    switch (true) {
-        case (code === 0): return "Clear sky";
-        case (code >= 1 && code <= 3): return "Mainly clear";
-        case (code >= 45 && code <= 48): return "Fog";
-        case (code >= 51 && code <= 55): return "Drizzle";
-        case (code === 56 || code === 57): return "Freezing drizzle";
-        case (code >= 61 && code <= 65): return "Rain";
-        case (code === 66 || code === 67): return "Freezing rain";
-        case (code >= 71 && code <= 75): return "Snow fall";
-        case (code === 77): return "Snow grains";
-        case (code >= 80 && code <= 82): return "Rain showers";
-        case (code === 85 || code === 86): return "Snow showers";
-        case (code === 95): return "Thunderstorm";
-        case (code === 96 || code === 99): return "Thunderstorm with hail";
-        default: return "Unknown";
-    }
-}
 
 /* ==========================================================================
    PWA Service Worker Registration
