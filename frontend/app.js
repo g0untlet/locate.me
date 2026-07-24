@@ -1,94 +1,78 @@
 /* ==========================================================================
-   imports
+   locate.me – Application Entry Point
+   Importiert alle Module und verdrahtet die App-Initialisierung.
    ========================================================================== */
-import {
-    formatRelativeDate,
-    formatShortAddress,
-    formatWalkingTime,
-    getWeatherText,
-    getWeatherIconSvg,
-    getLocationIconSvg
-} from './js/utils.js';
-
-import {
-    apiGetSystemInfo,
-    apiGetPositions,
-    apiGetCurrentPosition,
-    apiPostPosition,
-    apiDeletePosition
-} from './js/api.js';
-
-import {
-    getHistoryMap, setHistoryMap,
-    getHistoryMapData, setHistoryMapData,
-    getCurrentHistoryView, setCurrentHistoryView,
-    getCachedLocatePosition, setCachedLocatePosition,
-    getLocateMap, setLocateMap,
-    getLocateMarker, setLocateMarker
-} from './js/state.js';
-
-import { showStatusToast } from './js/ui/toast.js';
-
-import { updateHistoryBadge, silentBadgeSync } from './js/ui/badge.js';
-
-import { checkBackendStatus, showError } from './js/ui/status.js';
-
-import { setHistoryView, renderMapMarkers, showLocateMap, initMapListeners } from './js/ui/map.js';
-
+import { checkBackendStatus } from './js/ui/status.js';
+import { silentBadgeSync } from './js/ui/badge.js';
+import { setHistoryView, initMapListeners } from './js/ui/map.js';
 import { initSettingsPage } from './js/pages/settings.js';
-
 import { initLocatePage } from './js/pages/locate.js';
-
 import { fetchAndRenderHistory } from './js/pages/history.js';
 
-
 /* ==========================================================================
-   SPA Navigation Framework (Tab Controller)
-   ========================================================================== */
-document.querySelectorAll('.nav-item').forEach(button => {
-    button.addEventListener('click', () => {
-        document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-
-        const targetPageId = button.getAttribute('data-target');
-        document.querySelectorAll('.app-page').forEach(page => page.classList.add('hidden'));
-        document.getElementById(targetPageId).classList.remove('hidden');
-
-        if (targetPageId === 'page-history') {
-            fetchAndRenderHistory({ getActiveUserId, checkBackendStatus });
-        } else {
-            setHistoryView('list');
-        }
-        
-    });
-});
-
-
-/* ==========================================================================
-   Global Helper: Dynamically extract active User ID from LocalStorage
+   Global Helper: Aktive User-ID aus LocalStorage lesen
+   Default: "user123" wenn nicht gesetzt oder leer.
    ========================================================================== */
 function getActiveUserId() {
     const savedId = localStorage.getItem('userId');
     return (savedId && savedId.trim() !== "") ? savedId.trim() : "user123";
 }
 
+/* ==========================================================================
+   SPA Navigation Framework (Tab Controller)
+   ========================================================================== */
+function initNavigation() {
+    document.querySelectorAll('.nav-item').forEach(button => {
+        button.addEventListener('click', () => {
+            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            const targetPageId = button.getAttribute('data-target');
+            document.querySelectorAll('.app-page').forEach(page => page.classList.add('hidden'));
+            document.getElementById(targetPageId).classList.remove('hidden');
+
+            if (targetPageId === 'page-history') {
+                fetchAndRenderHistory({ getActiveUserId, checkBackendStatus });
+            } else {
+                // Leaving history page: reset to list view so next visit starts fresh
+                setHistoryView('list');
+            }
+        });
+    });
+}
 
 /* ==========================================================================
-   Page 3: LocalStorage Settings Engine & Lifecycle Lifecycle Hooks
+   PWA Service Worker Registration
+   ========================================================================== */
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('Service Worker successfully registered!', reg.scope))
+                .catch(err => console.error('Service Worker Registration failed:', err));
+        });
+    }
+}
+
+/* ==========================================================================
+   App Bootstrap
    ========================================================================== */
 document.addEventListener('DOMContentLoaded', () => {
+
     initMapListeners();
-    
-    initSettingsPage({  
+
+    initSettingsPage({
         onSave: (userId) => silentBadgeSync(userId, checkBackendStatus),
         getActiveUserId
     });
 
-    initLocatePage({ 
+    initLocatePage({
         getActiveUserId,
         checkBackendStatus,
         silentBadgeSync
     });
+
+    initNavigation();
 
     // Tap on status indicator: re-check backend and show toast
     const statusIndicator = document.querySelector('.header-status-indicator');
@@ -109,15 +93,4 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-
-
-/* ==========================================================================
-   PWA Service Worker Registration
-   ========================================================================== */
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('Service Worker successfully registered!', reg.scope))
-            .catch(err => console.error('Service Worker Registration failed:', err));
-    });
-}
+registerServiceWorker();
