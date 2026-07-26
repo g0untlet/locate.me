@@ -232,12 +232,109 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
 }
 
 /* ==========================================================================
+   Pull-to-Refresh – Touch-basiertes Refresh auf dem History-List-Container
+   ========================================================================== */
+const PTR_THRESHOLD  = 72;   // px Zugdistanz bis Refresh auslöst
+const PTR_MAX_PULL   = 96;   // px maximale visuelle Auslenkung
+const PTR_INDICATOR_ID = 'ptr-indicator';
+
+function ensurePtrIndicator() {
+    if (document.getElementById(PTR_INDICATOR_ID)) return;
+    const el = document.createElement('div');
+    el.id = PTR_INDICATOR_ID;
+    el.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="1 4 1 10 7 10"></polyline>
+            <path d="M3.51 15a9 9 0 1 0 .49-3.5"></path>
+        </svg>`;
+    // Vor dem history-list einfügen
+    const list = document.getElementById('history-list');
+    list.parentNode.insertBefore(el, list);
+}
+
+function initPullToRefresh(deps) {
+    const page = document.getElementById('page-history');
+    const list = document.getElementById('history-list');
+
+    let startY      = 0;
+    let pulling     = false;
+    let refreshing  = false;
+
+    const indicator = document.getElementById(PTR_INDICATOR_ID);
+
+    function setIndicatorProgress(pullY) {
+        const ratio    = Math.min(pullY / PTR_THRESHOLD, 1);
+        const clamped  = Math.min(pullY, PTR_MAX_PULL);
+        indicator.style.height   = `${clamped * 0.6}px`;
+        indicator.style.opacity  = `${ratio}`;
+        indicator.querySelector('svg').style.transform = `rotate(${ratio * 360}deg)`;
+    }
+
+    function resetIndicator() {
+        indicator.style.height  = '0px';
+        indicator.style.opacity = '0';
+        indicator.classList.remove('ptr-spinning');
+        indicator.querySelector('svg').style.transform = 'rotate(0deg)';
+    }
+
+    function triggerRefresh() {
+        refreshing = true;
+        indicator.classList.add('ptr-spinning');
+        indicator.style.height  = '44px';
+        indicator.style.opacity = '1';
+
+        fetchAndRenderHistory(deps);
+
+        // Indicator nach kurzem Delay zurücksetzen (Render übernimmt den Rest)
+        setTimeout(() => {
+            resetIndicator();
+            refreshing = false;
+        }, 800);
+    }
+
+    page.addEventListener('touchstart', (e) => {
+        if (refreshing) return;
+        // Nur starten wenn Liste ganz oben gescrollt ist
+        if (list.scrollTop > 0) return;
+        startY  = e.touches[0].clientY;
+        pulling = true;
+    }, { passive: true });
+
+    page.addEventListener('touchmove', (e) => {
+        if (!pulling || refreshing) return;
+        const pullY = e.touches[0].clientY - startY;
+        if (pullY <= 0) { pulling = false; return; }
+        setIndicatorProgress(pullY);
+    }, { passive: true });
+
+    page.addEventListener('touchend', (e) => {
+        if (!pulling || refreshing) return;
+        pulling = false;
+        const pullY = e.changedTouches[0].clientY - startY;
+        if (pullY >= PTR_THRESHOLD) {
+            triggerRefresh();
+        } else {
+            resetIndicator();
+        }
+    }, { passive: true });
+}
+
+/* ==========================================================================
    fetchAndRenderHistory – Haupt-Einstiegspunkt, wird beim Tab-Wechsel aufgerufen
    deps = { getActiveUserId, checkBackendStatus }
    ========================================================================== */
 export function fetchAndRenderHistory(deps) {
     const { getActiveUserId, checkBackendStatus } = deps;
     const listContainer = document.getElementById('history-list');
+
+    // Pull-to-Refresh einmalig initialisieren
+    ensurePtrIndicator();
+    if (!listContainer.dataset.ptrReady) {
+        initPullToRefresh(deps);
+        listContainer.dataset.ptrReady = 'true';
+    }
+
     listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">Loading historical logs...</div>`;
 
     const activeUserId = getActiveUserId();
