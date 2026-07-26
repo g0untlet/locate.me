@@ -6,6 +6,17 @@
 
 export function initSettingsPage({ onSave, getActiveUserId }) {
 
+    // --- Dark-Mode-Toggle --- 
+    const darkToggle = document.getElementById('dark-mode-toggle'); 
+    darkToggle.setAttribute('aria-checked', document.documentElement.dataset.theme === 'dark');
+
+    darkToggle.addEventListener('click', () => {
+        const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        localStorage.setItem('theme', next);
+        darkToggle.setAttribute('aria-checked', next === 'dark');
+    });
+
     // --- LocalStorage: userId beim Start ins Feld laden ---
     const savedId = localStorage.getItem('userId');
     if (savedId) {
