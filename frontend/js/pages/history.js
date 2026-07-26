@@ -345,6 +345,91 @@ export function showHistorySkeleton() {
 }
 
 /* ==========================================================================
+   Search / Filter
+   Zentrale Match-Funktion – bei Tags/Kommentaren nur hier erweitern.
+   ========================================================================== */
+function posMatchesFilter(pos, term) {
+    if (!term) return true;
+    const t = term.toLowerCase();
+    return (
+        (pos.displayName  || '').toLowerCase().includes(t) ||
+        // Erweiterungspunkte – greifen sobald Backend die Felder liefert:
+        (pos.comment      || '').toLowerCase().includes(t) ||
+        (pos.tags         || []).some(tag => tag.toLowerCase().includes(t))
+    );
+}
+
+function applyFilter(allPositions, term) {
+    const cards = document.querySelectorAll('#history-list .log-card');
+    let visibleCount = 0;
+    cards.forEach((card, i) => {
+        const matches = posMatchesFilter(allPositions[i], term);
+        card.style.display = matches ? '' : 'none';
+        if (matches) visibleCount++;
+    });
+
+    const noResult = document.getElementById('history-no-results');
+    if (noResult) noResult.style.display = visibleCount === 0 ? 'block' : 'none';
+}
+
+function ensureSearchBar(allPositions) {
+    if (document.getElementById('history-search-bar')) return;
+
+    const bar = document.createElement('div');
+    bar.id = 'history-search-bar';
+    bar.className = 'history-search-bar';
+    bar.innerHTML = `
+        <div class="history-search-input-wrapper">
+            <svg class="history-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input id="history-search-input" class="history-search-input"
+                   type="search" placeholder="Filter by address…" autocomplete="off">
+            <button id="history-search-clear" class="history-search-clear hidden" aria-label="Clear filter">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div id="history-no-results" class="history-no-results hidden">No matches found.</div>
+    `;
+
+    const list = document.getElementById('history-list');
+    list.parentNode.insertBefore(bar, list);
+
+    const input     = bar.querySelector('#history-search-input');
+    const clearBtn  = bar.querySelector('#history-search-clear');
+    const noResults = bar.querySelector('#history-no-results');
+
+    input.addEventListener('input', () => {
+        const term = input.value.trim();
+        clearBtn.classList.toggle('hidden', term === '');
+        applyFilter(allPositions, term);
+    });
+
+    clearBtn.addEventListener('click', () => {
+        input.value = '';
+        clearBtn.classList.add('hidden');
+        applyFilter(allPositions, '');
+        input.focus();
+    });
+}
+
+function resetSearchBar() {
+    // Suchfeld beim Reload leeren, damit Filter nicht auf alten Term läuft
+    const input    = document.getElementById('history-search-input');
+    const clearBtn = document.getElementById('history-search-clear');
+    if (input)    { input.value = ''; }
+    if (clearBtn) { clearBtn.classList.add('hidden'); }
+    const noResults = document.getElementById('history-no-results');
+    if (noResults) { noResults.classList.add('hidden'); }
+}
+
+/* ==========================================================================
    fetchAndRenderHistory – Haupt-Einstiegspunkt, wird beim Tab-Wechsel aufgerufen
    deps = { getActiveUserId, checkBackendStatus }
    ========================================================================== */
@@ -395,6 +480,10 @@ export function fetchAndRenderHistory(deps) {
                         console.error("Skipped rendering corrupted log item:", pos, itemError);
                     }
                 });
+
+                // Suchfeld einmalig anlegen, Term nach Reload zurücksetzen
+                ensureSearchBar(data);
+                resetSearchBar();
 
                 checkBackendStatus();
             })
