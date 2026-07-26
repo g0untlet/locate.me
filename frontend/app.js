@@ -7,7 +7,7 @@ import { silentBadgeSync } from './js/ui/badge.js';
 import { setHistoryView, initMapListeners } from './js/ui/map.js';
 import { initSettingsPage } from './js/pages/settings.js';
 import { initLocatePage } from './js/pages/locate.js';
-import { fetchAndRenderHistory } from './js/pages/history.js';
+import { fetchAndRenderHistory, showHistorySkeleton } from './js/pages/history.js';
 
 /* ==========================================================================
    Global Helper: Aktive User-ID aus LocalStorage lesen
@@ -32,6 +32,7 @@ function initNavigation() {
             document.getElementById(targetPageId).classList.remove('hidden');
 
             if (targetPageId === 'page-history') {
+                showHistorySkeleton();
                 fetchAndRenderHistory({ getActiveUserId, checkBackendStatus });
             } else {
                 // Leaving history page: reset to list view so next visit starts fresh

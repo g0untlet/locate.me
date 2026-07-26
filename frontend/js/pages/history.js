@@ -232,13 +232,138 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
 }
 
 /* ==========================================================================
+   Pull-to-Refresh
+   ========================================================================== */
+const PTR_THRESHOLD    = 72;
+const PTR_MAX_PULL     = 96;
+const PTR_INDICATOR_ID = 'ptr-indicator';
+
+function ensurePtrIndicator() {
+    if (document.getElementById(PTR_INDICATOR_ID)) return;
+    const el = document.createElement('div');
+    el.id = PTR_INDICATOR_ID;
+    el.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="4" x2="12" y2="20"></line>
+            <polyline points="6 14 12 20 18 14"></polyline>
+        </svg>`;
+    const list = document.getElementById('history-list');
+    list.parentNode.insertBefore(el, list);
+}
+
+function initPullToRefresh(deps) {
+    const page      = document.getElementById('page-history');
+    const list      = document.getElementById('history-list');
+    const indicator = document.getElementById(PTR_INDICATOR_ID);
+
+    let startY     = 0;
+    let pulling    = false;
+    let refreshing = false;
+
+    function setIndicatorProgress(pullY) {
+        const ratio   = Math.min(pullY / PTR_THRESHOLD, 1);
+        const clamped = Math.min(pullY, PTR_MAX_PULL);
+        indicator.style.height  = `${clamped * 0.6}px`;
+        indicator.style.opacity = `${ratio}`;
+        indicator.querySelector('svg').style.transform = `rotate(${ratio * 360}deg)`;
+    }
+
+    function resetIndicator() {
+        indicator.style.height  = '0px';
+        indicator.style.opacity = '0';
+        indicator.classList.remove('ptr-spinning');
+        indicator.querySelector('svg').style.transform = 'rotate(0deg)';
+    }
+
+    function triggerRefresh() {
+        refreshing = true;
+        indicator.style.opacity = '0';
+        indicator.style.height  = '0px';
+
+        fetchAndRenderHistory(deps);
+
+        setTimeout(() => {
+            resetIndicator();
+            refreshing = false;
+        }, 800);
+    }
+
+    page.addEventListener('touchstart', (e) => {
+        if (refreshing) return;
+        if (list.scrollTop > 0) return;
+        startY  = e.touches[0].clientY;
+        pulling = true;
+    }, { passive: true });
+
+    page.addEventListener('touchmove', (e) => {
+        if (!pulling || refreshing) return;
+        const pullY = e.touches[0].clientY - startY;
+        if (pullY <= 0) { pulling = false; return; }
+        setIndicatorProgress(pullY);
+    }, { passive: true });
+
+    page.addEventListener('touchend', (e) => {
+        if (!pulling || refreshing) return;
+        pulling = false;
+        const pullY = e.changedTouches[0].clientY - startY;
+        if (pullY >= PTR_THRESHOLD) {
+            triggerRefresh();
+        } else {
+            resetIndicator();
+        }
+    }, { passive: true });
+}
+
+/* ==========================================================================
+   Skeleton Loader – sofortiges visuelles Feedback vor dem API-Call
+   ========================================================================== */
+function buildSkeletonCard() {
+    const card = document.createElement('div');
+    card.className = 'skeleton-card';
+    card.innerHTML = `
+        <div class="skeleton-card-header">
+            <div class="skel skel-id"></div>
+            <div class="skel skel-badge"></div>
+        </div>
+        <div class="skeleton-card-body">
+            <div class="skel skel-address-line"></div>
+            <div class="skel skel-address-line skel-address-short"></div>
+            <div class="skel skel-temp"></div>
+        </div>
+    `;
+    return card;
+}
+
+export function showHistorySkeleton() {
+    const listContainer = document.getElementById('history-list');
+    if (!listContainer) return;
+    listContainer.innerHTML = '';
+    for (let i = 0; i < 4; i++) {
+        listContainer.appendChild(buildSkeletonCard());
+    }
+}
+
+/* ==========================================================================
    fetchAndRenderHistory – Haupt-Einstiegspunkt, wird beim Tab-Wechsel aufgerufen
    deps = { getActiveUserId, checkBackendStatus }
    ========================================================================== */
 export function fetchAndRenderHistory(deps) {
     const { getActiveUserId, checkBackendStatus } = deps;
     const listContainer = document.getElementById('history-list');
-    listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">Loading historical logs...</div>`;
+
+    // PTR + Indicator einmalig initialisieren
+    ensurePtrIndicator();
+    if (!listContainer.dataset.ptrReady) {
+        initPullToRefresh(deps);
+        listContainer.dataset.ptrReady = 'true';
+    }
+
+    // Skeleton wurde bereits von app.js gesetzt – nur sicherstellen falls
+    // fetchAndRenderHistory direkt aufgerufen wird (z.B. Pull-to-Refresh)
+    if (!listContainer.querySelector('.skeleton-card')) {
+        showHistorySkeleton();
+    }
 
     const activeUserId = getActiveUserId();
 
