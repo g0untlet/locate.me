@@ -232,10 +232,10 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
 }
 
 /* ==========================================================================
-   Pull-to-Refresh – Touch-basiertes Refresh auf dem History-List-Container
+   Pull-to-Refresh
    ========================================================================== */
-const PTR_THRESHOLD  = 72;   // px Zugdistanz bis Refresh auslöst
-const PTR_MAX_PULL   = 96;   // px maximale visuelle Auslenkung
+const PTR_THRESHOLD    = 72;
+const PTR_MAX_PULL     = 96;
 const PTR_INDICATOR_ID = 'ptr-indicator';
 
 function ensurePtrIndicator() {
@@ -245,29 +245,27 @@ function ensurePtrIndicator() {
     el.innerHTML = `
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
              stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="1 4 1 10 7 10"></polyline>
-            <path d="M3.51 15a9 9 0 1 0 .49-3.5"></path>
+            <line x1="12" y1="4" x2="12" y2="20"></line>
+            <polyline points="6 14 12 20 18 14"></polyline>
         </svg>`;
-    // Vor dem history-list einfügen
     const list = document.getElementById('history-list');
     list.parentNode.insertBefore(el, list);
 }
 
 function initPullToRefresh(deps) {
-    const page = document.getElementById('page-history');
-    const list = document.getElementById('history-list');
-
-    let startY      = 0;
-    let pulling     = false;
-    let refreshing  = false;
-
+    const page      = document.getElementById('page-history');
+    const list      = document.getElementById('history-list');
     const indicator = document.getElementById(PTR_INDICATOR_ID);
 
+    let startY     = 0;
+    let pulling    = false;
+    let refreshing = false;
+
     function setIndicatorProgress(pullY) {
-        const ratio    = Math.min(pullY / PTR_THRESHOLD, 1);
-        const clamped  = Math.min(pullY, PTR_MAX_PULL);
-        indicator.style.height   = `${clamped * 0.6}px`;
-        indicator.style.opacity  = `${ratio}`;
+        const ratio   = Math.min(pullY / PTR_THRESHOLD, 1);
+        const clamped = Math.min(pullY, PTR_MAX_PULL);
+        indicator.style.height  = `${clamped * 0.6}px`;
+        indicator.style.opacity = `${ratio}`;
         indicator.querySelector('svg').style.transform = `rotate(${ratio * 360}deg)`;
     }
 
@@ -280,13 +278,11 @@ function initPullToRefresh(deps) {
 
     function triggerRefresh() {
         refreshing = true;
-        indicator.classList.add('ptr-spinning');
-        indicator.style.height  = '44px';
-        indicator.style.opacity = '1';
+        indicator.style.opacity = '0';
+        indicator.style.height  = '0px';
 
         fetchAndRenderHistory(deps);
 
-        // Indicator nach kurzem Delay zurücksetzen (Render übernimmt den Rest)
         setTimeout(() => {
             resetIndicator();
             refreshing = false;
@@ -295,7 +291,6 @@ function initPullToRefresh(deps) {
 
     page.addEventListener('touchstart', (e) => {
         if (refreshing) return;
-        // Nur starten wenn Liste ganz oben gescrollt ist
         if (list.scrollTop > 0) return;
         startY  = e.touches[0].clientY;
         pulling = true;
@@ -321,6 +316,35 @@ function initPullToRefresh(deps) {
 }
 
 /* ==========================================================================
+   Skeleton Loader – sofortiges visuelles Feedback vor dem API-Call
+   ========================================================================== */
+function buildSkeletonCard() {
+    const card = document.createElement('div');
+    card.className = 'skeleton-card';
+    card.innerHTML = `
+        <div class="skeleton-card-header">
+            <div class="skel skel-id"></div>
+            <div class="skel skel-badge"></div>
+        </div>
+        <div class="skeleton-card-body">
+            <div class="skel skel-address-line"></div>
+            <div class="skel skel-address-line skel-address-short"></div>
+            <div class="skel skel-temp"></div>
+        </div>
+    `;
+    return card;
+}
+
+export function showHistorySkeleton() {
+    const listContainer = document.getElementById('history-list');
+    if (!listContainer) return;
+    listContainer.innerHTML = '';
+    for (let i = 0; i < 4; i++) {
+        listContainer.appendChild(buildSkeletonCard());
+    }
+}
+
+/* ==========================================================================
    fetchAndRenderHistory – Haupt-Einstiegspunkt, wird beim Tab-Wechsel aufgerufen
    deps = { getActiveUserId, checkBackendStatus }
    ========================================================================== */
@@ -328,14 +352,18 @@ export function fetchAndRenderHistory(deps) {
     const { getActiveUserId, checkBackendStatus } = deps;
     const listContainer = document.getElementById('history-list');
 
-    // Pull-to-Refresh einmalig initialisieren
+    // PTR + Indicator einmalig initialisieren
     ensurePtrIndicator();
     if (!listContainer.dataset.ptrReady) {
         initPullToRefresh(deps);
         listContainer.dataset.ptrReady = 'true';
     }
 
-    listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">Loading historical logs...</div>`;
+    // Skeleton wurde bereits von app.js gesetzt – nur sicherstellen falls
+    // fetchAndRenderHistory direkt aufgerufen wird (z.B. Pull-to-Refresh)
+    if (!listContainer.querySelector('.skeleton-card')) {
+        showHistorySkeleton();
+    }
 
     const activeUserId = getActiveUserId();
 

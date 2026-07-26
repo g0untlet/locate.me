@@ -970,3 +970,60 @@ body {
 @keyframes ptr-spin {
     to { transform: rotate(360deg); }
 }
+
+/* ==========================================================================
+   Skeleton Loader (History)
+   ========================================================================== */
+@keyframes shimmer {
+    0%   { background-position: -400px 0; }
+    100% { background-position:  400px 0; }
+}
+
+.skel {
+    border-radius: 6px;
+    background: linear-gradient(
+        90deg,
+        var(--border-color) 25%,
+        var(--surface-subtle) 50%,
+        var(--border-color) 75%
+    );
+    background-size: 800px 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-card {
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.skeleton-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.skeleton-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+}
+
+.skel-id           { width: 48px;  height: 12px; }
+.skel-badge        { width: 52px;  height: 20px; border-radius: 6px; }
+.skel-address-line { width: 75%;   height: 12px; }
+.skel-address-short{ width: 45%;   height: 12px; }
+.skel-temp         {
+    width: 56px;
+    height: 28px;
+    border-radius: 6px;
+    position: absolute;
+    right: 0;
+    top: 0;
+}
