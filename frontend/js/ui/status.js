@@ -10,9 +10,8 @@ function renderBackendInfo(info) {
 
     if (!info) {
         el.innerHTML = `
-            <span class="attribution-label">BACKEND</span>
             <div class="attribution-links">
-                <span class="attribution-link attribution-link--offline">Not reachable</span>
+                <span class="attribution-link attribution-link--offline">Backend not reachable</span>
             </div>`;
         return;
     }
@@ -29,7 +28,6 @@ function renderBackendInfo(info) {
     }
 
     el.innerHTML = `
-        <span class="attribution-label">BACKEND</span>
         <div class="attribution-links">
             <span class="attribution-link">${info.artifactId || '–'} ${info.version || ''}</span>
             <span class="attribution-link">Online since ${onlineSince}</span>
