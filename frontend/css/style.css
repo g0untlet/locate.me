@@ -1128,4 +1128,11 @@ body {
     color: var(--error-color, #dc2626);
 }
 
-
+/* Chrome Android Fix: CSS-Variablen in dynamisch gesetztem Content erzwingen */
+#backend-info,
+#backend-info * {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-weight: normal;
+}
