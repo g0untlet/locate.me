@@ -763,41 +763,7 @@ body {
     color: #dc2626;
     border: 1px solid #fecaca;
 }
-/* ==========================================================================
-   Backend Info Block (Settings Page)
-   ========================================================================== */
-.backend-info-block {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    margin-top: 12px;
-    min-height: 36px;
-}
 
-.backend-info-label {
-    font-size: 0.65rem;
-    font-weight: 500;
-    color: var(--text-muted);
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-}
-
-.backend-info-value {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text-muted);
-}
-
-.backend-info-since {
-    font-size: 0.72rem;
-    font-weight: 400;
-    color: var(--text-muted);
-}
-
-.backend-info-offline {
-    color: #dc2626;
-}
 
 /* ==========================================================================
    History View Toggle Bar
@@ -1111,3 +1077,55 @@ body {
     text-align: center;
     padding: 8px 0 4px;
 }
+
+#page-history {
+    overscroll-behavior-y: contain;
+}
+
+.history-list {
+    overscroll-behavior-y: contain;
+}
+
+/* ==========================================================================
+   Attribution Block (Settings Page)
+   ========================================================================== */
+.attribution-block {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+}
+
+.attribution-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.attribution-links {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.attribution-link {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.attribution-link:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+.attribution-link--offline {
+    color: var(--error-color, #dc2626);
+}
+
+

@@ -6,10 +6,10 @@
     <title>locate.me</title>
     <script>
         const APP_VERSION = '0.2.3';
-        const APP_BUILD   = '20260726';
+        const APP_BUILD   = '20260727';
         document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light';
     </script>
-    <link rel="stylesheet" href="css/style.css?v=0.2.3">
+    <link rel="stylesheet" href="css/style.css?v=0.2.3_1">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -18,7 +18,7 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 <body>
-    <script type="module" src="app.js?v=0.2.3"></script>
+    <script type="module" src="app.js?v=0.2.3_1"></script>
 
     <div class="app-container">
         <header class="app-header">
@@ -133,12 +133,32 @@
                 <button id="save-settings-btn" class="track-btn">SAVE SETTINGS</button>
                 <div id="settings-status" class="settings-status"></div>
                 
-                <div id="app-version-display" style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: 25px; letter-spacing: 0.5px;"></div>
+                <div class="attribution-block">
+                    <span class="attribution-label">VERSION</span>
+                    <div class="attribution-links">
+                        <span id="app-version-display" class="attribution-link"></span>
+                    </div>
+                </div>
                 <script>
-                    document.getElementById('app-version-display').textContent = 'Version ' + APP_VERSION + ' (' + APP_BUILD + ')';
+                    document.getElementById('app-version-display').textContent = APP_VERSION + ' (' + APP_BUILD + ')';
                 </script>
 
-                <div id="backend-info" class="backend-info-block"></div>
+                <div id="backend-info" class="attribution-block"></div>
+
+                <div class="attribution-block">
+                    <span class="attribution-label">POWERED BY</span>
+                    <div class="attribution-links">
+                        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" class="attribution-link">
+                            © OpenStreetMap contributors
+                        </a>
+                        <a href="https://leafletjs.com" target="_blank" rel="noopener" class="attribution-link">
+                            Leaflet
+                        </a>
+                        <a href="https://open-meteo.com" target="_blank" rel="noopener" class="attribution-link">
+                            Open-Meteo
+                        </a>
+                    </div>
+                </div>
             </div>
         </section>
 

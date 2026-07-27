@@ -9,8 +9,11 @@ function renderBackendInfo(info) {
     if (!el) return;
 
     if (!info) {
-        el.innerHTML = `<span class="backend-info-label">BACKEND</span>
-                        <span class="backend-info-value backend-info-offline">Not reachable</span>`;
+        el.innerHTML = `
+            <span class="attribution-label">BACKEND</span>
+            <div class="attribution-links">
+                <span class="attribution-link attribution-link--offline">Not reachable</span>
+            </div>`;
         return;
     }
 
@@ -25,9 +28,12 @@ function renderBackendInfo(info) {
         }
     }
 
-    el.innerHTML = `<span class="backend-info-label">BACKEND</span>
-                    <span class="backend-info-value">${info.artifactId || '–'} ${info.version || ''}</span>
-                    <span class="backend-info-since">Online since ${onlineSince}</span>`;
+    el.innerHTML = `
+        <span class="attribution-label">BACKEND</span>
+        <div class="attribution-links">
+            <span class="attribution-link">${info.artifactId || '–'} ${info.version || ''}</span>
+            <span class="attribution-link">Online since ${onlineSince}</span>
+        </div>`;
 }
 
 /* ==========================================================================
