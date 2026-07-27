@@ -43,18 +43,17 @@ function initNavigation() {
 }
 
 /* ==========================================================================
-   PWA Service Worker Registration
+   PWA Service Worker – Deregistrierung
+   SW wird nicht mehr benötigt (Passthrough ohne Mehrwert, verursacht
+   Cache-Probleme bei Updates). Bestehende Registrierungen werden bereinigt.
    ========================================================================== */
-function registerServiceWorker() {
+function unregisterServiceWorker() {
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js')
-                .then(reg => {
-                    console.log('Service Worker successfully registered!', reg.scope);
-                    // Sofort auf Updates prüfen – verhindert dass alter SW ewig läuft
-                    reg.update();
-                })
-                .catch(err => console.error('Service Worker Registration failed:', err));
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+            registrations.forEach(reg => {
+                reg.unregister();
+                console.log('Service Worker deregistriert:', reg.scope);
+            });
         });
     }
 }
@@ -98,4 +97,4 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-registerServiceWorker();
+unregisterServiceWorker();
