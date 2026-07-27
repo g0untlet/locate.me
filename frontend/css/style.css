@@ -1078,7 +1078,7 @@ body {
     padding: 8px 0 4px;
 }
 
-#page-history {
+.app-container {
     overscroll-behavior-y: contain;
 }
 

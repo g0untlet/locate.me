@@ -49,7 +49,11 @@ function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('sw.js')
-                .then(reg => console.log('Service Worker successfully registered!', reg.scope))
+                .then(reg => {
+                    console.log('Service Worker successfully registered!', reg.scope);
+                    // Sofort auf Updates prüfen – verhindert dass alter SW ewig läuft
+                    reg.update();
+                })
                 .catch(err => console.error('Service Worker Registration failed:', err));
         });
     }

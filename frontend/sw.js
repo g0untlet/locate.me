@@ -1,4 +1,4 @@
-// locate.me Service Worker – v0.2.3
+// locate.me Service Worker – v0.2.3_2
 // Versions-Kommentar ändern → Chrome erkennt geänderte sw.js → neuer SW wird installiert
 
 self.addEventListener('install', (event) => {
