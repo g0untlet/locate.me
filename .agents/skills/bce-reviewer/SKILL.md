@@ -1,6 +1,6 @@
 ---
-name: ecb-reviewer
-description: Review ECB Quarkus applications for architecture and code quality compliance. Use when asked to review, audit, or check a BCE codebase against ECB conventions. Triggers on "review ECB", "check architecture", "audit code", "BCE compliance", or requests to validate code against BCE patterns.
+name: bce-reviewer
+description: Review BCE Quarkus applications for architecture and code quality compliance. Use when asked to review, audit, or check a BCE codebase against BCE conventions. Triggers on "review BCE", "check architecture", "audit code", "BCE compliance", or requests to validate code against BCE patterns.
 metadata:
   authors:
     - g0untlet
