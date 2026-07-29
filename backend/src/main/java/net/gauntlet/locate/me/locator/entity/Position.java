@@ -9,6 +9,8 @@ import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -82,6 +84,14 @@ public class Position {
     @Size(max = 255)
     @Column(name = "country", length = 255)
     String country;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tag")
+    PositionTag tag;
+
+    @Size(max = 255)
+    @Column(name = "comment", length = 255)
+    String comment;
 
     public Position() {
     }
@@ -239,6 +249,24 @@ public class Position {
         return this;
     }
 
+    public PositionTag tag() {
+        return this.tag;
+    }
+
+    public Position tag(PositionTag tag) {
+        this.tag = tag;
+        return this;
+    }
+
+    public String comment() {
+        return this.comment;
+    }
+
+    public Position comment(String comment) {
+        this.comment = comment;
+        return this;
+    }
+
     public JsonObject toJSON() {
         JsonObjectBuilder builder = Json.createObjectBuilder();
         if (this.id != null) {
@@ -291,6 +319,14 @@ public class Position {
         }
         if (this.country != null) {
             builder.add("country", this.country);
+        }
+
+        if (this.tag != null) {
+            builder.add("tag", this.tag.name());
+        }
+
+        if (this.comment != null) {
+            builder.add("comment", this.comment);
         }
         
         return builder.build();
@@ -349,6 +385,12 @@ public class Position {
         }
         if (json.containsKey("country") && !json.isNull("country")) {
             position.country(json.getString("country"));
+        }
+        if (json.containsKey("tag") && !json.isNull("tag")) {
+            position.tag(PositionTag.valueOf(json.getString("tag")));
+        }
+        if (json.containsKey("comment") && !json.isNull("comment")) {
+            position.comment(json.getString("comment"));
         }
         return position;
     }

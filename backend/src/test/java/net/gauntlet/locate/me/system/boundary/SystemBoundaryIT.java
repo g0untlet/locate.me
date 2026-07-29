@@ -21,7 +21,7 @@ public class SystemBoundaryIT {
           .then()
              .statusCode(200)
              .body("artifactId", is("locator-service"))
-             .body("version", is("0.2.0"))
+             .body("version", is("0.3.0"))
              .body("startupTime", notNullValue());
     }
 }
