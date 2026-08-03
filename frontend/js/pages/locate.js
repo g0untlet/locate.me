@@ -5,6 +5,7 @@ import { showError } from '../ui/status.js';
 import {
     getWeatherIconSvg,
     getWeatherText,
+    formatElevation,
     getLocationIconSvg,
     formatShortAddress
 } from '../utils.js';
@@ -43,6 +44,11 @@ function renderLocationCard(data, timeLabel) {
     if (mainIconSvg) mainIconSvg.style.stroke = "#1a5f8c";
 
     document.getElementById('res-weather').innerText = getWeatherText(data.weatherCode);
+
+    document.getElementById('res-uv').innerText =
+        (data.uvIndex != null) ? parseFloat(data.uvIndex).toFixed(1) : '-';
+
+    document.getElementById('res-elevation').innerText = formatElevation(data.elevation) || '-';
 
     const addressContainer = document.getElementById('res-address-container');
     addressContainer.innerHTML = `

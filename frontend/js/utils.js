@@ -58,6 +58,13 @@ export function formatWalkingTime(minutes) {
     return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
+export function formatElevation(value) {
+    if (value === undefined || value === null || isNaN(parseFloat(value))) return null;
+    const elevation = parseFloat(value);
+    const formatted = Number.isInteger(elevation) ? elevation.toString() : elevation.toFixed(1);
+    return `${formatted} m`;
+}
+
 export function getWeatherText(code) {
     if (code === undefined || code === null) return "Unknown";
 
@@ -104,6 +111,18 @@ export function getWeatherIconSvg(code) {
         default:
             return fallbackIcon;
     }
+}
+
+/* ==========================================================================
+   UV Index: Level classification (WHO thresholds)
+   ========================================================================== */
+export function getUvLevel(value) {
+    if (value === undefined || value === null || isNaN(parseFloat(value))) return null;
+    const uv = parseFloat(value);
+    if (uv < 3)  return 'low';
+    if (uv < 6)  return 'medium';
+    if (uv < 8)  return 'high';
+    return 'very-high';
 }
 
 /* ==========================================================================

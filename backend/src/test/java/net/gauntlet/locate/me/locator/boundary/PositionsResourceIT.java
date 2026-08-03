@@ -180,6 +180,36 @@ public class PositionsResourceIT {
     }
 
     @Test
+    void createWithTag() {
+        JsonObject json = Json.createObjectBuilder()
+                .add("userId", "validUser")
+                .add("latitude", 48.1351)
+                .add("longitude", 11.5820)
+                .add("tag", "WORK")
+                .add("timestamp", Instant.now().toString())
+                .build();
+
+        int id = given()
+                .contentType(ContentType.JSON)
+                .body(json.toString())
+                .when()
+                .post("/api/positions?userId=validUser")
+                .then()
+                .statusCode(201)
+                .body("id", notNullValue())
+                .body("tag", is("WORK"))
+                .extract()
+                .path("id");
+
+        // Cleanup
+        given()
+                .when()
+                .delete("/api/positions/" + id + "?userId=validUser")
+                .then()
+                .statusCode(204);
+    }
+
+    @Test
     void createWithNominatimGeocoding() {
         Mockito.when(this.geocodingClient.reverse(48.1351, 11.5820, "jsonv2"))
                 .thenReturn(Json.createObjectBuilder()

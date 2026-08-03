@@ -21,9 +21,15 @@
 
 ### 1.4. Weather Information
 - For a given location, the application fetches and displays the current temperature and weather conditions.
+- The current UV-Index is also fetched and displayed.
 - This is done by an external API (Open-Meteo).
 
-### 1.5. Geocoding
+### 1.5. Elevation Information
+- For a given location, the application fetches and displays the elevation (meters above sea level).
+- The elevation is retrieved from the Open-Meteo API together with the weather data.
+- In the Locate view it is shown as a separate value below the address; in the History view it is shown inline with the address (e.g. `Isartorplatz, München, Deutschland (521 m)`).
+
+### 1.6. Geocoding
 - For a given location, the application fetches and displays the corresponding address.
 - This is done by an external API (OpenStreetMap/Nominatim).
 
@@ -36,12 +42,15 @@ The application is a single-page application (SPA) with three main views:
 - It displays a button to fetch the current location.
 - When the location is fetched, it is displayed on a map.
 - The view also shows the current weather and address information.
+- The current UV-Index and the elevation are displayed alongside the address.
 - A "Save Location" button allows the user to save the current location to their history.
 
 ### 2.2. History View
 - This view displays the user's saved locations.
 - It has two modes: a list view and a map view.
 - The list view shows a chronological list of saved locations.
+- Each entry shows the address, the temperature and a UV-Index badge.
+- The elevation is displayed inline with the address as a muted footnote (e.g. `(521 m)`).
 - The map view shows all saved locations as markers on a map.
 - Each location in the list can be deleted.
 
@@ -60,6 +69,8 @@ The backend provides a REST API with the following endpoints:
 - `GET /positions?userId={userId}&lat={lat}&lon={lon}`: Retrieves all positions for a user. If `lat` and `lon` are provided, it also calculates the distance and walking time to each position.
 - `GET /positions/current?userId={userId}&lat={lat}&lon={lon}`: Creates a new position with the given coordinates and returns it. This is used to get weather and geocoding information for the current location.
 
+Position responses include the weather-related fields `temperature`, `weatherCode`, `uvIndex`, and `elevation`. No new endpoints were introduced for UV-Index and elevation; they are persisted and returned by the existing endpoints above.
+
 ## 4. Business Objects
 
 The main business object is the `Position` entity, which has the following attributes:
@@ -70,7 +81,35 @@ The main business object is the `Position` entity, which has the following attri
 - `accuracy`: The accuracy of the coordinates.
 - `displayName`: A human-readable name for the position.
 - `temperature`, `weatherCode`: Weather information.
+- `uvIndex`: The current UV-Index at the position (Float, from Open-Meteo).
+- `elevation`: The elevation of the position in meters (Float, from Open-Meteo).
 - `timestamp`: When the position was recorded.
 - `osmCategory`, `osmType`, `osmName`, `addressType`, `houseNumber`, `road`, `city`, `country`: Geocoding information from OpenStreetMap.
 - `tag`: A tag for the position (e.g., "home", "work").
 - `comment`: A user-provided comment.
+
+## 5. ECB Classification
+
+### Entity Components
+- `Position`
+- `PositionTag` (enum)
+- `WeatherCode` (enum)
+- `WeatherCodeConverter` (AttributeConverter)
+
+### Control Components
+- `Positions`
+- `DistanceCalculator`
+- `SystemInfo`
+- `GeocodingClient` (REST client, OpenStreetMap/Nominatim)
+- `WeatherClient` (REST client, Open-Meteo)
+
+### Boundary Components
+- `PositionsResource`
+- `SystemBoundary`
+- `DatabaseHealthCheck`
+
+## 6. Change Log
+
+| Version | Date | Description |
+|---------|------|-------------|
+| 0.3.0 | 2026-08-03 | Added UV-Index and elevation fields to the `Position` entity (fetched from Open-Meteo); display UV-Index and elevation in the Locate and History views; fixed HTTP 500 on saving a location caused by an H2 2.4.240 enum CHECK constraint regression (see `docs/production-upgrade-0.3.0.md`). |

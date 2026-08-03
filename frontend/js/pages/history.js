@@ -4,10 +4,12 @@ import { renderMapMarkers } from '../ui/map.js';
 import { updateHistoryBadge } from '../ui/badge.js';
 import {
     getWeatherIconSvg,
+    getUvLevel,
     getLocationIconSvg,
     formatShortAddress,
     formatRelativeDate,
-    formatWalkingTime
+    formatWalkingTime,
+    formatElevation
 } from '../utils.js';
 
 /* ==========================================================================
@@ -56,6 +58,19 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
         weatherIconSvg = getWeatherIconSvg(wCode);
     }
 
+    // --- UV-Index ---
+    let uvHtml = "";
+    if (pos.uvIndex !== undefined && pos.uvIndex !== null && !isNaN(parseFloat(pos.uvIndex))) {
+        const uvVal   = parseFloat(pos.uvIndex);
+        const uvLevel = getUvLevel(uvVal);
+        uvHtml = `
+            <div class="uv-display uv-${uvLevel}" title="UV Index ${uvVal.toFixed(1)}">
+                <span>UV</span>
+                <span>${uvVal.toFixed(1)}</span>
+            </div>
+        `;
+    }
+
     // --- Distanz ---
     let distanceHtml = "";
     if (pos.distance !== undefined && pos.distance !== null && !isNaN(parseFloat(pos.distance))) {
@@ -90,6 +105,7 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
     const shortAddress       = formatShortAddress(pos);
     const locationIcon       = getLocationIconSvg(pos.osmCategory, pos.osmType);
     const fullAddressForTitle = pos.displayName || 'No detailed address available.';
+    const elevationFormatted = formatElevation(pos.elevation);
 
     const isLowAccuracy    = pos.accuracy && parseFloat(pos.accuracy) > 30;
     const badgeBgColor     = isLowAccuracy ? '#fef3c7' : '#f1f5f9';
@@ -117,13 +133,14 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
             <div class="log-card-body">
                 <div class="log-card-address address-container" title="${fullAddressForTitle}">
                     ${locationIcon}
-                    <span>${shortAddress}</span>
+                    <span>${shortAddress}${elevationFormatted ? ` <span class="log-card-elevation">(${elevationFormatted})</span>` : ''}</span>
                 </div>
                 <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
                     <div class="log-card-temp ${tempClass}">
                         ${weatherIconSvg}
                         <span>${tempFormatted}</span>
                     </div>
+                    ${uvHtml}
                     ${distanceHtml}
                     ${walkingTimeHtml}
                 </div>

@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>locate.me</title>
     <script>
-        const APP_VERSION = '0.2.3';
-        const APP_BUILD   = '20260727';
+        const APP_VERSION = '0.3.0';
+        const APP_BUILD   = '20260803';
         document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light';
     </script>
-    <link rel="stylesheet" href="css/style.css?v=0.2.3_3">
+    <link rel="stylesheet" href="css/style.css?v=0.3.0_5">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -18,7 +18,7 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 <body>
-    <script type="module" src="app.js?v=0.2.3_3"></script>
+    <script type="module" src="app.js?v=0.3.0_5"></script>
 
     <div class="app-container">
         <header class="app-header">
@@ -56,14 +56,22 @@
                             </div>
                         </div>
                         <div class="cell text-right">
-                            <span class="label">WEATHER CONDITION</span>
+                            <span class="label">CONDITION</span>
                             <span id="res-weather" class="value">-</span>
                         </div>
+                        <div class="cell text-right">
+                            <span class="label">UV-INDEX</span>
+                            <span id="res-uv" class="value">-</span>
+                        </div>
                     </div>
-                    <div class="row-full">
-                        <div class="cell">
+                    <div class="row-split">
+                        <div class="cell address-cell">
                             <span class="label">RESOLVED ADDRESS</span>
                             <div id="res-address-container" class="value address-container">-</div>
+                        </div>
+                        <div class="cell text-right elevation-cell">
+                            <span class="label">ELEVATION</span>
+                            <span id="res-elevation" class="value">-</span>
                         </div>
                     </div>
                     <div class="row-full">
