@@ -46,6 +46,12 @@ public class Position {
 
     Float temperature;
 
+    @Column(name = "uv_index")
+    Float uvIndex;
+
+    @Column(name = "elevation")
+    Float elevation;
+
     @Column(name = "weather_code")
     WeatherCode weatherCode;
 
@@ -156,6 +162,24 @@ public class Position {
 
     public Position temperature(Float temperature) {
         this.temperature = temperature;
+        return this;
+    }
+
+    public Float uvIndex() {
+        return this.uvIndex;
+    }
+
+    public Position uvIndex(Float uvIndex) {
+        this.uvIndex = uvIndex;
+        return this;
+    }
+
+    public Float elevation() {
+        return this.elevation;
+    }
+
+    public Position elevation(Float elevation) {
+        this.elevation = elevation;
         return this;
     }
 
@@ -288,6 +312,14 @@ public class Position {
             builder.add("temperature", this.temperature);
         }
 
+        if (this.uvIndex != null) {
+            builder.add("uvIndex", this.uvIndex);
+        }
+
+        if (this.elevation != null) {
+            builder.add("elevation", this.elevation);
+        }
+
         if (this.weatherCode != null) {
             builder.add("weatherCode", this.weatherCode.code());
         }
@@ -354,6 +386,12 @@ public class Position {
         }
         if (json.containsKey("temperature") && !json.isNull("temperature")) {
             position.temperature((float) json.getJsonNumber("temperature").doubleValue());
+        }
+        if (json.containsKey("uvIndex") && !json.isNull("uvIndex")) {
+            position.uvIndex((float) json.getJsonNumber("uvIndex").doubleValue());
+        }
+        if (json.containsKey("elevation") && !json.isNull("elevation")) {
+            position.elevation((float) json.getJsonNumber("elevation").doubleValue());
         }
         if (json.containsKey("weatherCode") && !json.isNull("weatherCode")) {
             position.weatherCode(WeatherCode.fromCode(json.getJsonNumber("weatherCode").intValue()));

@@ -22,6 +22,8 @@ class PositionTest {
                 .accuracy(10.5)
                 .displayName("Munich Office")
                 .temperature(18.5f)
+                .uvIndex(6.6f)
+                .elevation(520f)
                 .weatherCode(WeatherCode.PARTLY_CLOUDY)
                 .timestamp(now);
 
@@ -34,6 +36,8 @@ class PositionTest {
         assertThat(json.getJsonNumber("accuracy").doubleValue()).isEqualTo(10.5);
         assertThat(json.getString("displayName")).isEqualTo("Munich Office");
         assertThat((float) json.getJsonNumber("temperature").doubleValue()).isEqualTo(18.5f);
+        assertThat((float) json.getJsonNumber("uvIndex").doubleValue()).isEqualTo(6.6f);
+        assertThat((float) json.getJsonNumber("elevation").doubleValue()).isEqualTo(520f);
         assertThat(json.getJsonNumber("weatherCode").intValue()).isEqualTo(2);
         assertThat(json.getString("timestamp")).isEqualTo(now.toString());
     }
@@ -49,6 +53,8 @@ class PositionTest {
                 .add("accuracy", 10.5)
                 .add("displayName", "Munich Office")
                 .add("temperature", 18.5f)
+                .add("uvIndex", 6.6f)
+                .add("elevation", 520f)
                 .add("weatherCode", 2)
                 .add("timestamp", now.toString())
                 .build();
@@ -62,6 +68,8 @@ class PositionTest {
         assertThat(position.accuracy()).isEqualTo(10.5);
         assertThat(position.displayName()).isEqualTo("Munich Office");
         assertThat(position.temperature()).isEqualTo(18.5f);
+        assertThat(position.uvIndex()).isEqualTo(6.6f);
+        assertThat(position.elevation()).isEqualTo(520f);
         assertThat(position.weatherCode()).isEqualTo(WeatherCode.PARTLY_CLOUDY);
         assertThat(position.timestamp()).isEqualTo(now);
     }
