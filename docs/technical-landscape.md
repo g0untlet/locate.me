@@ -357,7 +357,9 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 ## Technology
 
 - Quarkus 3.33.2, Java 21, H2 2.4.240.
-- Caddy2 reverse proxy with HTTPS.
+- Caddy2 reverse proxy with HTTPS. All responses (static + `/api`) are sent with
+  `Cache-Control: no-store` in every site block (DEV, PROD, `:8070` tunnel) — nothing
+  is cached on clients; `?v=` cache-busting query tokens remain as a safety net.
 - HTTP/JSON communication; REST clients for Open-Meteo and Nominatim.
 - Parameterized queries only — never SQL built from user input.
 - H2 native enum CHECK constraints must not be (re-)created in the schema (2.4.240 regression; see Persistence).
@@ -386,3 +388,5 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 |---------|---------|---------|
 | 0.3.0 | 2026-08-10 | Initial version (replaces the template placeholder) |
 | 0.3.0 | 2026-08-10 | Save flow refactored: `Positions` control split into `enrich` (preview) and persist-only `create`; `POST /positions` no longer resolves geocoding/weather; `GET /positions/current` is the only enrichment path. |
+| 0.3.0 | 2026-08-10 | Caching policy: Caddy sends `Cache-Control: no-store` on all environments (DEV/PROD/`:8070`); PWA always fetches fresh `index.html`/assets. |
+| 0.3.0 | 2026-08-10 | GPS fast-fix tuning: target accuracy 15m → 30m, max wait 15s → 8s, fix timeout 12s → 8s, `maximumAge` 0 → 5s. |

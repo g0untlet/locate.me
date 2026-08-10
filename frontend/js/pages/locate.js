@@ -14,13 +14,15 @@ import {
    GPS Tuning
    ========================================================================== */
 // Per-fix ceiling: max milliseconds a single position fix may take before the
-// browser reports TIMEOUT. Sweet spot for both Android Chrome and iOS Safari.
-const GPS_TIMEOUT_MS = 12000;
-// Total refinement budget: keep listening until a fix meets
+// browser reports TIMEOUT. Aligned with GPS_MAX_WAIT_MS so a cold fix is not
+// pre-empted mid-budget. Sweet spot for both Android Chrome and iOS Safari.
+const GPS_TIMEOUT_MS = 8000;
+// Total listening budget: keep listening until a fix meets
 // GPS_TARGET_ACCURACY_M, then give up and use the best fix received so far.
-const GPS_MAX_WAIT_MS = 15000;
+const GPS_MAX_WAIT_MS = 8000;
 // Success gate: a fix as accurate as this (or better) is used immediately.
-const GPS_TARGET_ACCURACY_M = 15;
+// 30m matches the app's own "good" accuracy band (history flags >30m as low).
+const GPS_TARGET_ACCURACY_M = 30;
 
 /* ==========================================================================
    Shared GPS Options
@@ -28,7 +30,7 @@ const GPS_TARGET_ACCURACY_M = 15;
 const GEO_OPTIONS = {
     enableHighAccuracy: true,
     timeout: GPS_TIMEOUT_MS,
-    maximumAge: 0
+    maximumAge: 5000
 };
 
 /* ==========================================================================
