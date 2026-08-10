@@ -89,7 +89,7 @@ The backend is built as a highly structured, secure-by-default Java 21 microserv
 The core domain responsibility of the backend is managed by the **Locator** Business Component under the package `net.gauntlet.locate.me.locator`. 
 
 #### Domain Capabilities
-*   **Create Geo-Positions**: Ingests new position records, runs strict Bean Validation, enriches them asynchronously/synchronously with external metadata (geocoding via OpenStreetMap Nominatim and current weather conditions via Open-Meteo), and persists them.
+*   **Create Geo-Positions**: Persists position records supplied by the client after strict Bean Validation. Address/weather enrichment (geocoding via OpenStreetMap Nominatim and current weather/UV/elevation via Open-Meteo) happens during the preview fetch (`GET /positions/current`), not during save – the save payload is stored verbatim.
 *   **Search/Query Positions**: Supports querying positions specifically filtered by a given `userId`. If the optional parameters `lat` and `lon` are provided, the system automatically calculates two derived, response-only fields per position entry:
     *   `distance` (Double): Orthodromic straight-line distance in kilometers between the reference point and the recorded position, computed via the Haversine formula.
     *   `walkingTimeMinutes` (Double): Estimated pedestrian travel time in minutes, derived from `distance` using a circuity factor of `1.35` (to approximate real street network routing) and an average walking speed of `4.8 km/h`. Both fields are purely computed at query time and are **not persisted** in the database. Records are returned sorted by timestamp in descending order.
@@ -124,7 +124,7 @@ The backend follows the Boundary-Control-Entity pattern. To ensure loose couplin
 *   **Boundary Layer (`boundary/`)**: 
     Exposes Restful APIs using JAX-RS. The `PositionsResource` and `SystemBoundary` JAX-RS facades are annotated with `@Boundary` (Request-scoped), hold `@Transactional` boundary controls, handle Bean Validation on deserialized entity models, and delegate operations to their controllers.
 *   **Control Layer (`control/`)**: 
-    Zustandslose/Stateless business logic classes. `Positions` BA is annotated with `@Control` (Dependent-scoped) and performs operations using an injected package-private `EntityManager`. It acts as an orchestrator that leverages CDI-injected MicroProfile REST clients (`GeocodingClient` and `WeatherClient`) to automatically query and enrich incoming coordinates with real-time location addresses and weather metrics. `DistanceCalculator` is a package-private interface providing pure `static` methods for geodesic distance (`haversine`) and pedestrian travel time (`walkingTimeMinutes`) calculations, encapsulating all related mathematical constants. `SystemInfo` is an application-scoped bean that manages system-level parameters natively via Quarkus configuration properties.
+    Zustandslose/Stateless business logic classes. `Positions` BA is annotated with `@Control` (Dependent-scoped) and performs operations using an injected package-private `EntityManager`. It acts as an orchestrator that leverages CDI-injected MicroProfile REST clients (`GeocodingClient` and `WeatherClient`) to enrich coordinates with real-time location addresses and weather metrics during the preview fetch (`GET /positions/current`), and persists the already-enriched payload during save (`POST /positions`). `DistanceCalculator` is a package-private interface providing pure `static` methods for geodesic distance (`haversine`) and pedestrian travel time (`walkingTimeMinutes`) calculations, encapsulating all related mathematical constants. `SystemInfo` is an application-scoped bean that manages system-level parameters natively via Quarkus configuration properties.
 *   **Entity Layer (`entity/`)**: 
     Represents persistent state and core business logic. The `Position` JPA Entity exposes a record-style getter interface (e.g. `userId()` instead of `getUserId()`) and encapsulates its own JSON-P transformations (`toJSON()` and `fromJSON()`). It maps optional parameters such as `temperature` and `weatherCode`. The weather condition is represented as a structured `WeatherCode` enum, which is persisted to the database via a JPA `AttributeConverter` (`WeatherCodeConverter`).
 
@@ -308,7 +308,7 @@ mvn clean verify
 You can manually interact with and test the RESTful API endpoints using `curl` while the backend application is running. All positions REST endpoints expect a mandatory, authorized `userId` (max 16 characters, alphanumeric) passed as a query parameter.
 
 ##### 1. Record a New Geo-Position (POST)
-Creates a new position entry for an authorized user. If `displayName`, `temperature`, or `weatherCode` are omitted, the backend will automatically resolve them using the geocoding and weather APIs.
+Persists a position entry for an authorized user. The Locate view first resolves the address and weather via `GET /api/positions/current` and then sends that enriched payload back here; the backend stores it **verbatim** (only a server-assigned `id` is added) and does **not** re-resolve geocoding or weather. Enrichment fields omitted from the body are stored as `null`/absent.
 ```bash
 curl -i -X POST "http://localhost:8090/api/positions?userId=user123" \
   -H "Content-Type: application/json" \
@@ -317,10 +317,20 @@ curl -i -X POST "http://localhost:8090/api/positions?userId=user123" \
     "latitude": 48.1351,
     "longitude": 11.5820,
     "accuracy": 10.5,
+    "displayName": "Marienplatz, Altstadt-Lehel, Munich, Upper Bavaria, Bavaria, 80331, Germany",
+    "osmCategory": "historic",
+    "osmType": "memorial",
+    "osmName": "Marienplatz",
+    "addressType": "historic",
+    "road": "Marienplatz",
+    "city": "Munich",
+    "country": "Germany",
+    "temperature": 16.8,
+    "weatherCode": 2,
     "timestamp": "2026-06-11T22:00:00Z"
   }'
 ```
-*Response payload showing automatic address and weather enrichment (including expanded OpenStreetMap fields):*
+*Response payload: the stored record echoed verbatim, plus a server-assigned `id`:*
 ```json
 {
   "id": 1,

@@ -88,6 +88,8 @@ public class PositionsResource {
         }
         // Force validated userId from query parameter
         position.userId(userId);
+        // A new position is created server-side; never accept a client-supplied id
+        position.id(null);
 
         Set<ConstraintViolation<Position>> violations = this.validator.validate(position);
         if (!violations.isEmpty()) {
@@ -95,7 +97,7 @@ public class PositionsResource {
             throw new BadRequestException("Validation failed: " + violations.iterator().next().getMessage());
         }
 
-        Position created = this.positions.create(position, true);
+        Position created = this.positions.create(position);
         return Response.created(URI.create("/positions/" + created.id()))
                 .entity(created.toJSON())
                 .build();
@@ -174,7 +176,7 @@ public class PositionsResource {
             throw new BadRequestException("Validation failed: " + violations.iterator().next().getMessage());
         }
 
-        Position current = this.positions.create(position, false);
+        Position current = this.positions.enrich(position);
         return Response.ok(URI.create("/positions/current"))
                 .entity(current.toJSON())
                 .build();

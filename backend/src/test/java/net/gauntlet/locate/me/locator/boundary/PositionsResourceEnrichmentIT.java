@@ -5,7 +5,6 @@ package net.gauntlet.locate.me.locator.boundary;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import io.quarkus.test.junit.QuarkusTest;
@@ -17,8 +16,6 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.core.Response;
 import net.gauntlet.locate.me.locator.control.GeocodingClient;
 import net.gauntlet.locate.me.locator.control.WeatherClient;
-import net.gauntlet.locate.me.locator.entity.Position;
-import net.gauntlet.locate.me.locator.entity.WeatherCode;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -94,38 +91,35 @@ public class PositionsResourceEnrichmentIT {
 
     @Test
     @Transactional
-    public void testCreatePositionWithEnrichment() {
+    public void testPreviewPositionWithEnrichment() {
         // Given
         String userId = "validUser";
-        JsonObject positionJson = Json.createObjectBuilder()
-            .add("latitude", 52.5162)
-            .add("longitude", 13.3777)
-            .add("timestamp", Instant.now().toString())
-            .build();
 
         // When
-        Response response = positionsResource.create(userId, positionJson);
-        
-        // Then
-        assertThat(response.getStatus()).isEqualTo(201);
+        Response response = positionsResource.fetchCurrentPosition(userId, 52.5162, 13.3777);
 
-        Position savedPosition = (Position) em.createQuery("FROM Position p WHERE p.userId = :userId")
+        // Then
+        assertThat(response.getStatus()).isEqualTo(200);
+
+        JsonObject json = (JsonObject) response.getEntity();
+        assertThat(json.getString("displayName")).isEqualTo("Reichstagsgebäude, Platz der Republik, Tiergarten, Mitte, Berlin, 10557, Deutschland");
+        assertThat(json.getString("osmCategory")).isEqualTo("historic");
+        assertThat(json.getString("osmType")).isEqualTo("memorial");
+        assertThat(json.getString("osmName")).isEqualTo("Reichstagsgebäude");
+        assertThat(json.getString("addressType")).isEqualTo("historic");
+        assertThat(json.getString("road")).isEqualTo("Platz der Republik");
+        assertThat(json.getString("city")).isEqualTo("Berlin");
+        assertThat(json.getString("country")).isEqualTo("Deutschland");
+        assertThat(json.containsKey("houseNumber")).isFalse(); // Not in this response
+        assertThat((float) json.getJsonNumber("temperature").doubleValue()).isEqualTo(32.3f);
+        assertThat((float) json.getJsonNumber("uvIndex").doubleValue()).isEqualTo(6.6f);
+        assertThat(json.getJsonNumber("elevation").doubleValue()).isEqualTo(520);
+        assertThat(json.getJsonNumber("weatherCode").intValue()).isEqualTo(2);
+
+        // And the preview must not be persisted
+        Long count = em.createQuery("SELECT COUNT(p) FROM Position p WHERE p.userId = :userId", Long.class)
                 .setParameter("userId", userId)
                 .getSingleResult();
-
-        assertThat(savedPosition).isNotNull();
-        assertThat(savedPosition.displayName()).isEqualTo("Reichstagsgebäude, Platz der Republik, Tiergarten, Mitte, Berlin, 10557, Deutschland");
-        assertThat(savedPosition.osmCategory()).isEqualTo("historic");
-        assertThat(savedPosition.osmType()).isEqualTo("memorial");
-        assertThat(savedPosition.osmName()).isEqualTo("Reichstagsgebäude");
-        assertThat(savedPosition.addressType()).isEqualTo("historic");
-        assertThat(savedPosition.road()).isEqualTo("Platz der Republik");
-        assertThat(savedPosition.city()).isEqualTo("Berlin");
-        assertThat(savedPosition.country()).isEqualTo("Deutschland");
-        assertThat(savedPosition.houseNumber()).isNull(); // Not in this response
-        assertThat(savedPosition.temperature()).isEqualTo(32.3f);
-        assertThat(savedPosition.uvIndex()).isEqualTo(6.6f);
-        assertThat(savedPosition.elevation()).isEqualTo(520f);
-        assertThat(savedPosition.weatherCode()).isEqualTo(WeatherCode.PARTLY_CLOUDY);
+        assertThat(count).isEqualTo(0);
     }
 }

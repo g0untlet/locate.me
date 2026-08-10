@@ -26,8 +26,8 @@ public class Positions {
     @RestClient
     WeatherClient weatherClient;
 
-    public Position create(Position position, boolean persist) {
-        LOG.log(System.Logger.Level.DEBUG, "Creating position for user {0}", position.userId());
+    public Position enrich(Position position) {
+        LOG.log(System.Logger.Level.DEBUG, "Enriching position for user {0}", position.userId());
         if (position.displayName() == null || position.displayName().isBlank()) {
             try {
                 jakarta.json.JsonObject response = this.geocodingClient.reverse(position.latitude(), position.longitude(), "jsonv2");
@@ -78,9 +78,12 @@ public class Positions {
             LOG.log(System.Logger.Level.WARNING, "Failed to resolve weather via Open-Meteo API: {0}", e.getMessage());
         }
 
-        if (persist) {
-            this.em.persist(position);
-        }
+        return position;
+    }
+
+    public Position create(Position position) {
+        LOG.log(System.Logger.Level.DEBUG, "Persisting position for user {0}", position.userId());
+        this.em.persist(position);
         return position;
     }
 
