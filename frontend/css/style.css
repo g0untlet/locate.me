@@ -247,6 +247,9 @@ body {
 .row-split { display: flex; justify-content: space-between; width: 100%; }
 .row-full { width: 100%; }
 .cell { padding: 14px 16px; display: flex; flex-direction: column; }
+.address-cell { flex: 1; min-width: 0; }
+.elevation-cell { flex-shrink: 0; }
+#res-elevation { font-size: 0.85rem; font-weight: 400; line-height: 1.4; color: var(--text-color); }
 .border-bottom { border-bottom: 1px solid var(--border-color); }
 .text-right { align-items: flex-end; text-align: right; }
 
@@ -288,6 +291,10 @@ body {
     width: 16px;
     height: 16px;
     margin-top: 1px;
+}
+
+.log-card-elevation {
+    color: var(--text-muted);
 }
 
 .temp-display-wrapper {
@@ -489,6 +496,27 @@ body {
 .temp-red .embedded-weather-icon { stroke: #b91c1c; }
 .temp-none { color: var(--text-muted); background-color: #f1f5f9; }
 .temp-none .embedded-weather-icon { stroke: var(--text-muted); }
+
+/* ==========================================================================
+   UV Index Display (Locate + History)
+   ========================================================================== */
+.uv-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    white-space: nowrap;
+    color: var(--text-muted);
+    background-color: #f1f5f9;
+}
+
+.uv-low { color: #16a34a; background-color: #d1fae5; }
+.uv-medium { color: #d97706; background-color: #fef9c3; }
+.uv-high { color: #b45309; background-color: #fef3c7; }
+.uv-very-high { color: #b91c1c; background-color: #fee2e2; }
 
 /* ==========================================================================
    Settings Page Configuration

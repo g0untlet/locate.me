@@ -18,6 +18,7 @@ import jakarta.ws.rs.core.Response;
 import net.gauntlet.locate.me.locator.control.GeocodingClient;
 import net.gauntlet.locate.me.locator.control.WeatherClient;
 import net.gauntlet.locate.me.locator.entity.Position;
+import net.gauntlet.locate.me.locator.entity.WeatherCode;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -79,8 +80,16 @@ public class PositionsResourceEnrichmentIT {
         
         when(geocodingClient.reverse(anyDouble(), anyDouble(), anyString())).thenReturn(nominatimResponse);
 
-        // Mock weather client to avoid side effects
-        when(weatherClient.forecast(anyDouble(), anyDouble(), anyString())).thenReturn(Json.createObjectBuilder().build());
+        JsonObject weatherResponse = Json.createObjectBuilder()
+                .add("elevation", 520)
+                .add("current", Json.createObjectBuilder()
+                        .add("temperature_2m", 32.3)
+                        .add("weather_code", 2)
+                        .add("uv_index", 6.6)
+                        .build())
+                .build();
+
+        when(weatherClient.forecast(anyDouble(), anyDouble(), anyString())).thenReturn(weatherResponse);
     }
 
     @Test
@@ -114,5 +123,9 @@ public class PositionsResourceEnrichmentIT {
         assertThat(savedPosition.city()).isEqualTo("Berlin");
         assertThat(savedPosition.country()).isEqualTo("Deutschland");
         assertThat(savedPosition.houseNumber()).isNull(); // Not in this response
+        assertThat(savedPosition.temperature()).isEqualTo(32.3f);
+        assertThat(savedPosition.uvIndex()).isEqualTo(6.6f);
+        assertThat(savedPosition.elevation()).isEqualTo(520f);
+        assertThat(savedPosition.weatherCode()).isEqualTo(WeatherCode.PARTLY_CLOUDY);
     }
 }

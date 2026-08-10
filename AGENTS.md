@@ -1,7 +1,7 @@
 # locate.me – AGENTS.md
 
 ## Project
-Personal geo-tracking PWA. Small, trusted user base, not publicly exposed.
+Personal geo-tracking PWA. Small, trusted user base, publicly exposed to small user base.
 GitHub: https://github.com/g0untlet/locate.me
 
 ## Stack
@@ -15,41 +15,9 @@ GitHub: https://github.com/g0untlet/locate.me
 | Mapping | Leaflet.js + OpenStreetMap/Nominatim |
 | Weather | Open-Meteo API |
 
-
-## Core Rules
-### Quarkus Backend
-- Use BCE architecture 
-- Preserve package structure 
-- Use Java 21 
-- Use Quarkus 3.33.2
-- Do not refactor unrelated code 
-### HTML/JS Frontend
-- No bundler, no framework – native ES6 modules only
-- Never hardcode colors – always use CSS custom properties
-- no sw.js, no caching
-
-## Directory Structure
-```
-locate.me/
-├── backend/        ← Quarkus backend with strict BCE architecture
-├── backend-st/     ← System tests for backend
-└── frontend/       ← Vanilla HTML/JS/CSS for PWA frontend
-    ├── app.js
-    ├── index.html
-    ├── css/style.css
-    └── js/
-        ├── config.js
-        ├── utils.js
-        ├── api.js
-        ├── state.js
-        ├── ui/     (toast, badge, status, map)
-        └── pages/  (settings, locate, history)
-```
-
-## Data Access
-- NEVER build SQL queries using string concatenation with user input.
-- Always use parameterized queries.
-- Avoid exposing database structure in error messages.
+## Documentation 
+Functional Scope see ./docs/functional-scope.md 
+Technical Landscape see ./docs/technical-landscape.md 
 
 ## Missing Context
 If required information is missing:

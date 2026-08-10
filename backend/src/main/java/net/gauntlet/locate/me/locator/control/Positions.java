@@ -57,16 +57,22 @@ public class Positions {
         }
 
         try {
-            jakarta.json.JsonObject response = this.weatherClient.forecast(position.latitude(), position.longitude(), "temperature_2m,weather_code");
+            jakarta.json.JsonObject response = this.weatherClient.forecast(position.latitude(), position.longitude(), "temperature_2m,weather_code,uv_index");
             if (response != null && response.containsKey("current") && !response.isNull("current")) {
                 jakarta.json.JsonObject current = response.getJsonObject("current");
                 if (current.containsKey("temperature_2m") && !current.isNull("temperature_2m")) {
                     position.temperature((float) current.getJsonNumber("temperature_2m").doubleValue());
                 }
+                if (current.containsKey("uv_index") && !current.isNull("uv_index")) {
+                    position.uvIndex((float) current.getJsonNumber("uv_index").doubleValue());
+                }
                 if (current.containsKey("weather_code") && !current.isNull("weather_code")) {
                     int code = current.getJsonNumber("weather_code").intValue();
                     position.weatherCode(net.gauntlet.locate.me.locator.entity.WeatherCode.fromCode(code));
                 }
+            }
+            if (response != null && response.containsKey("elevation") && !response.isNull("elevation")) {
+                position.elevation((float) response.getJsonNumber("elevation").doubleValue());
             }
         } catch (Exception e) {
             LOG.log(System.Logger.Level.WARNING, "Failed to resolve weather via Open-Meteo API: {0}", e.getMessage());
