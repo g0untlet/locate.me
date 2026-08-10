@@ -11,11 +11,23 @@ import {
 } from '../utils.js';
 
 /* ==========================================================================
+   GPS Tuning
+   ========================================================================== */
+// Per-fix ceiling: max milliseconds a single position fix may take before the
+// browser reports TIMEOUT. Sweet spot for both Android Chrome and iOS Safari.
+const GPS_TIMEOUT_MS = 12000;
+// Total refinement budget: keep listening until a fix meets
+// GPS_TARGET_ACCURACY_M, then give up and use the best fix received so far.
+const GPS_MAX_WAIT_MS = 15000;
+// Success gate: a fix as accurate as this (or better) is used immediately.
+const GPS_TARGET_ACCURACY_M = 15;
+
+/* ==========================================================================
    Shared GPS Options
    ========================================================================== */
 const GEO_OPTIONS = {
     enableHighAccuracy: true,
-    timeout: 9000,
+    timeout: GPS_TIMEOUT_MS,
     maximumAge: 0
 };
 
@@ -167,7 +179,7 @@ export function initLocatePage(deps) {
                     showError("GPS Timeout: No position found.");
                 }
             }
-        }, 10000);
+        }, GPS_MAX_WAIT_MS);
 
         watchId = navigator.geolocation.watchPosition(
             (position) => {
@@ -175,7 +187,7 @@ export function initLocatePage(deps) {
                     bestPosition = position;
                     statusText.innerText = `Improving signal... (\u00B1${Math.round(position.coords.accuracy)}m)`;
                 }
-                if (position.coords.accuracy <= 15) {
+                if (position.coords.accuracy <= GPS_TARGET_ACCURACY_M) {
                     clearTimeout(maxWaitTimer);
                     navigator.geolocation.clearWatch(watchId);
                     fetchCurrentPosition(position, deps);
