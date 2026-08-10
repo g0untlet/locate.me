@@ -81,35 +81,24 @@ The main business object is the `Position` entity, which has the following attri
 - `accuracy`: The accuracy of the coordinates.
 - `displayName`: A human-readable name for the position.
 - `temperature`, `weatherCode`: Weather information.
-- `uvIndex`: The current UV-Index at the position (Float, from Open-Meteo).
-- `elevation`: The elevation of the position in meters (Float, from Open-Meteo).
+- `uvIndex`: The current UV-Index at the position.
+- `elevation`: The elevation of the position in meters.
 - `timestamp`: When the position was recorded.
 - `osmCategory`, `osmType`, `osmName`, `addressType`, `houseNumber`, `road`, `city`, `country`: Geocoding information from OpenStreetMap.
 - `tag`: A tag for the position (e.g., "home", "work").
 - `comment`: A user-provided comment.
 
-## 5. ECB Classification
+## 5. BCE Architecture
 
-### Entity Components
-- `Position`
-- `PositionTag` (enum)
-- `WeatherCode` (enum)
-- `WeatherCodeConverter` (AttributeConverter)
-
-### Control Components
-- `Positions`
-- `DistanceCalculator`
-- `SystemInfo`
-- `GeocodingClient` (REST client, OpenStreetMap/Nominatim)
-- `WeatherClient` (REST client, Open-Meteo)
-
-### Boundary Components
-- `PositionsResource`
-- `SystemBoundary`
-- `DatabaseHealthCheck`
+The backend is structured according to the BCE (Boundary-Control-Entity) principle:
+every functional area is implemented as a set of boundaries (REST resources),
+controls (business logic) and entities (business objects). This documentation
+describes the system from a functional point of view; the complete technical
+component breakdown lives in `docs/technical-landscape.md` → ECB Architecture.
 
 ## 6. Change Log
 
 | Version | Date | Description |
 |---------|------|-------------|
 | 0.3.0 | 2026-08-03 | Added UV-Index and elevation fields to the `Position` entity (fetched from Open-Meteo); display UV-Index and elevation in the Locate and History views; fixed HTTP 500 on saving a location caused by an H2 2.4.240 enum CHECK constraint regression (see `docs/production-upgrade-0.3.0.md`). |
+| 0.3.0 | 2026-08-10 | Documentation alignment: technical details (incl. the BCE component breakdown) moved to `docs/technical-landscape.md`. |
