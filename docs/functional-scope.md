@@ -92,17 +92,24 @@ The main business object is the `Position` entity, which has the following attri
 - `elevation`: The elevation of the position in meters.
 - `timestamp`: When the position was recorded.
 - `osmCategory`, `osmType`, `osmName`, `addressType`, `houseNumber`, `road`, `city`, `country`: Geocoding information from OpenStreetMap.
-- `tag`: An optional predefined tag for the position (`PARKING`, `SHOPPING`, `RESTAURANT`, `WORK`, `EDU`, `POI`, `LEISURE`).
+- `tag`: An optional predefined tag for the position (`HOME`, `WORK`, `PARKING`, `SHOPPING`, `EATING`, `LEISURE`, `FRIENDS`, `HEALTH`).
 - `comment`: An optional user-provided comment (max. 25 characters in the UI, 255 in the database).
 
 ### 4.1. Managing the Tag Vocabulary (`PositionTag`)
 
-The selectable tags are defined by the `PositionTag` enum on the backend and mirrored in the `PREDEFINED_TAGS` list in the frontend (`frontend/js/pages/locate.js`). A tag is persisted as its name in a plain VARCHAR column, so the database schema does not change when the vocabulary changes.
+The selectable tags are defined by the `PositionTag` enum on the backend and mirrored in the `PREDEFINED_TAGS` list in the frontend (`frontend/js/pages/locate.js`).
+
+**Important – the database column type:** Hibernate creates the `tag` column as an H2 native `ENUM` whose allowed values are fixed when the column is created. Changing the vocabulary in the `PositionTag` enum does **not** update an existing column — saving a new tag value then fails with HTTP 500. The column must therefore be converted to a plain `VARCHAR` once per existing database (backend stopped first, the H2 file is locked while it runs):
+
+```sql
+ALTER TABLE positions ALTER COLUMN tag SET DATA TYPE VARCHAR(32) USING (CAST(tag AS VARCHAR));
+```
 
 **Adding a tag**
-1. Add the new value to the `PositionTag` enum (backend, `locator/entity` package).
-2. Add the same value to `PREDEFINED_TAGS` in `frontend/js/pages/locate.js` — the tag chips in the Locate view are generated from this list.
-3. Redeploy backend and frontend together (backend first). The backend rejects unknown tags with `400 Bad Request`, so a tag can only be saved once both sides know it.
+1. Convert the `tag` column to `VARCHAR` (see above) if not already done.
+2. Add the new value to the `PositionTag` enum (backend, `locator/entity` package).
+3. Add the same value to `PREDEFINED_TAGS` in `frontend/js/pages/locate.js` — the tag chips in the Locate view are generated from this list.
+4. Redeploy backend and frontend together (backend first). The backend rejects unknown tags with `400 Bad Request`, so a tag can only be saved once both sides know it.
 
 **Removing a tag**
 Removing the enum constant is only safe once no saved position still uses the tag: the backend maps the stored value back to the enum on every read, and an unknown value breaks loading the affected history entries.
@@ -125,3 +132,5 @@ component breakdown lives in `docs/technical-landscape.md` → ECB Architecture.
 | 0.3.0 | 2026-08-10 | Documentation alignment: technical details (incl. the BCE component breakdown) moved to `docs/technical-landscape.md`. |
 | 0.3.0 | 2026-08-10 | Save flow refactored: the Locate view now POSTs the already-fetched enriched data back to `POST /positions`, which persists it verbatim without re-resolving geocoding/weather. Enrichment happens only during `GET /positions/current`. |
 | 0.3.0 | 2026-08-11 | Added optional tag and comment when saving a location: single-select predefined tag chips and a 25-character comment in the Locate view; shown as a tag pill + comment line in the History list and at the top of the saved-location card. |
+| 0.3.0 | 2026-08-11 | Tag vocabulary revised for long-term stability: `HOME, WORK, PARKING, SHOPPING, EATING, LEISURE, FRIENDS, HEALTH` (replaced `RESTAURANT`, `EDU`, `POI`; one activity-based axis). No tag data existed in the databases, so no migration was required. |
+| 0.3.0 | 2026-08-11 | Fixed HTTP 500 when saving new tag values: the `tag` column existed as an H2 native `ENUM` with the old value list baked in; converted it to `VARCHAR` on the DEV database (see §4.1). |

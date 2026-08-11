@@ -36,7 +36,7 @@ const GEO_OPTIONS = {
 /* ==========================================================================
    Predefined Tags – single-select vocabulary, must match backend PositionTag
    ========================================================================== */
-const PREDEFINED_TAGS = ['PARKING', 'SHOPPING', 'RESTAURANT', 'WORK', 'EDU', 'POI', 'LEISURE'];
+const PREDEFINED_TAGS = ['HOME', 'WORK', 'PARKING', 'SHOPPING', 'EATING', 'LEISURE', 'FRIENDS', 'HEALTH'];
 
 /* ==========================================================================
    Internal: Save Options (Tag + Comment) helpers
