@@ -34,11 +34,80 @@ const GEO_OPTIONS = {
 };
 
 /* ==========================================================================
+   Predefined Tags – single-select vocabulary, must match backend PositionTag
+   ========================================================================== */
+const PREDEFINED_TAGS = ['PARKING', 'SHOPPING', 'RESTAURANT', 'WORK', 'EDU', 'POI', 'LEISURE'];
+
+/* ==========================================================================
+   Internal: Save Options (Tag + Comment) helpers
+   ========================================================================== */
+function getSaveOptionsElements() {
+    return {
+        block:   document.getElementById('save-options'),
+        chips:   document.getElementById('tag-chips'),
+        comment: document.getElementById('comment-input'),
+        counter: document.getElementById('comment-counter')
+    };
+}
+
+function getSelectedTag() {
+    const { chips } = getSaveOptionsElements();
+    const selected = chips ? chips.querySelector('.tag-chip--selected') : null;
+    return selected ? selected.getAttribute('data-tag') : null;
+}
+
+function resetSaveOptions() {
+    const { block, chips, comment, counter } = getSaveOptionsElements();
+    if (!block) return;
+    block.classList.add('hidden');
+    if (chips) {
+        chips.querySelectorAll('.tag-chip--selected').forEach(c => c.classList.remove('tag-chip--selected'));
+    }
+    if (comment) comment.value = '';
+    if (counter) counter.textContent = '0/25';
+}
+
+function showSaveOptions() {
+    const { block } = getSaveOptionsElements();
+    if (block) block.classList.remove('hidden');
+}
+
+function initSaveOptions() {
+    const { chips, comment, counter } = getSaveOptionsElements();
+    if (!chips) return;
+
+    PREDEFINED_TAGS.forEach(tag => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'tag-chip';
+        chip.setAttribute('data-tag', tag);
+        chip.textContent = tag;
+        chips.appendChild(chip);
+    });
+
+    // Single-select: tapping an active chip deselects it
+    chips.addEventListener('click', (e) => {
+        const chip = e.target.closest('.tag-chip');
+        if (!chip) return;
+        const wasSelected = chip.classList.contains('tag-chip--selected');
+        chips.querySelectorAll('.tag-chip--selected').forEach(c => c.classList.remove('tag-chip--selected'));
+        if (!wasSelected) chip.classList.add('tag-chip--selected');
+    });
+
+    if (comment && counter) {
+        comment.addEventListener('input', () => {
+            counter.textContent = `${comment.value.length}/25`;
+        });
+    }
+}
+
+/* ==========================================================================
    Internal: Reset Locate Page to initial state
    ========================================================================== */
 function resetLocatePage() {
     document.getElementById('btn-fetch-location').textContent = 'FETCH LOCATION';
     document.getElementById('track-btn').style.display = 'none';
+    resetSaveOptions();
     setCachedLocatePosition(null);
 }
 
@@ -98,6 +167,7 @@ function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus })
             setCachedLocatePosition({ ...data, accuracy: position.coords.accuracy });
             fetchBtn.textContent = 'Refresh';
             document.getElementById('track-btn').style.display = 'block';
+            showSaveOptions();
             statusText.innerText = "Preview: Position not yet saved.";
             statusText.className = "status-preview";
 
@@ -130,6 +200,7 @@ function sendPositionToBackend(payload, { getActiveUserId, checkBackendStatus, s
 
             document.getElementById('track-btn').style.display = 'none';
             document.getElementById('btn-fetch-location').textContent = 'FETCH LOCATION';
+            resetSaveOptions();
             setCachedLocatePosition(null);
 
             statusText.innerText = "Location successfully saved.";
@@ -151,6 +222,8 @@ function sendPositionToBackend(payload, { getActiveUserId, checkBackendStatus, s
    deps = { getActiveUserId, checkBackendStatus, silentBadgeSync }
    ========================================================================== */
 export function initLocatePage(deps) {
+
+    initSaveOptions();
 
     // --- FETCH LOCATION Button ---
     document.getElementById('btn-fetch-location').addEventListener('click', () => {
@@ -225,6 +298,20 @@ export function initLocatePage(deps) {
             userId:    deps.getActiveUserId(),
             timestamp: new Date().toISOString()
         };
+
+        const tag = getSelectedTag();
+        if (tag) {
+            payload.tag = tag;
+        } else {
+            delete payload.tag;
+        }
+
+        const comment = getSaveOptionsElements().comment ? getSaveOptionsElements().comment.value.trim() : '';
+        if (comment) {
+            payload.comment = comment;
+        } else {
+            delete payload.comment;
+        }
 
         sendPositionToBackend(payload, deps);
     });

@@ -29,6 +29,8 @@ class PositionsSystemIT {
                 .add("longitude", 13.4050)
                 .add("accuracy", 15.0)
                 .add("displayName", "Berlin Office")
+                .add("tag", "WORK")
+                .add("comment", "Berlin meeting")
                 .add("timestamp", Instant.now().toString())
                 .build();
 
@@ -38,6 +40,8 @@ class PositionsSystemIT {
             JsonObject created = response.readEntity(JsonObject.class);
             assertThat(created.getString("userId")).isEqualTo("stUser");
             assertThat(created.getString("displayName")).isEqualTo("Berlin Office");
+            assertThat(created.getString("tag")).isEqualTo("WORK");
+            assertThat(created.getString("comment")).isEqualTo("Berlin meeting");
             long id = created.getJsonNumber("id").longValue();
 
             // 2. Query Position via REST Client without distance parameters

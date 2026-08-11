@@ -179,12 +179,13 @@ public class PositionsResourceIT {
     }
 
     @Test
-    void createWithTag() {
+    void createWithTagAndComment() {
         JsonObject json = Json.createObjectBuilder()
                 .add("userId", "validUser")
                 .add("latitude", 48.1351)
                 .add("longitude", 11.5820)
                 .add("tag", "WORK")
+                .add("comment", "Team meeting")
                 .add("timestamp", Instant.now().toString())
                 .build();
 
@@ -197,8 +198,19 @@ public class PositionsResourceIT {
                 .statusCode(201)
                 .body("id", notNullValue())
                 .body("tag", is("WORK"))
+                .body("comment", is("Team meeting"))
                 .extract()
                 .path("id");
+
+        // Round-trip: persisted tag and comment are returned on GET
+        given()
+                .when()
+                .get("/api/positions?userId=validUser")
+                .then()
+                .statusCode(200)
+                .body("[0].id", is(id))
+                .body("[0].tag", is("WORK"))
+                .body("[0].comment", is("Team meeting"));
 
         // Cleanup
         given()
@@ -206,6 +218,25 @@ public class PositionsResourceIT {
                 .delete("/api/positions/" + id + "?userId=validUser")
                 .then()
                 .statusCode(204);
+    }
+
+    @Test
+    void createWithInvalidTag() {
+        JsonObject json = Json.createObjectBuilder()
+                .add("userId", "validUser")
+                .add("latitude", 48.1351)
+                .add("longitude", 11.5820)
+                .add("tag", "NOPE")
+                .add("timestamp", Instant.now().toString())
+                .build();
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(json.toString())
+                .when()
+                .post("/api/positions?userId=validUser")
+                .then()
+                .statusCode(400);
     }
 
     @Test

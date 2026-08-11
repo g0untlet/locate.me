@@ -369,6 +369,50 @@ body {
 
 .log-card-id { color: var(--text-color); font-weight: 700; }
 
+.log-card-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    margin-left: 6px;
+    border-radius: 6px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--primary-dark);
+    background-color: var(--primary-tint);
+    border: 1px solid var(--border-color);
+    vertical-align: middle;
+}
+
+.log-card-tag svg {
+    width: 10px;
+    height: 10px;
+    stroke: currentColor;
+    flex-shrink: 0;
+}
+
+.log-card-comment {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--border-color);
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.log-card-comment svg {
+    width: 12px;
+    height: 12px;
+    stroke: var(--text-muted);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
 .log-card-accuracy-badge { 
     padding: 2px 7px; 
     border-radius: 6px; 
@@ -657,6 +701,101 @@ body {
 
 .track-btn--save:hover {
     background-color: var(--primary-tint);
+}
+
+/* ==========================================================================
+   Locate Page: Save Options (Tag + Comment)
+   Erscheint nur im Vorschau-Modus (parallel zum Save-Button).
+   ========================================================================== */
+.save-options {
+    width: 100%;
+    max-width: 280px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background-color: var(--surface-subtle);
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.save-options-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.save-options-row .label {
+    margin-bottom: 0;
+}
+
+.tag-chips {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.tag-chips::-webkit-scrollbar { display: none; }
+
+.tag-chip {
+    flex-shrink: 0;
+    padding: 5px 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--primary-dark);
+    background-color: var(--primary-tint);
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.tag-chip:hover {
+    border-color: var(--primary-color);
+}
+
+.tag-chip--selected {
+    background-color: var(--primary-color);
+    color: #ffffff;
+    border-color: var(--primary-color);
+}
+
+.comment-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.comment-input {
+    width: 100%;
+    padding: 9px 48px 9px 12px;
+    font-size: 0.88rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    transition: var(--transition);
+}
+
+.comment-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.comment-counter {
+    position: absolute;
+    right: 10px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    pointer-events: none;
 }
 
 /* ==========================================================================
