@@ -6,10 +6,10 @@
     <title>locate.me</title>
     <script>
         const APP_VERSION = '0.3.0';
-        const APP_BUILD   = '20260810';
+        const APP_BUILD   = '20260811';
         document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light';
     </script>
-    <link rel="stylesheet" href="css/style.css?v=0.3.0_7">
+    <link rel="stylesheet" href="css/style.css?v=0.3.0_11">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -18,7 +18,7 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 <body>
-    <script type="module" src="app.js?v=0.3.0_12"></script>
+    <script type="module" src="app.js?v=0.3.0_14"></script>
 
     <div class="app-container">
         <header class="app-header">
@@ -38,30 +38,46 @@
                 </button>
             </div>
 
-            <div id="save-options" class="save-options hidden">
-                <div class="save-options-row">
-                    <span class="label">TAG</span>
-                    <div id="tag-chips" class="tag-chips"></div>
-                </div>
-                <div class="save-options-row">
-                    <span class="label">COMMENT</span>
-                    <div class="comment-input-wrapper">
-                        <input id="comment-input" class="comment-input" type="text"
-                               maxlength="25" placeholder="Add a comment (optional)…" autocomplete="off">
-                        <span id="comment-counter" class="comment-counter">0/25</span>
-                    </div>
-                </div>
-            </div>
-
             <div class="status-container">
                 <div id="status" class="status-ready">Ready</div>
             </div>
 
-            <div id="response-card" class="response-card hidden">
-                <div class="card-header">
-                    Location Details at <span id="res-time-span">--:--</span>
+            <div id="save-options" class="save-options hidden">
+                <button id="save-options-toggle" class="save-options-toggle" type="button" aria-expanded="false">
+                    <svg class="save-options-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"></path>
+                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                    </svg>
+                    <span class="save-options-toggle-label">TAG &amp; COMMENT</span>
+                    <span id="save-options-summary" class="save-options-summary hidden"></span>
+                    <svg class="save-options-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="save-options-body">
+                    <div class="save-options-inner">
+                        <div class="save-options-row">
+                            <span class="label">TAG</span>
+                            <div id="tag-chips" class="tag-chips"></div>
+                        </div>
+                        <div class="save-options-row">
+                            <span class="label">COMMENT</span>
+                            <div class="comment-input-wrapper">
+                                <input id="comment-input" class="comment-input" type="text"
+                                       maxlength="25" placeholder="Add a comment (optional)…" autocomplete="off">
+                                <span id="comment-counter" class="comment-counter">0/25</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+            </div>
+
+            <div id="response-card" class="response-card hidden">
                 <div class="flex-rows">
+                    <div id="res-tag-comment" class="res-tag-comment border-bottom hidden">
+                        <span id="res-tag-pill" class="res-tag-pill hidden"></span>
+                        <span id="res-comment-text" class="res-comment-text"></span>
+                    </div>
                     <div class="row-split border-bottom">
                         <div class="cell">
                             <span class="label">TEMPERATURE</span>
