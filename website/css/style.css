@@ -1,0 +1,536 @@
+/* ==========================================================================
+   locate.me website – own stylesheet
+   Look & feel mirrors the locate.me PWA (design tokens as matching values),
+   but is written from scratch for the marketing/install site.
+   ========================================================================== */
+
+:root {
+    --bg-page: #f8fafc;
+    --bg-outer: #cbd5e1;
+    --bg-hero: #eef5fb;
+    --card-bg: #ffffff;
+    --surface-subtle: #f8fafc;
+    --primary-color: #72b2dc;
+    --primary-hover: #5fa3cf;
+    --primary-dark: #1a5f8c;
+    --primary-tint: #e0f2fe;
+    --text-color: #1e293b;
+    --text-strong: #000000;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+    --radius-lg: 24px;
+    --radius-md: 16px;
+    --radius-sm: 8px;
+    --shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+    --shadow-card: 0 4px 14px rgba(0, 0, 0, 0.04);
+    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] {
+    --bg-page: #1e293b;
+    --bg-outer: #020617;
+    --bg-hero: #16202f;
+    --card-bg: #1e293b;
+    --surface-subtle: #0f172a;
+    --primary-color: #72b2dc;
+    --primary-hover: #5fa3cf;
+    --primary-dark: #7ec8e3;
+    --primary-tint: #1e3a4f;
+    --text-color: #e2e8f0;
+    --text-strong: #f8fafc;
+    --text-muted: #94a3b8;
+    --border-color: #334155;
+    --shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    --shadow-card: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-outer);
+    color: var(--text-color);
+    line-height: 1.6;
+    min-height: 100dvh;
+    transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.container {
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+a {
+    color: var(--primary-dark);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* ==========================================================================
+   Header
+   ========================================================================== */
+.site-header {
+    background-color: var(--bg-page);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 14px;
+    padding-bottom: 14px;
+}
+
+.logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.75px;
+    color: var(--text-color);
+    text-decoration: none;
+}
+
+.logo:hover {
+    text-decoration: none;
+}
+
+.logo-mark {
+    width: 34px;
+    height: 34px;
+}
+
+.title-accent {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* --- Language switcher --- */
+.lang-switch {
+    display: inline-flex;
+    border: 1px solid var(--border-color);
+    border-radius: 9999px;
+    background-color: var(--surface-subtle);
+    padding: 3px;
+}
+
+.lang-link {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding: 5px 12px;
+    border-radius: 9999px;
+    transition: var(--transition);
+}
+
+.lang-link:hover {
+    text-decoration: none;
+    color: var(--primary-dark);
+}
+
+.lang-link.is-active {
+    background-color: var(--primary-color);
+    color: #ffffff;
+}
+
+/* --- Theme toggle --- */
+.toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 26px;
+    background-color: var(--border-color);
+    border: none;
+    border-radius: 13px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.toggle-switch[aria-checked="true"] {
+    background-color: var(--primary-color);
+}
+
+.toggle-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    background-color: #ffffff;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+}
+
+.toggle-switch[aria-checked="true"] .toggle-knob {
+    transform: translateX(18px);
+}
+
+/* ==========================================================================
+   Hero
+   ========================================================================== */
+.hero {
+    background: linear-gradient(180deg, var(--bg-hero) 0%, var(--bg-page) 100%);
+    padding: 56px 0 64px;
+    text-align: center;
+}
+
+.hero-title {
+    font-size: clamp(1.9rem, 5vw, 3.2rem);
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    line-height: 1.15;
+    color: var(--text-strong);
+    max-width: 20ch;
+    margin: 0 auto 18px;
+}
+
+.hero-subtitle {
+    font-size: 1.05rem;
+    max-width: 60ch;
+    margin: 0 auto 30px;
+    color: var(--text-muted);
+}
+
+.cta-row {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 26px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.btn:hover {
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(114, 178, 220, 0.3);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+}
+
+.btn-secondary {
+    background-color: var(--card-bg);
+    color: var(--primary-dark);
+    border: 1.5px solid var(--primary-color);
+}
+
+.btn-secondary:hover {
+    background-color: var(--primary-tint);
+}
+
+/* ==========================================================================
+   Sections
+   ========================================================================== */
+.section {
+    padding: 56px 0;
+}
+
+.section--subtle {
+    background-color: var(--surface-subtle);
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 34px;
+}
+
+.section-title {
+    font-size: clamp(1.4rem, 3vw, 1.9rem);
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text-strong);
+    margin-bottom: 10px;
+}
+
+.section-intro {
+    font-size: 1rem;
+    color: var(--text-muted);
+    max-width: 64ch;
+    margin: 0 auto 14px;
+}
+
+/* ==========================================================================
+   Feature grid
+   ========================================================================== */
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+}
+
+.feature-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 26px 22px;
+    box-shadow: var(--shadow-card);
+    transition: var(--transition);
+}
+
+.feature-card:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+}
+
+.feature-icon {
+    width: 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--primary-tint);
+    border-radius: 12px;
+    margin-bottom: 14px;
+}
+
+.feature-icon svg {
+    width: 22px;
+    height: 22px;
+    stroke: var(--primary-dark);
+}
+
+.feature-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-strong);
+    margin-bottom: 6px;
+}
+
+.feature-text {
+    font-size: 0.92rem;
+    color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Install section
+   ========================================================================== */
+.install-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+}
+
+.install-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 26px 24px;
+    box-shadow: var(--shadow-card);
+}
+
+.install-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.install-brand svg {
+    width: 20px;
+    height: 20px;
+    stroke: var(--primary-dark);
+}
+
+.install-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-strong);
+}
+
+.install-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 18px;
+}
+
+.steps {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    counter-reset: step;
+}
+
+.step {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.step-num {
+    counter-increment: step;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background-color: var(--primary-tint);
+    color: var(--primary-dark);
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+}
+
+.step-num::before {
+    content: counter(step);
+}
+
+.step-text {
+    font-size: 0.95rem;
+    color: var(--text-color);
+}
+
+.step-text code,
+.app-url {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.88rem;
+    background-color: var(--surface-subtle);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 1px 7px;
+    color: var(--primary-dark);
+    word-break: break-all;
+}
+
+.step-muted {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+}
+
+.install-notice {
+    margin-top: 26px;
+    background-color: var(--primary-tint);
+    border: 1px solid var(--primary-color);
+    color: var(--primary-dark);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    font-size: 0.92rem;
+    text-align: center;
+}
+
+.install-notice strong {
+    font-weight: 700;
+}
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+.site-footer {
+    background-color: var(--surface-subtle);
+    border-top: 1px solid var(--border-color);
+    padding: 30px 0;
+    text-align: center;
+}
+
+.footer-brand {
+    font-weight: 700;
+    color: var(--text-color);
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+}
+
+.attribution {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.attribution a {
+    color: var(--text-muted);
+}
+
+.attribution a:hover {
+    color: var(--primary-dark);
+}
+
+.footer-note {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 12px;
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+@media (max-width: 860px) {
+    .feature-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .hero {
+        padding: 40px 0 48px;
+    }
+
+    .feature-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .install-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .install-card {
+        padding: 22px 18px;
+    }
+
+    .header-inner {
+        flex-wrap: wrap;
+    }
+}

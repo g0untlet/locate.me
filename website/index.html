@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>locate.me – Know where you are. Remember where you've been.</title>
+    <meta name="description" content="locate.me is a private, self-hosted geo-tracking PWA. Learn what it does and how to install it as an app on Android (Chrome, Brave) and iPhone (Safari).">
+    <script>
+        try {
+            var t = localStorage.getItem('theme');
+            document.documentElement.dataset.theme = (t === 'dark' || t === 'light') ? t : 'light';
+        } catch (e) {
+            document.documentElement.dataset.theme = 'light';
+        }
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="alternate" hreflang="de" href="index.de.html">
+    <link rel="alternate" hreflang="en" href="index.html">
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="container header-inner">
+            <a class="logo" href=".">
+                <svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true">
+                    <rect width="64" height="64" rx="14" fill="#1a5f8c"/>
+                    <path d="M32 12c-9.4 0-17 7.6-17 17 0 12.7 17 25.5 17 25.5S49 41.7 49 29c0-9.4-7.6-17-17-17z" fill="#ffffff"/>
+                    <circle cx="32" cy="29" r="6.5" fill="#72b2dc"/>
+                </svg>
+                <span>locate<span class="title-accent">.me</span></span>
+            </a>
+            <div class="header-actions">
+                <nav class="lang-switch" aria-label="Language">
+                    <a class="lang-link is-active" href="index.html" hreflang="en" aria-current="true">EN</a>
+                    <a class="lang-link" href="index.de.html" hreflang="de">DE</a>
+                </nav>
+                <button id="theme-toggle" class="toggle-switch" role="switch" aria-checked="false" aria-label="Toggle dark mode">
+                    <span class="toggle-knob"></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <h1 class="hero-title">Know where you are. Remember where you've been.</h1>
+                <p class="hero-subtitle">
+                    locate.me is a private, self-hosted geo-tracker for you and the people you trust.
+                    Find out where you are right now &mdash; with your address, weather and more &mdash;
+                    and keep a history of the places that matter.
+                </p>
+                <div class="cta-row">
+                    <a class="btn btn-primary" href="https://locateme.folger.home64.de/" target="_blank" rel="noopener">Open App</a>
+                    <a class="btn btn-secondary" href="#install">How to install</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section section--subtle">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">What is locate.me?</h2>
+                    <p class="section-intro">
+                        A tiny web app that turns your phone into a smart location notebook.
+                        One tap tells you where you are and what the world looks like right there &mdash;
+                        another tap saves the spot, so you always find your way back.
+                    </p>
+                </div>
+                <div class="feature-grid">
+                    <article class="feature-card">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                        </div>
+                        <h3 class="feature-title">Locate</h3>
+                        <p class="feature-text">Get your position with a fast, high-accuracy GPS fix.</p>
+                    </article>
+                    <article class="feature-card">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line></svg>
+                        </div>
+                        <h3 class="feature-title">Address</h3>
+                        <p class="feature-text">Your exact address is resolved automatically via OpenStreetMap.</p>
+                    </article>
+                    <article class="feature-card">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="6.34" y2="6.34"></line><line x1="17.66" y1="17.66" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="6.34" y2="17.66"></line><line x1="17.66" y1="6.34" x2="19.07" y2="4.93"></line></svg>
+                        </div>
+                        <h3 class="feature-title">Weather</h3>
+                        <p class="feature-text">See temperature, UV index and elevation at your current spot.</p>
+                    </article>
+                    <article class="feature-card">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        </div>
+                        <h3 class="feature-title">History</h3>
+                        <p class="feature-text">Every saved place stays on your personal list and map &mdash; with distance and walking time.</p>
+                    </article>
+                    <article class="feature-card">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        </div>
+                        <h3 class="feature-title">Installable</h3>
+                        <p class="feature-text">Lives on your home screen like a native app &mdash; one tap to open.</p>
+                    </article>
+                    <article class="feature-card">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        </div>
+                        <h3 class="feature-title">Private</h3>
+                        <p class="feature-text">Self-hosted and only accessible to people you trust. Your location stays yours.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="install">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Install it like an app</h2>
+                    <p class="section-intro">
+                        Install locate.me as a Progressive Web App on your phone.
+                        It works and feels like a real app, with one tap from your home screen.
+                        You only need to do this once.
+                    </p>
+                </div>
+
+                <div class="install-grid">
+                    <article class="install-card">
+                        <div class="install-brand">
+                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                            <h3 class="install-title">Android &mdash; Chrome &amp; Brave</h3>
+                        </div>
+                        <p class="install-subtitle">The steps are nearly identical in both browsers.</p>
+                        <ol class="steps">
+                            <li class="step">
+                                <span class="step-num"></span>
+                                <span class="step-text">Open <span class="app-url">https://locateme.folger.home64.de/</span> in Chrome or Brave.</span>
+                            </li>
+                            <li class="step">
+                                <span class="step-num"></span>
+                                <span class="step-text">Tap the <strong>&#x22EE;</strong> menu icon &mdash; top right of the browser.</span>
+                            </li>
+                            <li class="step">
+                                <span class="step-num"></span>
+                                <span class="step-text">Choose <strong>&ldquo;Add to Home screen&rdquo;</strong> (Chrome) or <strong>&ldquo;Install app&rdquo;</strong> (Brave).</span>
+                            </li>
+                            <li class="step">
+                                <span class="step-num"></span>
+                                <span class="step-text">Confirm with <strong>&ldquo;Install&rdquo; / &ldquo;Add&rdquo;</strong>.<br>
+                                <span class="step-muted">Done &mdash; the locate.me icon is on your home screen.</span></span>
+                            </li>
+                        </ol>
+                    </article>
+
+                    <article class="install-card">
+                        <div class="install-brand">
+                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><line x1="2" y1="8" x2="22" y2="8"></line></svg>
+                            <h3 class="install-title">iOS &mdash; Safari</h3>
+                        </div>
+                        <p class="install-subtitle">Use Safari, not another browser or an in-app view.</p>
+                        <ol class="steps">
+                            <li class="step">
+                                <span class="step-num"></span>
+                                <span class="step-text">Open <span class="app-url">https://locateme.folger.home64.de/</span> in Safari.</span>
+                            </li>
+                            <li class="step">
+                                <span class="step-num"></span>
+                                <span class="step-text">Tap the <strong>Share</strong> button &mdash; the square with the up arrow at the bottom.</span>
+                            </li>
+                            <li class="step">
+                                <span class="step-num"></span>
+                                <span class="step-text">Scroll and tap <strong>&ldquo;Add to Home Screen&rdquo;</strong>.</span>
+                            </li>
+                            <li class="step">
+                                <span class="step-num"></span>
+                                <span class="step-text">Tap <strong>&ldquo;Add&rdquo;</strong>.<br>
+                                <span class="step-muted">Done &mdash; the locate.me icon is on your home screen.</span></span>
+                            </li>
+                        </ol>
+                    </article>
+                </div>
+
+                <p class="install-notice">
+                    <strong>Tip:</strong> A secure HTTPS connection is required for PWA installation &mdash; this URL already provides it.
+                </p>
+                <p class="install-notice">
+                    <strong>Location:</strong> When the browser asks for <strong>location (GPS) access</strong>, please allow it.
+                    This permission is used <strong>only by this website</strong> and nothing else &mdash;
+                    it is never shared with other apps or sites.
+                </p>
+                <p class="install-notice">
+                    <strong>Getting started:</strong> You don't need an account &mdash; try the shared demo user
+                    <span class="app-url">user123</span>. Want your own private user?
+                    <a href="mailto:gauntlet101@proton.me">Contact us</a>.
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p class="footer-brand">locate<span class="title-accent">.me</span></p>
+            <nav class="attribution" aria-label="Powered by">
+                <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">&copy; OpenStreetMap</a>
+                <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>
+                <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>
+            </nav>
+            <p class="footer-note">A private, self-hosted PWA for you and the people you trust.</p>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
