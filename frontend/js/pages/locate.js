@@ -11,12 +11,26 @@ import {
 } from '../utils.js';
 
 /* ==========================================================================
+   GPS Tuning
+   ========================================================================== */
+// Per-fix ceiling: max milliseconds a single position fix may take before the
+// browser reports TIMEOUT. Aligned with GPS_MAX_WAIT_MS so a cold fix is not
+// pre-empted mid-budget. Sweet spot for both Android Chrome and iOS Safari.
+const GPS_TIMEOUT_MS = 8000;
+// Total listening budget: keep listening until a fix meets
+// GPS_TARGET_ACCURACY_M, then give up and use the best fix received so far.
+const GPS_MAX_WAIT_MS = 8000;
+// Success gate: a fix as accurate as this (or better) is used immediately.
+// 30m matches the app's own "good" accuracy band (history flags >30m as low).
+const GPS_TARGET_ACCURACY_M = 30;
+
+/* ==========================================================================
    Shared GPS Options
    ========================================================================== */
 const GEO_OPTIONS = {
     enableHighAccuracy: true,
-    timeout: 9000,
-    maximumAge: 0
+    timeout: GPS_TIMEOUT_MS,
+    maximumAge: 5000
 };
 
 /* ==========================================================================
@@ -81,7 +95,7 @@ function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus })
 
             renderLocationCard(data, timeLabel);
 
-            setCachedLocatePosition(position);
+            setCachedLocatePosition({ ...data, accuracy: position.coords.accuracy });
             fetchBtn.textContent = 'Refresh';
             document.getElementById('track-btn').style.display = 'block';
             statusText.innerText = "Preview: Position not yet saved.";
@@ -97,21 +111,14 @@ function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus })
 }
 
 /* ==========================================================================
-   Step 2: POST /api/positions – Save Location
+   Step 2: POST /api/positions – Save the previously fetched location data
+   The enriched preview data is sent back verbatim; the backend only persists it.
    ========================================================================== */
-function sendPositionToBackend(position, { getActiveUserId, checkBackendStatus, silentBadgeSync }) {
+function sendPositionToBackend(payload, { getActiveUserId, checkBackendStatus, silentBadgeSync }) {
     const statusText = document.getElementById('status');
     statusText.innerText = "Sending to backend...";
 
     const clientTimestamp = new Date();
-    const payload = {
-        userId:    getActiveUserId(),
-        latitude:  position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracy:  position.coords.accuracy,
-        timestamp: clientTimestamp.toISOString()
-    };
-
     apiPostPosition(getActiveUserId(), payload)
         .then(data => {
             const timeLabel = clientTimestamp.toLocaleString('de-DE', {
@@ -174,7 +181,7 @@ export function initLocatePage(deps) {
                     showError("GPS Timeout: No position found.");
                 }
             }
-        }, 10000);
+        }, GPS_MAX_WAIT_MS);
 
         watchId = navigator.geolocation.watchPosition(
             (position) => {
@@ -182,7 +189,7 @@ export function initLocatePage(deps) {
                     bestPosition = position;
                     statusText.innerText = `Improving signal... (\u00B1${Math.round(position.coords.accuracy)}m)`;
                 }
-                if (position.coords.accuracy <= 15) {
+                if (position.coords.accuracy <= GPS_TARGET_ACCURACY_M) {
                     clearTimeout(maxWaitTimer);
                     navigator.geolocation.clearWatch(watchId);
                     fetchCurrentPosition(position, deps);
@@ -203,58 +210,22 @@ export function initLocatePage(deps) {
 
     // --- SAVE LOCATION Button ---
     document.getElementById('track-btn').addEventListener('click', () => {
-        if (!getCachedLocatePosition()) {
+        const cached = getCachedLocatePosition();
+        if (!cached) {
             showError("No position available. Please fetch first.");
             return;
         }
 
         const statusText = document.getElementById('status');
-        statusText.innerText = "Searching for precise GPS...";
+        statusText.innerText = "Saving location...";
         statusText.className = "status-loading";
 
-        if (!navigator.geolocation) {
-            showError("Geolocation is not supported by your browser.");
-            return;
-        }
+        const payload = {
+            ...cached,
+            userId:    deps.getActiveUserId(),
+            timestamp: new Date().toISOString()
+        };
 
-        let watchId      = null;
-        let bestPosition = null;
-
-        const maxWaitTimer = setTimeout(() => {
-            if (watchId) {
-                navigator.geolocation.clearWatch(watchId);
-                if (bestPosition) {
-                    statusText.innerText = "Timeout reached. Sending best available location...";
-                    sendPositionToBackend(bestPosition, deps);
-                } else {
-                    showError("GPS Timeout: No position found.");
-                }
-            }
-        }, 10000);
-
-        watchId = navigator.geolocation.watchPosition(
-            (position) => {
-                if (!bestPosition || position.coords.accuracy < bestPosition.coords.accuracy) {
-                    bestPosition = position;
-                    statusText.innerText = `Improving signal... (\u00B1${Math.round(position.coords.accuracy)}m)`;
-                }
-                if (position.coords.accuracy <= 15) {
-                    clearTimeout(maxWaitTimer);
-                    navigator.geolocation.clearWatch(watchId);
-                    statusText.innerText = "Precise location locked! Sending...";
-                    sendPositionToBackend(position, deps);
-                }
-            },
-            (error) => {
-                clearTimeout(maxWaitTimer);
-                if (watchId) navigator.geolocation.clearWatch(watchId);
-                if (bestPosition) {
-                    sendPositionToBackend(bestPosition, deps);
-                } else {
-                    showError(`GPS Error: ${error.message}`);
-                }
-            },
-            GEO_OPTIONS
-        );
+        sendPositionToBackend(payload, deps);
     });
 }

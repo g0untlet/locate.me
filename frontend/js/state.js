@@ -10,7 +10,7 @@ let _historyMapData = [];         // Last fetched positions, shared with map ren
 let _currentHistoryView = 'list'; // 'list' | 'map'
 
 // --- Locate Page State ---
-let _cachedLocatePosition = null; // Letzter GPS-Fix für den Save-Button
+let _cachedLocatePosition = null; // Enriched preview payload from GET /positions/current (+ GPS accuracy) for the Save-Button
 let _locateMap = null;            // Leaflet map instance für Locate-Seite (lazy init)
 let _locateMarker = null;         // Einzelner Marker auf der Locate-Karte
 

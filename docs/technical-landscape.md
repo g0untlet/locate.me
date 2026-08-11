@@ -135,7 +135,7 @@ net.gauntlet.locate.me
 
 | Control | Responsibility |
 |----------|----------|
-| `Positions` | Orchestrates create (enrich → persist), delete and queries; sole `EntityManager` access |
+| `Positions` | Orchestrates enrich (preview: geocoding + weather) and persist-only create, delete and queries; sole `EntityManager` access |
 | `DistanceCalculator` | Haversine distance + walking-time estimation (static util) |
 | `SystemInfo` | Application metadata (artifactId, version, startupTime) |
 | `GeocodingClient` | MicroProfile REST client → Nominatim reverse geocoding |
@@ -169,8 +169,8 @@ query parameter. Functional purpose of the endpoints is documented in
 | Method | Endpoint | Notes |
 |----------|----------|----------|
 | GET | `/api/positions?userId=&lat=&lon=` | 200 list, newest first; optional `lat`/`lon` add response-only `distance` (km) and `walkingTimeMinutes` |
-| POST | `/api/positions?userId=` | 201 + `Location`; persisted, enriched position |
-| GET | `/api/positions/current?userId=&lat=&lon=` | 200 preview, `persist=false` (no row written) |
+| POST | `/api/positions?userId=` | 201 + `Location`; persists client-provided data verbatim (no server-side geocoding/weather resolution) |
+| GET | `/api/positions/current?userId=&lat=&lon=` | 200 preview; geocoding + weather enrichment; not persisted |
 | DELETE | `/api/positions/{id}?userId=` | 204 |
 
 Common errors: 400 invalid/missing `userId` or body; 401 userId not in allow-list.
@@ -357,7 +357,9 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 ## Technology
 
 - Quarkus 3.33.2, Java 21, H2 2.4.240.
-- Caddy2 reverse proxy with HTTPS.
+- Caddy2 reverse proxy with HTTPS. All responses (static + `/api`) are sent with
+  `Cache-Control: no-store` in every site block (DEV, PROD, `:8070` tunnel) — nothing
+  is cached on clients; `?v=` cache-busting query tokens remain as a safety net.
 - HTTP/JSON communication; REST clients for Open-Meteo and Nominatim.
 - Parameterized queries only — never SQL built from user input.
 - H2 native enum CHECK constraints must not be (re-)created in the schema (2.4.240 regression; see Persistence).
@@ -385,3 +387,6 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 | Version | Date | Description |
 |---------|---------|---------|
 | 0.3.0 | 2026-08-10 | Initial version (replaces the template placeholder) |
+| 0.3.0 | 2026-08-10 | Save flow refactored: `Positions` control split into `enrich` (preview) and persist-only `create`; `POST /positions` no longer resolves geocoding/weather; `GET /positions/current` is the only enrichment path. |
+| 0.3.0 | 2026-08-10 | Caching policy: Caddy sends `Cache-Control: no-store` on all environments (DEV/PROD/`:8070`); PWA always fetches fresh `index.html`/assets. |
+| 0.3.0 | 2026-08-10 | GPS fast-fix tuning: target accuracy 15m → 30m, max wait 15s → 8s, fix timeout 12s → 8s, `maximumAge` 0 → 5s. |

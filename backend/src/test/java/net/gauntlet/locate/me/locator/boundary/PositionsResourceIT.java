@@ -16,7 +16,6 @@ import java.time.Instant;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -210,16 +209,37 @@ public class PositionsResourceIT {
     }
 
     @Test
-    void createWithNominatimGeocoding() {
-        Mockito.when(this.geocodingClient.reverse(48.1351, 11.5820, "jsonv2"))
+    void createPersistsClientProvidedEnrichmentWithoutServerResolution() {
+        // If the backend still resolved enrichment on save, it would overwrite these client values
+        when(weatherClient.forecast(anyDouble(), anyDouble(), anyString()))
                 .thenReturn(Json.createObjectBuilder()
-                        .add("display_name", "Mocked OSM Munich")
+                        .add("elevation", 999)
+                        .add("current", Json.createObjectBuilder()
+                                .add("temperature_2m", 99.9)
+                                .add("weather_code", 95)
+                                .add("uv_index", 9.9)
+                                .build())
                         .build());
+        when(geocodingClient.reverse(anyDouble(), anyDouble(), anyString()))
+                .thenReturn(Json.createObjectBuilder().add("display_name", "Server-Resolved Location").build());
 
         JsonObject json = Json.createObjectBuilder()
-                .add("userId", "geoUser")
+                .add("userId", "validUser")
                 .add("latitude", 48.1351)
                 .add("longitude", 11.5820)
+                .add("accuracy", 10.0)
+                .add("displayName", "Munich Office")
+                .add("osmCategory", "historic")
+                .add("osmType", "memorial")
+                .add("osmName", "Marienplatz")
+                .add("addressType", "historic")
+                .add("road", "Marienplatz")
+                .add("city", "Munich")
+                .add("country", "Germany")
+                .add("temperature", 18.5f)
+                .add("uvIndex", 6.6f)
+                .add("elevation", 520f)
+                .add("weatherCode", 2)
                 .add("timestamp", Instant.now().toString())
                 .build();
 
@@ -227,27 +247,29 @@ public class PositionsResourceIT {
                 .contentType(ContentType.JSON)
                 .body(json.toString())
                 .when()
-                .post("/api/positions?userId=geoUser")
+                .post("/api/positions?userId=validUser")
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
-                .body("displayName", is("Mocked OSM Munich"))
+                .body("displayName", is("Munich Office"))
+                .body("temperature", is(18.5f))
+                .body("uvIndex", is(6.6f))
+                .body("elevation", is(520f))
+                .body("weatherCode", is(2))
+                .body("road", is("Marienplatz"))
                 .extract()
                 .path("id");
 
         // Cleanup
         given()
                 .when()
-                .delete("/api/positions/" + id + "?userId=geoUser")
+                .delete("/api/positions/" + id + "?userId=validUser")
                 .then()
                 .statusCode(204);
     }
 
     @Test
-    void createWithNominatimGeocodingFailure() {
-        Mockito.when(this.geocodingClient.reverse(52.5200, 13.4050, "jsonv2"))
-                .thenThrow(new RuntimeException("OSM Service Unavailable"));
-
+    void createWithoutEnrichmentDataPersistsNullEnrichmentFields() {
         JsonObject json = Json.createObjectBuilder()
                 .add("userId", "geoFailUser")
                 .add("latitude", 52.5200)
@@ -273,6 +295,40 @@ public class PositionsResourceIT {
                 .delete("/api/positions/" + id + "?userId=geoFailUser")
                 .then()
                 .statusCode(204);
+    }
+
+    @Test
+    void fetchCurrentPositionEnrichesAndDoesNotPersist() {
+        when(geocodingClient.reverse(48.1351, 11.5820, "jsonv2"))
+                .thenReturn(Json.createObjectBuilder().add("display_name", "Mocked OSM Munich").build());
+        when(weatherClient.forecast(anyDouble(), anyDouble(), anyString()))
+                .thenReturn(Json.createObjectBuilder()
+                        .add("elevation", 520)
+                        .add("current", Json.createObjectBuilder()
+                                .add("temperature_2m", 32.3)
+                                .add("weather_code", 2)
+                                .add("uv_index", 6.6)
+                                .build())
+                        .build());
+
+        given()
+                .when()
+                .get("/api/positions/current?userId=geoUser&lat=48.1351&lon=11.5820")
+                .then()
+                .statusCode(200)
+                .body("displayName", is("Mocked OSM Munich"))
+                .body("temperature", is(32.3f))
+                .body("uvIndex", is(6.6f))
+                .body("elevation", is(520f))
+                .body("weatherCode", is(2));
+
+        // Preview must not be persisted
+        given()
+                .when()
+                .get("/api/positions?userId=geoUser")
+                .then()
+                .statusCode(200)
+                .body("size()", is(0));
     }
 
     @Test

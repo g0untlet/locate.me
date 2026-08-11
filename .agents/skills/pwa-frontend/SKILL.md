@@ -64,13 +64,15 @@ frontend/
 
 ## Currently Used Backend API
 ```
-POST   /api/positions              – save position
+POST   /api/positions              – save position: persist the already-fetched enriched payload verbatim (backend does NOT re-enrich)
 GET    /api/positions              – history (optional: ?lat=&lon= for distance)
-GET    /api/positions/current      – status + weather (Open-Meteo)
+GET    /api/positions/current      – preview: geocoding + weather enrichment (Open-Meteo/Nominatim), not persisted
 DELETE /api/positions/{id}         – delete position
 GET    /api/system/info            – { artifactId, version, startupTime }
 ```
 Auth: `userId` in request body/query, backend validates against allowlist.
+
+Save flow: the Locate page caches the enriched `/positions/current` preview (incl. GPS accuracy) and POSTs it back; it does NOT re-run GPS or re-fetch on save.
 
 ---
 
