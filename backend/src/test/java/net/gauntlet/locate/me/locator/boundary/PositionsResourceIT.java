@@ -435,7 +435,10 @@ public class PositionsResourceIT {
                 .statusCode(200)
                 .body("[0].id", is(id))
                 .body("[0].distance", notNullValue())
-                .body("[0].distance", is(0.0f));
+                .body("[0].distance", is(0.0f))
+                .body("[0].walkingTimeMinutes", notNullValue())
+                .body("[0].bikingTimeMinutes", notNullValue())
+                .body("[0].drivingTimeMinutes", notNullValue());
 
         // 3. Fetch passing coordinates far away (Berlin: 52.5200, 13.4050, expect ~500+ km distance)
         given()
@@ -444,7 +447,10 @@ public class PositionsResourceIT {
                 .then()
                 .statusCode(200)
                 .body("[0].id", is(id))
-                .body("[0].distance", notNullValue());
+                .body("[0].distance", notNullValue())
+                .body("[0].walkingTimeMinutes", notNullValue())
+                .body("[0].bikingTimeMinutes", notNullValue())
+                .body("[0].drivingTimeMinutes", notNullValue());
 
         // 4. Fetch without distance parameters, expect NO distance field in response
         given()
@@ -453,7 +459,10 @@ public class PositionsResourceIT {
                 .then()
                 .statusCode(200)
                 .body("[0].id", is(id))
-                .body("[0].distance", nullValue());
+                .body("[0].distance", nullValue())
+                .body("[0].walkingTimeMinutes", nullValue())
+                .body("[0].bikingTimeMinutes", nullValue())
+                .body("[0].drivingTimeMinutes", nullValue());
 
         // Cleanup
         given()

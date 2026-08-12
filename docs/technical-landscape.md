@@ -115,7 +115,7 @@ net.gauntlet.locate.me
 
 | Module | Purpose |
 |---------|---------|
-| `locator` | Position lifecycle (create/read/delete), geocoding + weather enrichment, distance/walking-time |
+| `locator` | Position lifecycle (create/read/delete), geocoding + weather enrichment, distance/travel-time (walking, biking, driving) |
 | `system` | Application info endpoint and startup timestamp |
 
 ---
@@ -136,7 +136,7 @@ net.gauntlet.locate.me
 | Control | Responsibility |
 |----------|----------|
 | `Positions` | Orchestrates enrich (preview: geocoding + weather) and persist-only create, delete and queries; sole `EntityManager` access |
-| `DistanceCalculator` | Haversine distance + walking-time estimation (static util) |
+| `DistanceCalculator` | Haversine distance + walking/biking/driving time estimation (static util) |
 | `SystemInfo` | Application metadata (artifactId, version, startupTime) |
 | `GeocodingClient` | MicroProfile REST client → Nominatim reverse geocoding |
 | `WeatherClient` | MicroProfile REST client → Open-Meteo forecast |
@@ -168,7 +168,7 @@ query parameter. Functional purpose of the endpoints is documented in
 
 | Method | Endpoint | Notes |
 |----------|----------|----------|
-| GET | `/api/positions?userId=&lat=&lon=` | 200 list, newest first; optional `lat`/`lon` add response-only `distance` (km) and `walkingTimeMinutes` |
+| GET | `/api/positions?userId=&lat=&lon=` | 200 list, newest first; optional `lat`/`lon` add response-only `distance` (km), `walkingTimeMinutes`, `bikingTimeMinutes`, `drivingTimeMinutes` |
 | POST | `/api/positions?userId=` | 201 + `Location`; persists client-provided data verbatim (no server-side geocoding/weather resolution) |
 | GET | `/api/positions/current?userId=&lat=&lon=` | 200 preview; geocoding + weather enrichment; not persisted |
 | DELETE | `/api/positions/{id}?userId=` | 204 |
