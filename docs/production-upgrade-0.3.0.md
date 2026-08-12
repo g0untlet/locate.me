@@ -29,7 +29,7 @@ file. They must be removed **once per existing database**.
 
 - Backend stopped (the H2 file is locked while the backend runs).
 - A `locator-service-0.3.0-runner.jar` build available on the target machine. The JAR is also
-  used as the H2 Shell host in steps 3-5, so it must be copied to the machine before those steps.
+  used as the H2 Shell host in steps 3-5 and 7, so it must be copied to the machine before those steps.
 - The production backend is currently 0.2.0 on port **8080**; the DEV backend is 0.3.0 on
   port **8090**. All `curl` examples below are port-agnostic unless noted.
 - A backup of the database file (see step 2).
@@ -137,7 +137,45 @@ On startup, Hibernate adds the new 0.3.0 columns (`tag`, `comment`, `elevation`,
 to the existing table. It does **not** re-add the dropped CHECK constraints (verified against
 the production-style database).
 
-### 7. Verify the fix
+Note: Hibernate creates the `tag` column as an H2 **native `ENUM`** whose allowed values are
+fixed when the column is created. It accepts the current 0.3.0 tag vocabulary, but any future
+change to `PositionTag` would make saves fail with HTTP 500 unless the column is converted to
+`VARCHAR` — that is done in step 7.
+
+### 7. Convert the `tag` column from native `ENUM` to `VARCHAR`
+
+The `tag` column created in step 6 is an H2 native `ENUM`. Converting it to a plain `VARCHAR`
+makes the column independent of the enum's value list, so future tag additions, renames or
+removals in `PositionTag` never require another schema change. This is a **one-time**
+conversion per database file.
+
+Stop the backend (the H2 file is locked while the backend runs), then alter the column:
+
+```bash
+/home/gauntlet/homelab/stop-locateme-backend.sh prod
+
+cd /home/gauntlet/homelab/locate.me/backend
+java -cp locator-service-0.3.0-runner.jar org.h2.tools.Shell \
+  -url "jdbc:h2:file:./data/locator" -user sa -password sa \
+  -sql "ALTER TABLE positions ALTER COLUMN tag SET DATA TYPE VARCHAR(32) USING (CAST(tag AS VARCHAR));"
+```
+
+Verify the column type is now `CHARACTER VARYING` (if it already is, the ALTER was not needed
+and can be skipped):
+
+```bash
+java -cp locator-service-0.3.0-runner.jar org.h2.tools.Shell \
+  -url "jdbc:h2:file:./data/locator" -user sa -password sa \
+  -sql "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'POSITIONS' AND COLUMN_NAME = 'TAG'"
+```
+
+Restart the backend:
+
+```bash
+/home/gauntlet/homelab/start-locateme-backend.sh prod
+```
+
+### 8. Verify the fix
 
 ```bash
 curl -s http://localhost:8080/q/health/ready
@@ -154,13 +192,27 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST 'http://localhost:8080/api/posi
 Expect `201`. For full confidence, save a second location after more than 5 minutes of
 idle — that was the exact failure window.
 
+Finally, verify a tag that did **not** exist in the pre-0.3.0 vocabulary saves cleanly
+(`HOME` was added in the 2026-08-11 revision) — this proves the `VARCHAR` conversion works:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -X POST 'http://localhost:8080/api/positions?userId=user123' \
+  -H 'Content-Type: application/json' \
+  -d '{"userId":"user123","latitude":52.52,"longitude":13.405,"tag":"HOME","timestamp":"2026-08-11T00:00:00Z"}'
+```
+
+Expect `201`.
+
 ## Important notes
 
 - The constraint drop is **one-time per database file**. Hibernate's `database.generation=update`
   never re-adds constraints to an existing table.
 - A **brand-new** database (fresh file, first start of 0.3.0) will contain the enum CHECK
-  constraints again and must be cleaned with steps 3-5 once.
+  constraints again and must be cleaned with steps 3-5 once. Its `tag` column will again be
+  created as a native `ENUM`, so the step 7 conversion is also needed once if the tag
+  vocabulary may change later.
 - The **DEV server** was cleaned on 2026-08-03 (both constraints dropped, 0.3.0 deployed,
-  save after >10 min idle verified). No further action needed there.
+  save after >10 min idle verified) and additionally had its `tag` column converted to
+  `VARCHAR` on 2026-08-11 (step 7). No further action needed there.
 - If you ever revert to H2 < 2.4.240 the bug is absent, but this document assumes the
   standard 2.4.240 that ships with Quarkus 3.33.x.

@@ -8,6 +8,7 @@ A personal geo-location tracking application: a mobile-first **Progressive Web A
 - Automatic address reverse geocoding (OpenStreetMap / Nominatim)
 - Weather, UV index, and elevation enrichment (Open-Meteo)
 - Location history with straight-line distance and estimated walking time
+- Optional tags and comments on saved locations (shown in history and after saving)
 - Installable PWA (no service worker, no client-side caching)
 
 ## Tech Stack

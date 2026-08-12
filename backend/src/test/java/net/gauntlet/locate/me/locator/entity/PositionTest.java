@@ -25,6 +25,8 @@ class PositionTest {
                 .uvIndex(6.6f)
                 .elevation(520f)
                 .weatherCode(WeatherCode.PARTLY_CLOUDY)
+                .tag(PositionTag.WORK)
+                .comment("Team meeting")
                 .timestamp(now);
 
         JsonObject json = position.toJSON();
@@ -39,6 +41,8 @@ class PositionTest {
         assertThat((float) json.getJsonNumber("uvIndex").doubleValue()).isEqualTo(6.6f);
         assertThat((float) json.getJsonNumber("elevation").doubleValue()).isEqualTo(520f);
         assertThat(json.getJsonNumber("weatherCode").intValue()).isEqualTo(2);
+        assertThat(json.getString("tag")).isEqualTo("WORK");
+        assertThat(json.getString("comment")).isEqualTo("Team meeting");
         assertThat(json.getString("timestamp")).isEqualTo(now.toString());
     }
 
@@ -56,6 +60,8 @@ class PositionTest {
                 .add("uvIndex", 6.6f)
                 .add("elevation", 520f)
                 .add("weatherCode", 2)
+                .add("tag", "WORK")
+                .add("comment", "Team meeting")
                 .add("timestamp", now.toString())
                 .build();
 
@@ -71,6 +77,8 @@ class PositionTest {
         assertThat(position.uvIndex()).isEqualTo(6.6f);
         assertThat(position.elevation()).isEqualTo(520f);
         assertThat(position.weatherCode()).isEqualTo(WeatherCode.PARTLY_CLOUDY);
+        assertThat(position.tag()).isEqualTo(PositionTag.WORK);
+        assertThat(position.comment()).isEqualTo("Team meeting");
         assertThat(position.timestamp()).isEqualTo(now);
     }
 }

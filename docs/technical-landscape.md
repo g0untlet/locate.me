@@ -205,13 +205,13 @@ Single table, no relationships.
 | `weatherCode` | `weather_code` | INT | via `WeatherCodeConverter` |
 | `timestamp` Instant | `timestamp` | TIMESTAMP | not null |
 | `osmCategory` … `country` | `osm_category`, `osm_type`, `osm_name`, `address_type`, `house_number`, `road`, `city`, `country` | VARCHAR(255) | |
-| `tag` PositionTag | `tag` | VARCHAR | `@Enumerated(EnumType.STRING)` |
-| `comment` String | `comment` | VARCHAR(255) | |
+| `tag` PositionTag | `tag` | ENUM (H2 native) | `@Enumerated(EnumType.STRING)`; value list is baked in at column creation — vocabulary changes need a one-time `ALTER` to `VARCHAR` (see functional-scope §4.1) |
+| `comment` String | `comment` | VARCHAR(255) | UI limit: 25 chars |
 
 ### Enumerations
 
 - `WeatherCode`: numeric WMO codes; persisted as `Integer`.
-- `PositionTag`: PARKING, SHOPPING, RESTAURANT, WORK, EDU, POI, LEISURE; persisted as String.
+- `PositionTag`: HOME, WORK, PARKING, SHOPPING, EATING, LEISURE, FRIENDS, HEALTH; persisted as String. Hibernate creates the `tag` column as an H2 native `ENUM` (not a plain VARCHAR) whose allowed values are fixed when the column is created; changing the vocabulary requires a one-time `ALTER TABLE positions ALTER COLUMN tag SET DATA TYPE VARCHAR(32) ...` per existing database.
 
 ---
 
@@ -331,7 +331,7 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 
 | Test Type | Scope |
 |------------|------------|
-| Integration tests (IT) | REST + persistence + enrichment on in-memory H2 (`PositionsResourceIT`, incl. `createWithTag`) |
+| Integration tests (IT) | REST + persistence + enrichment on in-memory H2 (`PositionsResourceIT`, incl. `createWithTagAndComment` and `createWithInvalidTag`) |
 | System tests (`backend-st`) | Run against a live backend on 8090 (`PositionsSystemIT` + `PositionsResourceClient`) |
 | Manual E2E | Real devices/browsers against DEV (Android Chrome/Brave, iOS Safari) |
 
@@ -390,3 +390,6 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 | 0.3.0 | 2026-08-10 | Save flow refactored: `Positions` control split into `enrich` (preview) and persist-only `create`; `POST /positions` no longer resolves geocoding/weather; `GET /positions/current` is the only enrichment path. |
 | 0.3.0 | 2026-08-10 | Caching policy: Caddy sends `Cache-Control: no-store` on all environments (DEV/PROD/`:8070`); PWA always fetches fresh `index.html`/assets. |
 | 0.3.0 | 2026-08-10 | GPS fast-fix tuning: target accuracy 15m → 30m, max wait 15s → 8s, fix timeout 12s → 8s, `maximumAge` 0 → 5s. |
+| 0.3.0 | 2026-08-11 | Frontend: tag & comment save UI (disclosure toggle, single-select predefined tags, 25-char comment); tag/comment shown in the History list and at the top of the saved-location card. |
+| 0.3.0 | 2026-08-11 | Tag vocabulary revised: `PositionTag` and `PREDEFINED_TAGS` aligned to `HOME, WORK, PARKING, SHOPPING, EATING, LEISURE, FRIENDS, HEALTH` (replaced `RESTAURANT`, `EDU`, `POI`). No data migration required. |
+| 0.3.0 | 2026-08-11 | DB fix: converted the DEV `positions.tag` column from H2 native `ENUM` to `VARCHAR` — new tag values were rejected with HTTP 500 because the `ENUM` value list is baked in at column creation (Hibernate creates the column as native `ENUM` even with `@Enumerated(EnumType.STRING)`). |

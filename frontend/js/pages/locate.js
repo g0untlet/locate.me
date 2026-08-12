@@ -34,11 +34,116 @@ const GEO_OPTIONS = {
 };
 
 /* ==========================================================================
+   Predefined Tags – single-select vocabulary, must match backend PositionTag
+   ========================================================================== */
+const PREDEFINED_TAGS = ['HOME', 'WORK', 'PARKING', 'SHOPPING', 'EATING', 'LEISURE', 'FRIENDS', 'HEALTH'];
+
+/* ==========================================================================
+   Internal: Save Options (Tag + Comment) helpers
+   ========================================================================== */
+function getSaveOptionsElements() {
+    return {
+        block:    document.getElementById('save-options'),
+        toggle:   document.getElementById('save-options-toggle'),
+        chips:    document.getElementById('tag-chips'),
+        comment:  document.getElementById('comment-input'),
+        counter:  document.getElementById('comment-counter'),
+        summary:  document.getElementById('save-options-summary')
+    };
+}
+
+function getSelectedTag() {
+    const { chips } = getSaveOptionsElements();
+    const selected = chips ? chips.querySelector('.tag-chip--selected') : null;
+    return selected ? selected.getAttribute('data-tag') : null;
+}
+
+function setSaveOptionsExpanded(expanded) {
+    const { block, toggle } = getSaveOptionsElements();
+    if (!block) return;
+    block.classList.toggle('expanded', expanded);
+    if (toggle) toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+}
+
+function updateSaveOptionsSummary() {
+    const { comment, summary } = getSaveOptionsElements();
+    if (!summary) return;
+    const tag         = getSelectedTag();
+    const commentText = comment ? comment.value.trim() : '';
+    const parts = [];
+    if (tag) parts.push(tag);
+    if (commentText) parts.push(commentText);
+    summary.textContent = parts.join(' \u00B7 ');
+    summary.classList.toggle('hidden', parts.length === 0);
+}
+
+function resetSaveOptions() {
+    const { block, chips, comment, counter } = getSaveOptionsElements();
+    if (!block) return;
+    block.classList.add('hidden');
+    setSaveOptionsExpanded(false);
+    if (chips) {
+        chips.querySelectorAll('.tag-chip--selected').forEach(c => c.classList.remove('tag-chip--selected'));
+    }
+    if (comment) comment.value = '';
+    if (counter) counter.textContent = '0/25';
+    updateSaveOptionsSummary();
+}
+
+function showSaveOptions() {
+    const { block } = getSaveOptionsElements();
+    if (!block) return;
+    setSaveOptionsExpanded(false);
+    block.classList.remove('hidden');
+    updateSaveOptionsSummary();
+}
+
+function initSaveOptions() {
+    const { toggle, chips, comment, counter } = getSaveOptionsElements();
+    if (!chips) return;
+
+    PREDEFINED_TAGS.forEach(tag => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'tag-chip';
+        chip.setAttribute('data-tag', tag);
+        chip.textContent = tag;
+        chips.appendChild(chip);
+    });
+
+    // Disclosure: expand / collapse the tag + comment fields
+    if (toggle) {
+        toggle.addEventListener('click', () => {
+            const expanded = toggle.getAttribute('aria-expanded') === 'true';
+            setSaveOptionsExpanded(!expanded);
+        });
+    }
+
+    // Single-select: tapping an active chip deselects it
+    chips.addEventListener('click', (e) => {
+        const chip = e.target.closest('.tag-chip');
+        if (!chip) return;
+        const wasSelected = chip.classList.contains('tag-chip--selected');
+        chips.querySelectorAll('.tag-chip--selected').forEach(c => c.classList.remove('tag-chip--selected'));
+        if (!wasSelected) chip.classList.add('tag-chip--selected');
+        updateSaveOptionsSummary();
+    });
+
+    if (comment && counter) {
+        comment.addEventListener('input', () => {
+            counter.textContent = `${comment.value.length}/25`;
+            updateSaveOptionsSummary();
+        });
+    }
+}
+
+/* ==========================================================================
    Internal: Reset Locate Page to initial state
    ========================================================================== */
 function resetLocatePage() {
     document.getElementById('btn-fetch-location').textContent = 'FETCH LOCATION';
     document.getElementById('track-btn').style.display = 'none';
+    resetSaveOptions();
     setCachedLocatePosition(null);
 }
 
@@ -46,8 +151,19 @@ function resetLocatePage() {
    Internal: Render weather + address data into the response card
    Shared by fetchCurrentPosition and sendPositionToBackend.
    ========================================================================== */
-function renderLocationCard(data, timeLabel) {
-    document.getElementById('res-time-span').innerText = timeLabel;
+function renderLocationCard(data) {
+    const tagComment    = document.getElementById('res-tag-comment');
+    const tagPill       = document.getElementById('res-tag-pill');
+    const commentText   = document.getElementById('res-comment-text');
+    const hasTag        = Boolean(data.tag);
+    const hasComment    = data.comment && data.comment.trim() !== '';
+
+    if (tagPill) {
+        tagPill.textContent = data.tag || '';
+        tagPill.classList.toggle('hidden', !hasTag);
+    }
+    if (commentText) commentText.textContent = hasComment ? data.comment : '';
+    if (tagComment) tagComment.classList.toggle('hidden', !hasTag && !hasComment);
 
     document.getElementById('res-temp').innerText =
         (data.temperature != null) ? `${parseFloat(data.temperature).toFixed(1)} \u00B0C` : '-';
@@ -89,16 +205,16 @@ function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus })
     apiGetCurrentPosition(getActiveUserId(), latitude, longitude)
         .then(data => {
             const timeLabel = new Date().toLocaleString('de-DE', {
-                day: '2-digit', month: '2-digit', year: 'numeric',
                 hour: '2-digit', minute: '2-digit'
             });
 
-            renderLocationCard(data, timeLabel);
+            renderLocationCard(data);
 
             setCachedLocatePosition({ ...data, accuracy: position.coords.accuracy });
             fetchBtn.textContent = 'Refresh';
             document.getElementById('track-btn').style.display = 'block';
-            statusText.innerText = "Preview: Position not yet saved.";
+            showSaveOptions();
+            statusText.innerText = `Preview from ${timeLabel} \u2014 not yet saved.`;
             statusText.className = "status-preview";
 
             showLocateMap(latitude, longitude);
@@ -118,18 +234,13 @@ function sendPositionToBackend(payload, { getActiveUserId, checkBackendStatus, s
     const statusText = document.getElementById('status');
     statusText.innerText = "Sending to backend...";
 
-    const clientTimestamp = new Date();
     apiPostPosition(getActiveUserId(), payload)
         .then(data => {
-            const timeLabel = clientTimestamp.toLocaleString('de-DE', {
-                day: '2-digit', month: '2-digit', year: 'numeric',
-                hour: '2-digit', minute: '2-digit'
-            });
-
-            renderLocationCard(data, timeLabel);
+            renderLocationCard(data);
 
             document.getElementById('track-btn').style.display = 'none';
             document.getElementById('btn-fetch-location').textContent = 'FETCH LOCATION';
+            resetSaveOptions();
             setCachedLocatePosition(null);
 
             statusText.innerText = "Location successfully saved.";
@@ -151,6 +262,8 @@ function sendPositionToBackend(payload, { getActiveUserId, checkBackendStatus, s
    deps = { getActiveUserId, checkBackendStatus, silentBadgeSync }
    ========================================================================== */
 export function initLocatePage(deps) {
+
+    initSaveOptions();
 
     // --- FETCH LOCATION Button ---
     document.getElementById('btn-fetch-location').addEventListener('click', () => {
@@ -225,6 +338,20 @@ export function initLocatePage(deps) {
             userId:    deps.getActiveUserId(),
             timestamp: new Date().toISOString()
         };
+
+        const tag = getSelectedTag();
+        if (tag) {
+            payload.tag = tag;
+        } else {
+            delete payload.tag;
+        }
+
+        const comment = getSaveOptionsElements().comment ? getSaveOptionsElements().comment.value.trim() : '';
+        if (comment) {
+            payload.comment = comment;
+        } else {
+            delete payload.comment;
+        }
 
         sendPositionToBackend(payload, deps);
     });

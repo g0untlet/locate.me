@@ -38,6 +38,9 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
     const card = document.createElement('div');
     card.className = 'log-card';
     card.id = `log-card-${pos.id}`;
+    // Daten am Card-Element halten – Filter liest direkt vom Card, nicht aus
+    // einem parallelen Array (Index-Drift nach Refresh/Delete vermeiden)
+    card._pos = pos;
 
     // --- Temperatur & Wetter ---
     let tempClass      = "temp-none";
@@ -112,12 +115,31 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
     const badgeTextColor   = isLowAccuracy ? '#b45309' : 'var(--text-muted)';
     const roundedAccuracy  = pos.accuracy ? Math.round(pos.accuracy) : '?';
 
+    const tagHtml = pos.tag
+        ? `<span class="log-card-tag" title="Tag ${pos.tag}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"></path>
+                <line x1="7" y1="7" x2="7.01" y2="7"></line>
+            </svg>
+            ${pos.tag}
+        </span>`
+        : '';
+
+    const commentHtml = (pos.comment && pos.comment.trim() !== '')
+        ? `<div class="log-card-comment">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span>${pos.comment}</span>
+        </div>`
+        : '';
+
     card.innerHTML = `
         <div class="log-card-clickable-area">
             <div class="log-card-header">
                 <div>
                     <span class="log-card-id">#${index + 1}</span>
-                    <span style="margin-left: 6px;">${dateFormatted}</span>
+                    <span style="margin-left: 6px;">${dateFormatted}</span>${tagHtml}
                 </div>
                 <span class="log-card-accuracy-badge" style="background-color: ${badgeBgColor}; color: ${badgeTextColor};">
                     <svg class="log-accuracy-icon" style="stroke: ${badgeTextColor};" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -131,9 +153,12 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
                 </span>
             </div>
             <div class="log-card-body">
-                <div class="log-card-address address-container" title="${fullAddressForTitle}">
-                    ${locationIcon}
-                    <span>${shortAddress}${elevationFormatted ? ` <span class="log-card-elevation">(${elevationFormatted})</span>` : ''}</span>
+                <div style="flex: 1; min-width: 0;">
+                    <div class="log-card-address address-container" title="${fullAddressForTitle}">
+                        ${locationIcon}
+                        <span>${shortAddress}${elevationFormatted ? ` <span class="log-card-elevation">(${elevationFormatted})</span>` : ''}</span>
+                    </div>
+                    ${commentHtml}
                 </div>
                 <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
                     <div class="log-card-temp ${tempClass}">
@@ -367,20 +392,20 @@ export function showHistorySkeleton() {
    ========================================================================== */
 function posMatchesFilter(pos, term) {
     if (!term) return true;
+    if (!pos) return false;
     const t = term.toLowerCase();
     return (
         (pos.displayName  || '').toLowerCase().includes(t) ||
-        // Erweiterungspunkte – greifen sobald Backend die Felder liefert:
         (pos.comment      || '').toLowerCase().includes(t) ||
-        (pos.tags         || []).some(tag => tag.toLowerCase().includes(t))
+        (pos.tag          || '').toLowerCase().includes(t)
     );
 }
 
-function applyFilter(allPositions, term) {
+function applyFilter(term) {
     const cards = document.querySelectorAll('#history-list .log-card');
     let visibleCount = 0;
-    cards.forEach((card, i) => {
-        const matches = posMatchesFilter(allPositions[i], term);
+    cards.forEach(card => {
+        const matches = posMatchesFilter(card._pos, term);
         card.style.display = matches ? '' : 'none';
         if (matches) visibleCount++;
     });
@@ -389,7 +414,7 @@ function applyFilter(allPositions, term) {
     if (noResult) noResult.style.display = visibleCount === 0 ? 'block' : 'none';
 }
 
-function ensureSearchBar(allPositions) {
+function ensureSearchBar() {
     if (document.getElementById('history-search-bar')) return;
 
     const bar = document.createElement('div');
@@ -425,13 +450,13 @@ function ensureSearchBar(allPositions) {
     input.addEventListener('input', () => {
         const term = input.value.trim();
         clearBtn.classList.toggle('hidden', term === '');
-        applyFilter(allPositions, term);
+        applyFilter(term);
     });
 
     clearBtn.addEventListener('click', () => {
         input.value = '';
         clearBtn.classList.add('hidden');
-        applyFilter(allPositions, '');
+        applyFilter('');
         input.focus();
     });
 }
@@ -499,7 +524,7 @@ export function fetchAndRenderHistory(deps) {
                 });
 
                 // Suchfeld einmalig anlegen, Term nach Reload zurücksetzen
-                ensureSearchBar(data);
+                ensureSearchBar();
                 resetSearchBar();
 
                 checkBackendStatus();

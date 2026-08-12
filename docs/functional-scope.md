@@ -44,6 +44,8 @@ The application is a single-page application (SPA) with three main views:
 - The view also shows the current weather and address information.
 - The current UV-Index and the elevation are displayed alongside the address.
 - A "Save Location" button allows the user to save the current location to their history.
+- Before saving, a collapsible "TAG & COMMENT" section allows the user to select a single predefined tag and optionally enter a comment (max. 25 characters).
+- After saving, the chosen tag and comment are shown at the top of the location card, above the temperature section.
 
 ### 2.2. History View
 - This view displays the user's saved locations.
@@ -51,6 +53,7 @@ The application is a single-page application (SPA) with three main views:
 - The list view shows a chronological list of saved locations.
 - Each entry shows the address, the temperature and a UV-Index badge.
 - The elevation is displayed inline with the address as a muted footnote (e.g. `(521 m)`).
+- Each entry shows the tag as a pill next to the date and the comment as a line below the address (list mode only).
 - The map view shows all saved locations as markers on a map.
 - Each location in the list can be deleted.
 
@@ -71,6 +74,8 @@ The backend provides a REST API with the following endpoints:
 
 Position responses include the weather-related fields `temperature`, `weatherCode`, `uvIndex`, and `elevation`. No new endpoints were introduced for UV-Index and elevation; they are persisted and returned by the existing endpoints above.
 
+`tag` and `comment` are optional fields: when set on a save (`POST /positions`) they are persisted verbatim and returned in position responses; when absent they are simply not stored.
+
 Geocoding/weather enrichment happens only when fetching (`GET /positions/current`). Saving (`POST /positions`) persists the client-provided data verbatim – the Locate view sends back exactly the enriched preview data it already fetched, so the backend never re-resolves an already-fetched location.
 
 ## 4. Business Objects
@@ -87,8 +92,29 @@ The main business object is the `Position` entity, which has the following attri
 - `elevation`: The elevation of the position in meters.
 - `timestamp`: When the position was recorded.
 - `osmCategory`, `osmType`, `osmName`, `addressType`, `houseNumber`, `road`, `city`, `country`: Geocoding information from OpenStreetMap.
-- `tag`: A tag for the position (e.g., "home", "work").
-- `comment`: A user-provided comment.
+- `tag`: An optional predefined tag for the position (`HOME`, `WORK`, `PARKING`, `SHOPPING`, `EATING`, `LEISURE`, `FRIENDS`, `HEALTH`).
+- `comment`: An optional user-provided comment (max. 25 characters in the UI, 255 in the database).
+
+### 4.1. Managing the Tag Vocabulary (`PositionTag`)
+
+The selectable tags are defined by the `PositionTag` enum on the backend and mirrored in the `PREDEFINED_TAGS` list in the frontend (`frontend/js/pages/locate.js`).
+
+**Important – the database column type:** Hibernate creates the `tag` column as an H2 native `ENUM` whose allowed values are fixed when the column is created. Changing the vocabulary in the `PositionTag` enum does **not** update an existing column — saving a new tag value then fails with HTTP 500. The column must therefore be converted to a plain `VARCHAR` once per existing database (backend stopped first, the H2 file is locked while it runs):
+
+```sql
+ALTER TABLE positions ALTER COLUMN tag SET DATA TYPE VARCHAR(32) USING (CAST(tag AS VARCHAR));
+```
+
+**Adding a tag**
+1. Convert the `tag` column to `VARCHAR` (see above) if not already done.
+2. Add the new value to the `PositionTag` enum (backend, `locator/entity` package).
+3. Add the same value to `PREDEFINED_TAGS` in `frontend/js/pages/locate.js` — the tag chips in the Locate view are generated from this list.
+4. Redeploy backend and frontend together (backend first). The backend rejects unknown tags with `400 Bad Request`, so a tag can only be saved once both sides know it.
+
+**Removing a tag**
+Removing the enum constant is only safe once no saved position still uses the tag: the backend maps the stored value back to the enum on every read, and an unknown value breaks loading the affected history entries.
+- Recommended: remove the tag only from `PREDEFINED_TAGS` (frontend). It can then no longer be selected for new saves, while already-saved entries keep their tag pill (the History view shows the stored value without checking the list).
+- Full removal: first clear the existing values in the database (`UPDATE positions SET tag = NULL WHERE tag = '<TAG>'`), then remove the enum constant from the backend.
 
 ## 5. BCE Architecture
 
@@ -105,3 +131,6 @@ component breakdown lives in `docs/technical-landscape.md` → ECB Architecture.
 | 0.3.0 | 2026-08-03 | Added UV-Index and elevation fields to the `Position` entity (fetched from Open-Meteo); display UV-Index and elevation in the Locate and History views; fixed HTTP 500 on saving a location caused by an H2 2.4.240 enum CHECK constraint regression (see `docs/production-upgrade-0.3.0.md`). |
 | 0.3.0 | 2026-08-10 | Documentation alignment: technical details (incl. the BCE component breakdown) moved to `docs/technical-landscape.md`. |
 | 0.3.0 | 2026-08-10 | Save flow refactored: the Locate view now POSTs the already-fetched enriched data back to `POST /positions`, which persists it verbatim without re-resolving geocoding/weather. Enrichment happens only during `GET /positions/current`. |
+| 0.3.0 | 2026-08-11 | Added optional tag and comment when saving a location: single-select predefined tag chips and a 25-character comment in the Locate view; shown as a tag pill + comment line in the History list and at the top of the saved-location card. |
+| 0.3.0 | 2026-08-11 | Tag vocabulary revised for long-term stability: `HOME, WORK, PARKING, SHOPPING, EATING, LEISURE, FRIENDS, HEALTH` (replaced `RESTAURANT`, `EDU`, `POI`; one activity-based axis). No tag data existed in the databases, so no migration was required. |
+| 0.3.0 | 2026-08-11 | Fixed HTTP 500 when saving new tag values: the `tag` column existed as an H2 native `ENUM` with the old value list baked in; converted it to `VARCHAR` on the DEV database (see §4.1). |

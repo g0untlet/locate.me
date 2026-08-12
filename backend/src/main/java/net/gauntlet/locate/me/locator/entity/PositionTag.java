@@ -4,11 +4,12 @@
 package net.gauntlet.locate.me.locator.entity;
 
 public enum PositionTag {
+    HOME,
+    WORK,
     PARKING,
     SHOPPING,
-    RESTAURANT,
-    WORK,
-    EDU,
-    POI,
-    LEISURE
+    EATING,
+    LEISURE,
+    FRIENDS,
+    HEALTH
 }
