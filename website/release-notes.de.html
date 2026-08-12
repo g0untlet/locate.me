@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Versionshinweise – locate.me</title>
+    <meta name="description" content="Versionshinweise f&uuml;r locate.me &ndash; was es in jeder Version der selbst gehosteten Geo-Tracking-PWA Neues gibt. Die neueste Version steht immer oben.">
+    <script>
+        try {
+            var t = localStorage.getItem('theme');
+            document.documentElement.dataset.theme = (t === 'dark' || t === 'light') ? t : 'light';
+        } catch (e) {
+            document.documentElement.dataset.theme = 'light';
+        }
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="alternate" hreflang="en" href="release-notes.html">
+    <link rel="alternate" hreflang="de" href="release-notes.de.html">
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="container header-inner">
+            <a class="logo" href=".">
+                <svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true">
+                    <rect width="64" height="64" rx="14" fill="#1a5f8c"/>
+                    <path d="M32 12c-9.4 0-17 7.6-17 17 0 12.7 17 25.5 17 25.5S49 41.7 49 29c0-9.4-7.6-17-17-17z" fill="#ffffff"/>
+                    <circle cx="32" cy="29" r="6.5" fill="#72b2dc"/>
+                </svg>
+                <span>locate<span class="title-accent">.me</span></span>
+            </a>
+            <div class="header-actions">
+                <nav class="site-nav" aria-label="Hauptnavigation">
+                    <a class="nav-link" href="index.de.html">Startseite</a>
+                    <a class="nav-link is-active" href="release-notes.de.html" aria-current="page">Versionshinweise</a>
+                </nav>
+                <nav class="lang-switch" aria-label="Sprache">
+                    <a class="lang-link" href="release-notes.html" hreflang="en">EN</a>
+                    <a class="lang-link is-active" href="release-notes.de.html" hreflang="de" aria-current="true">DE</a>
+                </nav>
+                <button id="theme-toggle" class="toggle-switch" role="switch" aria-checked="false" aria-label="Dark Mode umschalten">
+                    <span class="toggle-knob"></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero hero--page">
+            <div class="container">
+                <h1 class="hero-title">Versionshinweise</h1>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="container">
+                <div class="release-list">
+
+                    <article class="release-card">
+                        <div class="release-head">
+                            <span class="release-version">v0.2.3</span>
+                        </div>
+                        <p class="release-tagline">Ein modernes Design, eine schnellere Bedienung und praktische neue Funktionen f&uuml;r deine Standort-Historie.</p>
+                        <ul class="release-items">
+                            <li><strong>Dark Mode</strong> &mdash; Augenschonend bei Nacht. In den Einstellungen umschaltbar; deine Wahl wird gespeichert und die App startet direkt im passenden Look.</li>
+                            <li><strong>Standorte direkt aus der Karte teilen</strong> &mdash; Tippst du in der Kartenansicht deiner Historie auf einen Pin, enth&auml;lt das Info-Fenster einen eigenen Share-Button.</li>
+                            <li><strong>Schnellsuche im Verlauf</strong> &mdash; Ein neues Suchfeld &uuml;ber der Liste filtert deine Eintr&auml;ge in Echtzeit, sobald du eine Adresse oder Stadt eintippst.</li>
+                            <li><strong>Herunterziehen zum Aktualisieren</strong> &mdash; Wische die Historie kurz nach unten, um die Eintr&auml;ge neu zu laden; ein visueller Pfeil zeigt dir, wann du loslassen kannst.</li>
+                            <li><strong>Fl&uuml;ssigeres Ladegef&uuml;hl</strong> &mdash; Beim &Ouml;ffnen der Historie erscheinen elegante Platzhalter-Karten, w&auml;hrend die Daten geladen werden &mdash; f&uuml;r eine sp&uuml;rbar fl&uuml;ssigere App.</li>
+                        </ul>
+                    </article>
+
+                    <article class="release-card">
+                        <div class="release-head">
+                            <span class="release-version">v0.2.1</span>
+                        </div>
+                        <p class="release-tagline">Das Festhalten und Teilen deiner Orte ist jetzt noch einfacher und intuitiver.</p>
+                        <ul class="release-items">
+                            <li><strong>Live-Z&auml;hler im Men&uuml;</strong> &mdash; Ein Badge am History-Icon zeigt dir auf einen Blick, wie viele Orte du bereits gespeichert hast.</li>
+                            <li><strong>Orte direkt teilen</strong> &mdash; &Uuml;ber den neuen &bdquo;Teilen&ldquo;-Button schickst du deine Standorte blitzschnell &uuml;ber das vertraute Teilen-Men&uuml; deines Smartphones (z.&nbsp;B. per WhatsApp).</li>
+                            <li><strong>OpenStreetMap-Integration</strong> &mdash; Deine Standorte werden direkt auf echten Karten visualisiert &mdash; sowohl bei der Suche als auch in der Historie.</li>
+                            <li><strong>Saubere Nummerierung</strong> &mdash; Schluss mit kryptischen Datenbank-IDs. Dein Verlauf ist einfach und &uuml;bersichtlich durchnummeriert.</li>
+                            <li><strong>Tippbarer Status-Punkt</strong> &mdash; Tippe auf den pulsierenden Punkt oben rechts, um sofort zu sehen, ob deine App online ist.</li>
+                            <li><strong>System-Infos</strong> &mdash; In den Einstellungen findest du alle wichtigen Hintergrunddaten zu deiner App-Version. Deine UserId wird nicht mehr im Klartext angezeigt.</li>
+                        </ul>
+                    </article>
+
+                    <article class="release-card">
+                        <div class="release-head">
+                            <span class="release-version">v0.2.0</span>
+                        </div>
+                        <p class="release-tagline">Der erste Meilenstein von locate.me ist da.</p>
+                        <ul class="release-items">
+                            <li><strong>Vorschau vor dem Speichern</strong> &mdash; Du siehst die Position, bevor du sie abspeicherst.</li>
+                            <li><strong>Kategorie-Icons</strong> &mdash; Gespeicherte Positionen sind mit einem kategorie-spezifischen Icon versehen.</li>
+                            <li><strong>Entfernung &amp; Gehzeit</strong> &mdash; Die Entfernung und Gehzeit vom aktuellen Standort zur gespeicherten Position wird angezeigt.</li>
+                        </ul>
+                    </article>
+
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p class="footer-brand">locate<span class="title-accent">.me</span></p>
+            <nav class="attribution" aria-label="Unterst&uuml;tzt durch">
+                <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">&copy; OpenStreetMap</a>
+                <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>
+                <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>
+            </nav>
+            <p class="footer-note">Eine private, selbst gehostete PWA f&uuml;r dich und die Menschen, denen du vertraust.</p>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
