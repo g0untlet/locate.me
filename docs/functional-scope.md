@@ -18,6 +18,7 @@
 - Saved locations are stored in a history.
 - The history can be viewed as a list or on a map.
 - Users can delete locations from their history.
+- For each saved location, the straight-line distance and the estimated travel times for walking, biking and driving are displayed.
 
 ### 1.4. Weather Information
 - For a given location, the application fetches and displays the current temperature and weather conditions.
@@ -54,6 +55,8 @@ The application is a single-page application (SPA) with three main views:
 - Each entry shows the address, the temperature and a UV-Index badge.
 - The elevation is displayed inline with the address as a muted footnote (e.g. `(521 m)`).
 - Each entry shows the tag as a pill next to the date and the comment as a line below the address (list mode only).
+- Each entry shows a travel row with the walking, biking and driving times (mode icon + duration) and the distance as a chip; for distances above 100 km the values are shown compactly with a tilde (e.g. `~109 km`, `~58h`).
+- Dates are shown relative to today: `Today`/`Yesterday`, then weekday names for the two following days (e.g. `Tuesday, 14:32`), and the full date for anything older.
 - The map view shows all saved locations as markers on a map.
 - Each location in the list can be deleted.
 
@@ -69,7 +72,7 @@ The backend provides a REST API with the following endpoints:
 
 - `POST /positions?userId={userId}`: Persists a new position for a user. The full position data (coordinates, address, weather, UV index, elevation) is supplied by the client in the request body; the backend stores it as-is without server-side resolution.
 - `DELETE /positions/{id}?userId={userId}`: Deletes a position by its ID.
-- `GET /positions?userId={userId}&lat={lat}&lon={lon}`: Retrieves all positions for a user. If `lat` and `lon` are provided, it also calculates the distance and walking time to each position.
+- `GET /positions?userId={userId}&lat={lat}&lon={lon}`: Retrieves all positions for a user. If `lat` and `lon` are provided, it also calculates the distance and travel times (walking, biking, driving) to each position.
 - `GET /positions/current?userId={userId}&lat={lat}&lon={lon}`: Resolves the address (Nominatim) and weather/UV/elevation (Open-Meteo) for the given coordinates and returns a preview without persisting it. This is used by the Locate view to fetch the current location before saving.
 
 Position responses include the weather-related fields `temperature`, `weatherCode`, `uvIndex`, and `elevation`. No new endpoints were introduced for UV-Index and elevation; they are persisted and returned by the existing endpoints above.
@@ -134,3 +137,6 @@ component breakdown lives in `docs/technical-landscape.md` → ECB Architecture.
 | 0.3.0 | 2026-08-11 | Added optional tag and comment when saving a location: single-select predefined tag chips and a 25-character comment in the Locate view; shown as a tag pill + comment line in the History list and at the top of the saved-location card. |
 | 0.3.0 | 2026-08-11 | Tag vocabulary revised for long-term stability: `HOME, WORK, PARKING, SHOPPING, EATING, LEISURE, FRIENDS, HEALTH` (replaced `RESTAURANT`, `EDU`, `POI`; one activity-based axis). No tag data existed in the databases, so no migration was required. |
 | 0.3.0 | 2026-08-11 | Fixed HTTP 500 when saving new tag values: the `tag` column existed as an H2 native `ENUM` with the old value list baked in; converted it to `VARCHAR` on the DEV database (see §4.1). |
+| 0.3.0 | 2026-08-12 | `GET /positions?userId=&lat=&lon=` now additionally returns the distance (km) and travel times for walking, biking and driving (response-only, not persisted), computed via Haversine distance plus speed assumptions (walking 4.8 km/h ×1.35, biking 16.5 km/h ×1.25, driving by distance band). |
+| 0.3.0 | 2026-08-12 | History cards now show travel-time chips (walk/bike/drive icons + time) and the distance in a dedicated always-aligned bottom row; travel times are shown compactly (e.g. `~58h`) for distances above 100 km. |
+| 0.3.0 | 2026-08-12 | History-card refinements: walk icon replaced with a sneaker; the distance is rendered as a neutral chip and rounded compactly (e.g. `~109 km`) above 100 km; the two days after yesterday show their weekday name (e.g. `Tuesday, 14:32`); cards use a stronger border (`--card-border`) in light and dark mode; the temperature-pill weather icon was resized to match the UV pill height. |

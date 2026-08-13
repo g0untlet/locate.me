@@ -132,21 +132,22 @@ public class PositionsResource {
         final boolean calculateDistance = lat != null && lon != null;
         
         list.stream()
-            .map(pos -> {
-                JsonObject json = pos.toJSON();
-                if (calculateDistance) {
-                    double dist = DistanceCalculator.haversine(lat, lon, pos.latitude(), pos.longitude());
-                    double walkingTime = DistanceCalculator.walkingTimeMinutes(dist);
-                    return Json.createObjectBuilder(json)
-                            .add("distance", dist)
-                            .add("walkingTimeMinutes", walkingTime)
-                            .build();
-                }
-                return json;
-            })
+            .map(pos -> calculateDistance
+                    ? enrichWithTravelTimes(pos, lat, lon)
+                    : pos.toJSON())
             .forEach(arrayBuilder::add);
 
         return Response.ok(arrayBuilder.build()).build();
+    }
+
+    private JsonObject enrichWithTravelTimes(Position position, double lat, double lon) {
+        double distanceKm = DistanceCalculator.haversine(lat, lon, position.latitude(), position.longitude());
+        return Json.createObjectBuilder(position.toJSON())
+                .add("distance", distanceKm)
+                .add("walkingTimeMinutes", DistanceCalculator.walkingTimeMinutes(distanceKm))
+                .add("bikingTimeMinutes", DistanceCalculator.bikingTimeMinutes(distanceKm))
+                .add("drivingTimeMinutes", DistanceCalculator.drivingTimeMinutes(distanceKm))
+                .build();
     }
 
     @GET

@@ -65,7 +65,7 @@ Browser (PWA) --HTTPS--> Caddy2 --/api--> Quarkus REST (Boundary /api)
 | `js/config.js` | API base URL resolution (dev port vs. relative proxy paths) |
 | `js/api.js` | Fetch wrappers for all REST endpoints |
 | `js/state.js` | Central mutable state (maps, cached fix, history data) |
-| `js/utils.js` | Formatting helpers (dates, address, weather text/icons, UV level, elevation) |
+| `js/utils.js` | Formatting helpers (relative/weekday dates, address, weather text/icons, UV level, elevation, travel-time formatting + walk/bike/drive icons) |
 | `js/ui/` | Reusable UI: `status.js`, `badge.js`, `toast.js`, `map.js` (Leaflet wrapper) |
 | `js/pages/` | Screens: `locate.js`, `history.js`, `settings.js` (deps injected) |
 
@@ -115,7 +115,7 @@ net.gauntlet.locate.me
 
 | Module | Purpose |
 |---------|---------|
-| `locator` | Position lifecycle (create/read/delete), geocoding + weather enrichment, distance/walking-time |
+| `locator` | Position lifecycle (create/read/delete), geocoding + weather enrichment, distance/travel-time (walking, biking, driving) |
 | `system` | Application info endpoint and startup timestamp |
 
 ---
@@ -136,7 +136,7 @@ net.gauntlet.locate.me
 | Control | Responsibility |
 |----------|----------|
 | `Positions` | Orchestrates enrich (preview: geocoding + weather) and persist-only create, delete and queries; sole `EntityManager` access |
-| `DistanceCalculator` | Haversine distance + walking-time estimation (static util) |
+| `DistanceCalculator` | Haversine distance + walking/biking/driving time estimation (static util) |
 | `SystemInfo` | Application metadata (artifactId, version, startupTime) |
 | `GeocodingClient` | MicroProfile REST client → Nominatim reverse geocoding |
 | `WeatherClient` | MicroProfile REST client → Open-Meteo forecast |
@@ -168,7 +168,7 @@ query parameter. Functional purpose of the endpoints is documented in
 
 | Method | Endpoint | Notes |
 |----------|----------|----------|
-| GET | `/api/positions?userId=&lat=&lon=` | 200 list, newest first; optional `lat`/`lon` add response-only `distance` (km) and `walkingTimeMinutes` |
+| GET | `/api/positions?userId=&lat=&lon=` | 200 list, newest first; optional `lat`/`lon` add response-only `distance` (km), `walkingTimeMinutes`, `bikingTimeMinutes`, `drivingTimeMinutes` |
 | POST | `/api/positions?userId=` | 201 + `Location`; persists client-provided data verbatim (no server-side geocoding/weather resolution) |
 | GET | `/api/positions/current?userId=&lat=&lon=` | 200 preview; geocoding + weather enrichment; not persisted |
 | DELETE | `/api/positions/{id}?userId=` | 204 |
@@ -393,3 +393,6 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 | 0.3.0 | 2026-08-11 | Frontend: tag & comment save UI (disclosure toggle, single-select predefined tags, 25-char comment); tag/comment shown in the History list and at the top of the saved-location card. |
 | 0.3.0 | 2026-08-11 | Tag vocabulary revised: `PositionTag` and `PREDEFINED_TAGS` aligned to `HOME, WORK, PARKING, SHOPPING, EATING, LEISURE, FRIENDS, HEALTH` (replaced `RESTAURANT`, `EDU`, `POI`). No data migration required. |
 | 0.3.0 | 2026-08-11 | DB fix: converted the DEV `positions.tag` column from H2 native `ENUM` to `VARCHAR` — new tag values were rejected with HTTP 500 because the `ENUM` value list is baked in at column creation (Hibernate creates the column as native `ENUM` even with `@Enumerated(EnumType.STRING)`). |
+| 0.3.0 | 2026-08-12 | `DistanceCalculator` extended with walking/biking/driving time estimation (Haversine + speed factors); `PositionsResource.enrichWithTravelTimes` adds response-only `distance`, `walkingTimeMinutes`, `bikingTimeMinutes`, `drivingTimeMinutes`. |
+| 0.3.0 | 2026-08-12 | Frontend: History travel row with `formatTravelTime(minutes, compact)` and `getTravelIconSvg(mode)` (walk/sneaker, bike, car icons); distance and travel times in a dedicated always-aligned bottom row, compact `~Xh` format for distances > 100 km. |
+| 0.3.0 | 2026-08-12 | Frontend: History-card refinements — distance rendered as a neutral chip and rounded compactly (`~109 km`) above 100 km; `formatRelativeDate` shows weekday names for the two days after yesterday; new `--card-border` CSS token (1.5px, light/dark) replaces the fainter `--border-color` on `.log-card`; `.log-card-temp .embedded-weather-icon` resized to 15px to match the UV pill. |

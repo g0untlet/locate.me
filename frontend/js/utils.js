@@ -9,6 +9,7 @@ export function formatRelativeDate(timestamp) {
     const now = new Date();
     const todayStart     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+    const threeDaysAgoStart = new Date(yesterdayStart.getTime() - 2 * 86400000);
 
     const timeStr = d.toLocaleString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
@@ -16,6 +17,9 @@ export function formatRelativeDate(timestamp) {
         return `Today, ${timeStr}`;
     } else if (d >= yesterdayStart) {
         return `Yesterday, ${timeStr}`;
+    } else if (d >= threeDaysAgoStart) {
+        const weekday = d.toLocaleString('en-GB', { weekday: 'long' });
+        return `${weekday}, ${timeStr}`;
     } else {
         return d.toLocaleString('de-DE', {
             day: '2-digit', month: '2-digit', year: 'numeric',
@@ -50,12 +54,34 @@ export function formatShortAddress(pos) {
 /* ==========================================================================
    Utilities
    ========================================================================== */
-export function formatWalkingTime(minutes) {
+export function formatTravelTime(minutes, compact = false) {
     const total = Math.round(minutes);
+    if (compact) {
+        const h = Math.round(total / 60);
+        return `~${h}h`;
+    }
     if (total < 60) return `${total} min`;
     const h = Math.floor(total / 60);
     const m = total % 60;
     return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
+/* ==========================================================================
+   Global Helper: Inline SVG Travel Mode Icon Renderer (walk / bike / drive)
+   ========================================================================== */
+export function getTravelIconSvg(mode) {
+    const svgAttrs = `class="travel-mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`;
+
+    switch (mode) {
+        case 'walk':
+            return `<svg ${svgAttrs}><path d="M4 6h5.426a1 1 0 0 1 .863 .496l1.064 1.823a3 3 0 0 0 1.896 1.407l4.677 1.114a4 4 0 0 1 3.074 3.89v2.27a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10a1 1 0 0 1 1 -1"></path><path d="M14 13l1 -2"></path><path d="M8 18v-1a4 4 0 0 0 -4 -4h-1"></path><path d="M10 12l1.5 -3"></path></svg>`;
+        case 'bike':
+            return `<svg ${svgAttrs}><circle cx="5.5" cy="17.5" r="3.5"></circle><circle cx="18.5" cy="17.5" r="3.5"></circle><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"></path><path d="M12 17.5V14l-3.5-3 4-3 2.5 3.5h2.5"></path><path d="M8.5 11l-3 1"></path></svg>`;
+        case 'drive':
+            return `<svg ${svgAttrs}><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H8c-.6 0-1.1.2-1.4.6L5 8H3c-.6 0-1 .4-1 1v7c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><circle cx="17" cy="17" r="2"></circle></svg>`;
+        default:
+            return `<svg ${svgAttrs}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+    }
 }
 
 export function formatElevation(value) {

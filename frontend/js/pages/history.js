@@ -6,9 +6,10 @@ import {
     getWeatherIconSvg,
     getUvLevel,
     getLocationIconSvg,
+    getTravelIconSvg,
     formatShortAddress,
     formatRelativeDate,
-    formatWalkingTime,
+    formatTravelTime,
     formatElevation
 } from '../utils.js';
 
@@ -78,31 +79,44 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
     let distanceHtml = "";
     if (pos.distance !== undefined && pos.distance !== null && !isNaN(parseFloat(pos.distance))) {
         const distVal = parseFloat(pos.distance);
+        const compactDistance = distVal > 100;
         distanceHtml = `
-            <div class="log-card-distance" style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+            <div class="log-card-distance" style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); background-color: #f1f5f9; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
                 <svg class="action-icon" style="stroke: var(--text-muted); width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="10"></circle>
                     <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
                 </svg>
-                <span>${distVal.toFixed(2)} km</span>
+                <span>${compactDistance ? `~${Math.round(distVal)}` : distVal.toFixed(2)} km</span>
             </div>
         `;
     }
 
-    // --- Walking Time ---
-    let walkingTimeHtml = "";
-    if (pos.walkingTimeMinutes !== undefined && pos.walkingTimeMinutes !== null && !isNaN(parseFloat(pos.walkingTimeMinutes))) {
-        const walkingFormatted = formatWalkingTime(parseFloat(pos.walkingTimeMinutes));
-        walkingTimeHtml = `
-            <div class="log-card-walking" style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 4px; margin-top: 2px;">
-                <svg class="action-icon" style="stroke: var(--text-muted); width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-                <span>${walkingFormatted}</span>
-            </div>
-        `;
+    // --- Travel Times (walk / bike / drive) ---
+    const travelModes = [
+        { mode: 'walk',  label: 'walk',  minutes: pos.walkingTimeMinutes },
+        { mode: 'bike',  label: 'bike',  minutes: pos.bikingTimeMinutes },
+        { mode: 'drive', label: 'drive', minutes: pos.drivingTimeMinutes }
+    ];
+    const presentTravelModes = travelModes.filter(m =>
+        m.minutes !== undefined && m.minutes !== null && !isNaN(parseFloat(m.minutes))
+    );
+    let travelTimesHtml = "";
+    if (presentTravelModes.length > 0) {
+        const travelDistanceKm = pos.distance !== undefined && pos.distance !== null && !isNaN(parseFloat(pos.distance))
+            ? parseFloat(pos.distance) : null;
+        const compactTravelTimes = travelDistanceKm !== null && travelDistanceKm > 100;
+        const travelItemsHtml = presentTravelModes.map(m => `
+            <span class="log-card-travel-item" title="Estimated ${m.label} time" aria-label="${m.label} time ${formatTravelTime(parseFloat(m.minutes))}">
+                ${getTravelIconSvg(m.mode)}
+                <span>${formatTravelTime(parseFloat(m.minutes), compactTravelTimes)}</span>
+            </span>
+        `).join("");
+        travelTimesHtml = `<div class="log-card-travel-times">${travelItemsHtml}</div>`;
     }
+
+    const travelRowHtml = (travelTimesHtml !== "" || distanceHtml !== "")
+        ? `<div class="log-card-travel-row">${travelTimesHtml}${distanceHtml}</div>`
+        : "";
 
     const dateFormatted      = formatRelativeDate(pos.timestamp);
     const shortAddress       = formatShortAddress(pos);
@@ -166,10 +180,9 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
                         <span>${tempFormatted}</span>
                     </div>
                     ${uvHtml}
-                    ${distanceHtml}
-                    ${walkingTimeHtml}
                 </div>
             </div>
+            ${travelRowHtml}
         </div>
         <div class="log-card-action-tray">
             <a href="https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}"
