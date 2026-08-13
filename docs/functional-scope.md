@@ -18,6 +18,7 @@
 - Saved locations are stored in a history.
 - The history can be viewed as a list or on a map.
 - Users can delete locations from their history.
+- For each saved location, the straight-line distance and the estimated travel times for walking, biking and driving are displayed.
 
 ### 1.4. Weather Information
 - For a given location, the application fetches and displays the current temperature and weather conditions.
@@ -54,6 +55,8 @@ The application is a single-page application (SPA) with three main views:
 - Each entry shows the address, the temperature and a UV-Index badge.
 - The elevation is displayed inline with the address as a muted footnote (e.g. `(521 m)`).
 - Each entry shows the tag as a pill next to the date and the comment as a line below the address (list mode only).
+- Each entry shows a travel row with the walking, biking and driving times (mode icon + duration) and the distance as a chip; for distances above 100 km the values are shown compactly with a tilde (e.g. `~109 km`, `~58h`).
+- Dates are shown relative to today: `Today`/`Yesterday`, then weekday names for the two following days (e.g. `Tuesday, 14:32`), and the full date for anything older.
 - The map view shows all saved locations as markers on a map.
 - Each location in the list can be deleted.
 
@@ -136,3 +139,4 @@ component breakdown lives in `docs/technical-landscape.md` → ECB Architecture.
 | 0.3.0 | 2026-08-11 | Fixed HTTP 500 when saving new tag values: the `tag` column existed as an H2 native `ENUM` with the old value list baked in; converted it to `VARCHAR` on the DEV database (see §4.1). |
 | 0.3.0 | 2026-08-12 | `GET /positions?userId=&lat=&lon=` now additionally returns the distance (km) and travel times for walking, biking and driving (response-only, not persisted), computed via Haversine distance plus speed assumptions (walking 4.8 km/h ×1.35, biking 16.5 km/h ×1.25, driving by distance band). |
 | 0.3.0 | 2026-08-12 | History cards now show travel-time chips (walk/bike/drive icons + time) and the distance in a dedicated always-aligned bottom row; travel times are shown compactly (e.g. `~58h`) for distances above 100 km. |
+| 0.3.0 | 2026-08-12 | History-card refinements: walk icon replaced with a sneaker; the distance is rendered as a neutral chip and rounded compactly (e.g. `~109 km`) above 100 km; the two days after yesterday show their weekday name (e.g. `Tuesday, 14:32`); cards use a stronger border (`--card-border`) in light and dark mode; the temperature-pill weather icon was resized to match the UV pill height. |

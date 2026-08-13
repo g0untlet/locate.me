@@ -79,13 +79,14 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
     let distanceHtml = "";
     if (pos.distance !== undefined && pos.distance !== null && !isNaN(parseFloat(pos.distance))) {
         const distVal = parseFloat(pos.distance);
+        const compactDistance = distVal > 100;
         distanceHtml = `
-            <div class="log-card-distance" style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+            <div class="log-card-distance" style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); background-color: #f1f5f9; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
                 <svg class="action-icon" style="stroke: var(--text-muted); width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="10"></circle>
                     <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
                 </svg>
-                <span>${distVal.toFixed(2)} km</span>
+                <span>${compactDistance ? `~${Math.round(distVal)}` : distVal.toFixed(2)} km</span>
             </div>
         `;
     }

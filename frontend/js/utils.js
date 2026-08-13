@@ -9,6 +9,7 @@ export function formatRelativeDate(timestamp) {
     const now = new Date();
     const todayStart     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+    const threeDaysAgoStart = new Date(yesterdayStart.getTime() - 2 * 86400000);
 
     const timeStr = d.toLocaleString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
@@ -16,6 +17,9 @@ export function formatRelativeDate(timestamp) {
         return `Today, ${timeStr}`;
     } else if (d >= yesterdayStart) {
         return `Yesterday, ${timeStr}`;
+    } else if (d >= threeDaysAgoStart) {
+        const weekday = d.toLocaleString('en-GB', { weekday: 'long' });
+        return `${weekday}, ${timeStr}`;
     } else {
         return d.toLocaleString('de-DE', {
             day: '2-digit', month: '2-digit', year: 'numeric',
