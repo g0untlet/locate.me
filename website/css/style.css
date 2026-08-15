@@ -580,6 +580,11 @@ a:hover {
     flex-shrink: 0;
 }
 
+.release-date {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
 .release-tagline {
     font-size: 1rem;
     font-weight: 600;

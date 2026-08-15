@@ -37,4 +37,11 @@
             }
         });
     }
+
+    var emailUser = 'gauntlet' + '101';
+    var emailDomain = 'proton' + '.me';
+    var emailLinks = document.querySelectorAll('.email-link');
+    for (var i = 0; i < emailLinks.length; i++) {
+        emailLinks[i].setAttribute('href', 'mailto:' + emailUser + '@' + emailDomain);
+    }
 })();
