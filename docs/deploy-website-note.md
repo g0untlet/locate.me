@@ -5,7 +5,11 @@ to the DEV server and serve it under `https://locateme-dev.folger.home64.de/webs
 
 The website is deployed to a **dedicated folder** (`/home/gauntlet/homelab/locate.me.dev/website/`)
 next to the frontend. Nothing of the app (frontend, backend, data) is touched.
-A section at the bottom prepares the same setup for PROD (`locateme.folger.home64.de`).
+A section at the bottom prepares the same setup for PROD (`locate-me.net`).
+
+> **Domains:** The **app** (DEV: `locateme-dev.folger.home64.de`, PROD: `locateme.srv64.de`)
+> is a separate thing from the **static website**. Only the static website will be served
+> under its own domain in PROD: `https://locate-me.net/`.
 
 ## Prerequisites
 
@@ -107,22 +111,33 @@ docker compose ps
 
 ## Ready for PROD (later)
 
-The same pattern applies to the PROD app at `locateme.folger.home64.de`. Nothing below
-is active yet – it is a preparation checklist.
+In PROD the **static website gets its own domain**: `https://locate-me.net/` (served at
+the root). The **app** stays at `https://locateme.srv64.de/` – its Caddy block keeps
+serving the app only and is not touched for website serving. The old idea of serving the
+website under a `/website/` subpath on the app domain is superseded. Nothing below is
+active yet – it is a preparation checklist.
 
-1. **Deploy target.** Create `deploy-website-prod.sh` as a copy of `deploy-website-dev.sh`
-   with `REMOTE_APP_DIR="/home/gauntlet/homelab/locate.me"`. All safety guards,
-   comments and the `SAFETY_DIR_NAME` logic are reusable unchanged.
+1. **Deploy target.** Create `deploy-website-prod.sh` as a copy of `deploy-website-dev.sh`,
+   changing `REMOTE_HOST` and `REMOTE_TARGET_DIR` to the PROD site folder, e.g.
+   `REMOTE_TARGET_DIR="/home/gauntlet/homelab/locate-me.net/website/"`.
+   > **TODO:** confirm the PROD server host and site folder before launch.
+   All safety guards, comments and the `SAFETY_DIR_NAME` logic are reusable unchanged.
 2. **Mount.** In the Caddy `docker-compose.yml` add:
    ```yaml
-         - /home/gauntlet/homelab/locate.me/website:/var/www/locate.me/website  #locate.me prod website
+         - /home/gauntlet/homelab/locate-me.net/website:/var/www/locate-me.net/website  #locate-me.net static website
    ```
    then `docker compose up -d`.
-3. **Caddy route.** In the `locateme.folger.home64.de` block, insert the same two
-   blocks between `handle /api*` and the fallback `handle { file_server }`, with
-   `root * /var/www/locate.me/website`.
+3. **Caddy route.** Add a dedicated site block for the website serving the folder at the
+   **root** – no `/website/` `handle_path` needed:
+   ```
+   locate-me.net {
+       root * /var/www/locate-me.net/website
+       file_server
+   }
+   ```
+   The `/website/`-specific notes and troubleshooting rows below do **not** apply here.
 4. **Validate/reload/test** exactly as Steps 4–5, with the PROD URLs:
-   <https://locateme.folger.home64.de/website/> and `/website/index.de.html`.
+   <https://locate-me.net/> and <https://locate-me.net/index.de.html>.
 
 ---
 
