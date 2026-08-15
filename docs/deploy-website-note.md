@@ -2,8 +2,7 @@
 
 This note explains how to deploy the static marketing/install website (`./website`).
 In DEV it is served under `https://locateme-dev.folger.home64.de/website/`; in PROD it
-is served at `https://locateme.srv64.de/website/` and via the DNS alias
-`https://locate-me.net/`.
+is served at `https://locateme.srv64.de/website/` and via `https://www.locate-me.net/`.
 
 The website is deployed to a **dedicated folder** (`/home/gauntlet/homelab/locate.me.dev/website/`)
 next to the frontend. Nothing of the app (frontend, backend, data) is touched.
@@ -13,8 +12,9 @@ A section below covers the PROD setup (`locate-me.net` + `locateme.srv64.de/webs
 > `locateme.srv64.de`) is a separate thing from the **static website**. In PROD the
 > website's content is physically hosted at `https://locateme.srv64.de/website/`. The
 > `locate-me.net` hoster does **not** allow uploading static content, so `locate-me.net`
-> is configured only via DNS (A-record + CNAME) to point at this server; Caddy then
-> serves the same folder at the root of `https://locate-me.net/`.
+> is configured via a `CNAME` for `www.locate-me.net` (→ `locateme.srv64.de`) plus a
+> hoster-side forward for the apex `locate-me.net` → `www`. Caddy then serves the same
+> folder at the root of `https://www.locate-me.net/`.
 
 ## Prerequisites
 
@@ -114,24 +114,27 @@ docker compose ps
 
 ---
 
-## PROD – Website on locateme.srv64.de/website/ + locate-me.net (DNS alias)
+## PROD – Website on locateme.srv64.de/website/ + www.locate-me.net (DNS alias)
 
 In PROD the **static website content is physically hosted on the app server** at
 `https://locateme.srv64.de/website/` (a subpath of the PROD app domain). The
-`locate-me.net` hoster allows no content upload, so `locate-me.net` is a **DNS alias**
-(A-record + CNAME) to this same server, and Caddy serves the **same folder** at the
-root of `https://locate-me.net/`. The app itself stays at `https://locateme.srv64.de/`
+`locate-me.net` hoster allows no content upload, so the website is reached via a
+`CNAME` for `www.locate-me.net` (→ `locateme.srv64.de`) plus a hoster-side forward for
+the apex `locate-me.net` → `www`. Caddy serves the **same folder** at the root of
+`https://www.locate-me.net/`. The app itself stays at `https://locateme.srv64.de/`
 (root) and is not touched.
 
-### P1 – DNS records (at the locate-me.net hoster)
+### P1 – DNS / forwarding (at the locate-me.net hoster)
 
 The hoster only forwards DNS – no files are uploaded there.
 
-- `A` record: `locate-me.net` → public IP of the `locateme.srv64.de` server.
-- `CNAME` record: `www.locate-me.net` → `locateme.srv64.de` (so `www` also works).
-- Caddy auto-provisions TLS certificates for `locate-me.net` / `www.locate-me.net`
-  once the DNS records resolve publicly (ACME via the HTTP-01 or TLS-ALPN challenge).
-  Make sure the records are live *before* testing HTTPS.
+- `CNAME` record: `www.locate-me.net` → `locateme.srv64.de`.
+- Apex `locate-me.net`: **no** `A` record for the website; the hoster provides a
+  `www`-forward for the apex (`locate-me.net` → `www`). This forward works over HTTP
+  only – HTTPS on the apex is **not available** hoster-side (accepted limitation).
+- Caddy auto-provisions the TLS certificate for `www.locate-me.net` once the `CNAME`
+  resolves publicly (ACME via the HTTP-01 or TLS-ALPN challenge). Make sure the
+  `CNAME` is live *before* testing HTTPS.
 
 ### P2 – Deploy the website files
 
@@ -187,11 +190,12 @@ Insert the following **between** `handle /api* { ... }` and the fallback
     }
 ```
 
-**Part B – new `locate-me.net` host block: serve the same folder at the root.**
-Add a dedicated site block (the DNS records from P1 point this host at this server):
+**Part B – new `www.locate-me.net` host block: serve the same folder at the root.**
+Add a dedicated site block (the `CNAME` from P1 points this host at this server).
+The apex `locate-me.net` is **not** in the Caddyfile – the hoster forwards it to `www`:
 
 ```
-locate-me.net, www.locate-me.net {
+www.locate-me.net {
     root * /var/www/locate.me/website
     file_server
     header Cache-Control "no-store"
@@ -210,7 +214,7 @@ earlier handle matched):
 
 Order must stay `/api*` → `/website/*` → `/website` redirect → fallback. The PWA has
 no URL routes and never requests `/website`, so requests are consumed by the website
-handler and cannot fall through to the app. `locate-me.net` is a separate block and
+handler and cannot fall through to the app. `www.locate-me.net` is a separate block and
 never touches the app. If the app suddenly serves `/website/…`, a catch-all /
 top-level `file_server` was placed above the `/website/*` handle (see Troubleshooting).
 
@@ -239,8 +243,9 @@ docker compose ps
 
 - Canonical content: <https://locateme.srv64.de/website/> and
   <https://locateme.srv64.de/website/index.de.html>.
-- Custom domain: <https://locate-me.net/> and <https://locate-me.net/index.de.html>
-  (also test `https://www.locate-me.net/`).
+- Custom domain: <https://www.locate-me.net/> and <https://www.locate-me.net/index.de.html>.
+- Apex: <http://locate-me.net/> (hoster `www`-forward; apex HTTPS intentionally not
+  available hoster-side).
 - The app must be unaffected: <https://locateme.srv64.de/>.
 - Also verify on a smartphone: layout, EN↔DE language switch, dark-mode toggle.
 
@@ -254,5 +259,6 @@ docker compose ps
 | Assets (CSS/JS) 404 under `/website/` | Shipping the `../` form of links; the site must use relative links (it does). Confirm no `<base>` tag was added. |
 | `/api*` broken after the change | The new `handle` blocks were placed **above** `handle /api*` in a conflicting position; order is `/api*` → `/website*` → fallback. Give `/website/*` a matcher that cannot match `/api`. |
 | App suddenly serves `/website/…` (PROD `locateme.srv64.de`) | A catch-all / top-level `file_server` (or `try_files` rewrite) was placed **above** the `/website/*` `handle_path`. Enforce the order `/api*` → `/website/*` → `/website` redirect → fallback. |
-| `locate-me.net` does not load / TLS error | DNS not live yet or A/CNAME missing (P1); Caddy cannot provision the certificate until the records resolve publicly. |
+| `www.locate-me.net` does not load / TLS error | `CNAME` not live yet (P1); Caddy cannot provision the certificate until it resolves publicly. |
+| `https://locate-me.net/` (apex) fails | Expected – the hoster's `www`-forward works over HTTP only; apex HTTPS is not available hoster-side. Use `https://www.locate-me.net/`. |
 | Language switch missing | Open `/website/index.de.html` directly; the EN↔DE links are relative and work from any `/website/` page. |
