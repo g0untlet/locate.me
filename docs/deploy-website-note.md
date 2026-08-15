@@ -1,11 +1,20 @@
-# locate.me – Website: DEV Deployment & Serving
+# locate.me – Website: Deployment & Serving (DEV + PROD)
 
-This note explains how to deploy the static marketing/install website (`./website`)
-to the DEV server and serve it under `https://locateme-dev.folger.home64.de/website/`.
+This note explains how to deploy the static marketing/install website (`./website`).
+In DEV it is served under `https://locateme-dev.folger.home64.de/website/`; in PROD it
+is served at `https://locateme.srv64.de/website/` and via `https://www.locate-me.net/`.
 
 The website is deployed to a **dedicated folder** (`/home/gauntlet/homelab/locate.me.dev/website/`)
 next to the frontend. Nothing of the app (frontend, backend, data) is touched.
-A section at the bottom prepares the same setup for PROD (`locateme.folger.home64.de`).
+A section below covers the PROD setup (`locate-me.net` + `locateme.srv64.de/website/`).
+
+> **Domains & hosting:** The **app** (DEV: `locateme-dev.folger.home64.de`, PROD:
+> `locateme.srv64.de`) is a separate thing from the **static website**. In PROD the
+> website's content is physically hosted at `https://locateme.srv64.de/website/`. The
+> `locate-me.net` hoster does **not** allow uploading static content, so `locate-me.net`
+> is configured via a `CNAME` for `www.locate-me.net` (→ `locateme.srv64.de`) plus a
+> hoster-side forward for the apex `locate-me.net` → `www`. Caddy then serves the same
+> folder at the root of `https://www.locate-me.net/`.
 
 ## Prerequisites
 
@@ -105,24 +114,140 @@ docker compose ps
 
 ---
 
-## Ready for PROD (later)
+## PROD – Website on locateme.srv64.de/website/ + www.locate-me.net (DNS alias)
 
-The same pattern applies to the PROD app at `locateme.folger.home64.de`. Nothing below
-is active yet – it is a preparation checklist.
+In PROD the **static website content is physically hosted on the app server** at
+`https://locateme.srv64.de/website/` (a subpath of the PROD app domain). The
+`locate-me.net` hoster allows no content upload, so the website is reached via a
+`CNAME` for `www.locate-me.net` (→ `locateme.srv64.de`) plus a hoster-side forward for
+the apex `locate-me.net` → `www`. Caddy serves the **same folder** at the root of
+`https://www.locate-me.net/`. The app itself stays at `https://locateme.srv64.de/`
+(root) and is not touched.
 
-1. **Deploy target.** Create `deploy-website-prod.sh` as a copy of `deploy-website-dev.sh`
-   with `REMOTE_APP_DIR="/home/gauntlet/homelab/locate.me"`. All safety guards,
-   comments and the `SAFETY_DIR_NAME` logic are reusable unchanged.
-2. **Mount.** In the Caddy `docker-compose.yml` add:
-   ```yaml
-         - /home/gauntlet/homelab/locate.me/website:/var/www/locate.me/website  #locate.me prod website
-   ```
-   then `docker compose up -d`.
-3. **Caddy route.** In the `locateme.folger.home64.de` block, insert the same two
-   blocks between `handle /api*` and the fallback `handle { file_server }`, with
-   `root * /var/www/locate.me/website`.
-4. **Validate/reload/test** exactly as Steps 4–5, with the PROD URLs:
-   <https://locateme.folger.home64.de/website/> and `/website/index.de.html`.
+### P1 – DNS / forwarding (at the locate-me.net hoster)
+
+The hoster only forwards DNS – no files are uploaded there.
+
+- `CNAME` record: `www.locate-me.net` → `locateme.srv64.de`.
+- Apex `locate-me.net`: **no** `A` record for the website; the hoster provides a
+  `www`-forward for the apex (`locate-me.net` → `www`). This forward works over HTTP
+  only – HTTPS on the apex is **not available** hoster-side (accepted limitation).
+- Caddy auto-provisions the TLS certificate for `www.locate-me.net` once the `CNAME`
+  resolves publicly (ACME via the HTTP-01 or TLS-ALPN challenge). Make sure the
+  `CNAME` is live *before* testing HTTPS.
+
+### P2 – Deploy the website files
+
+From the repository root:
+
+```bash
+./deploy-website-prod.sh
+```
+
+This rsyncs `./website/` to `gauntlet@192.168.178.88:/home/gauntlet/homelab/locate.me/website/`
+(the PROD app lives in `~/homelab/locate.me/`, same server as DEV).
+
+Verify on the server:
+
+```bash
+ssh gauntlet@192.168.178.88 'ls -la /home/gauntlet/homelab/locate.me/website/'
+```
+
+### P3 – Expose the folder to the Caddy container (PROD)
+
+Edit the Caddy service in your `docker-compose.yml` and add this volume next to the
+PROD frontend mount:
+
+```yaml
+      - /home/gauntlet/homelab/locate.me/website:/var/www/locate.me/website  #locate.me prod website
+```
+
+Then recreate the container so the new mount becomes active:
+
+```bash
+docker compose up -d
+```
+
+> **Note:** Bind mounts are fixed at container creation – a plain `caddy reload`
+> cannot add a new volume. The container must be recreated (`up -d` handles this).
+
+### P4 – Caddy routes (two parts)
+
+**Part A – `locateme.srv64.de` block: serve the website under `/website/`.**
+Insert the following **between** `handle /api* { ... }` and the fallback
+`handle { file_server }` (identical to DEV Step 3):
+
+```
+    # Statische Website (Marketing/Installations-Seite) im Unterpfad
+    handle_path /website/* {
+        root * /var/www/locate.me/website
+        file_server
+    }
+
+    # Ohne abschließenden Slash direkt auf /website/ weiterleiten
+    handle /website {
+        redir /website/ permanent
+    }
+```
+
+**Part B – new `www.locate-me.net` host block: serve the same folder at the root.**
+Add a dedicated site block (the `CNAME` from P1 points this host at this server).
+The apex `locate-me.net` is **not** in the Caddyfile – the hoster forwards it to `www`:
+
+```
+www.locate-me.net {
+    root * /var/www/locate.me/website
+    file_server
+    header Cache-Control "no-store"
+}
+```
+
+**No-conflict guarantee.** The three path namespaces are disjoint and Caddy `handle`
+blocks are mutually exclusive (first match wins; the fallback only serves what no
+earlier handle matched):
+
+| Path prefix | Served by |
+|---|---|
+| `/api/*` | Quarkus backend |
+| `/website/*` | static website folder |
+| everything else (root `/`, `/app.js`, …) | PWA frontend |
+
+Order must stay `/api*` → `/website/*` → `/website` redirect → fallback. The PWA has
+no URL routes and never requests `/website`, so requests are consumed by the website
+handler and cannot fall through to the app. `www.locate-me.net` is a separate block and
+never touches the app. If the app suddenly serves `/website/…`, a catch-all /
+top-level `file_server` was placed above the `/website/*` handle (see Troubleshooting).
+
+### P5 – Validate + (re)load Caddy
+
+Validate the Caddyfile (catches typos before they break the server):
+
+```bash
+docker exec caddy caddy validate --config /etc/caddy/Caddyfile
+```
+
+If you changed **only** the Caddyfile (no compose change), hot-reload it:
+
+```bash
+docker exec caddy caddy reload --config /etc/caddy/Caddyfile
+```
+
+If you recreated the container in P3, Caddy loads the new config automatically on
+start. Confirm the container is healthy:
+
+```bash
+docker compose ps
+```
+
+### P6 – Test
+
+- Canonical content: <https://locateme.srv64.de/website/> and
+  <https://locateme.srv64.de/website/index.de.html>.
+- Custom domain: <https://www.locate-me.net/> and <https://www.locate-me.net/index.de.html>.
+- Apex: <http://locate-me.net/> (hoster `www`-forward; apex HTTPS intentionally not
+  available hoster-side).
+- The app must be unaffected: <https://locateme.srv64.de/>.
+- Also verify on a smartphone: layout, EN↔DE language switch, dark-mode toggle.
 
 ---
 
@@ -133,4 +258,7 @@ is active yet – it is a preparation checklist.
 | 404 on `/website/` | Bind mount missing or container not recreated → re-check Step 2. |
 | Assets (CSS/JS) 404 under `/website/` | Shipping the `../` form of links; the site must use relative links (it does). Confirm no `<base>` tag was added. |
 | `/api*` broken after the change | The new `handle` blocks were placed **above** `handle /api*` in a conflicting position; order is `/api*` → `/website*` → fallback. Give `/website/*` a matcher that cannot match `/api`. |
+| App suddenly serves `/website/…` (PROD `locateme.srv64.de`) | A catch-all / top-level `file_server` (or `try_files` rewrite) was placed **above** the `/website/*` `handle_path`. Enforce the order `/api*` → `/website/*` → `/website` redirect → fallback. |
+| `www.locate-me.net` does not load / TLS error | `CNAME` not live yet (P1); Caddy cannot provision the certificate until it resolves publicly. |
+| `https://locate-me.net/` (apex) fails | Expected – the hoster's `www`-forward works over HTTP only; apex HTTPS is not available hoster-side. Use `https://www.locate-me.net/`. |
 | Language switch missing | Open `/website/index.de.html` directly; the EN↔DE links are relative and work from any `/website/` page. |

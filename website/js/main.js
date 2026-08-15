@@ -37,4 +37,11 @@
             }
         });
     }
+
+    var emailUser = 'in' + 'fo';
+    var emailDomain = 'locate' + '-me.net';
+    var emailLinks = document.querySelectorAll('.email-link');
+    for (var i = 0; i < emailLinks.length; i++) {
+        emailLinks[i].setAttribute('href', 'mailto:' + emailUser + '@' + emailDomain);
+    }
 })();
