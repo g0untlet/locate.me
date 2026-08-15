@@ -19,6 +19,16 @@ function getActiveUserId() {
 }
 
 /* ==========================================================================
+   Demo Mode Note: flashing hint on the Locate page while the app runs with
+   the default "user123" ID. Hidden once a custom User ID is set.
+   ========================================================================== */
+function updateDemoModeNote() {
+    const note = document.getElementById('demo-mode-note');
+    if (!note) return;
+    note.classList.toggle('hidden', getActiveUserId() !== 'user123');
+}
+
+/* ==========================================================================
    SPA Navigation Framework (Tab Controller)
    ========================================================================== */
 function initNavigation() {
@@ -66,7 +76,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initMapListeners();
 
     initSettingsPage({
-        onSave: (userId) => silentBadgeSync(userId, checkBackendStatus),
+        onSave: (userId) => {
+            silentBadgeSync(userId, checkBackendStatus);
+            updateDemoModeNote();
+        },
         getActiveUserId
     });
 
@@ -75,6 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
         checkBackendStatus,
         silentBadgeSync
     });
+
+    updateDemoModeNote();
 
     initNavigation();
 

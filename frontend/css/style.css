@@ -648,6 +648,16 @@ body {
 .settings-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--primary-dark); }
 .form-group { width: 100%; margin-bottom: 20px; display: flex; flex-direction: column; }
 .help-text { font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; }
+
+.request-user-id-link {
+    color: var(--primary-dark);
+    text-decoration: underline;
+    transition: var(--transition);
+}
+
+.request-user-id-link:hover {
+    color: var(--primary-color);
+}
 .settings-status { font-size: 0.85rem; text-align: center; font-weight: 500; min-height: 18px; }
 
 /* ==========================================================================
@@ -769,6 +779,13 @@ body {
 
 .locate-action-group .track-btn {
     margin-bottom: 0;
+}
+
+.demo-mode-note {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: center;
+    animation: pulse 1.5s infinite;
 }
 
 .track-btn--save {
