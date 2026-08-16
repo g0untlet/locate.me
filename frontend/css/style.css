@@ -5,6 +5,7 @@
     --bg-color: #f8fafc;
     --bg-outer: #cbd5e1;
     --card-bg: #ffffff;
+    --card-tile-bg: #f1f5f9;
     --surface-subtle: #f8fafc;
     --primary-color: #72b2dc;
     --primary-hover: #5fa3cf;
@@ -24,6 +25,7 @@
     --bg-color: #1e293b;
     --bg-outer: #020617;
     --card-bg: #1e293b;
+    --card-tile-bg: #2c3b4a;
     --surface-subtle: #0f172a;
     --primary-color: #72b2dc;
     --primary-hover: #5fa3cf;
@@ -82,6 +84,23 @@ body {
         height: 640px;
         border-radius: var(--border-radius);
         padding: 30px 20px 90px 20px;
+    }
+}
+
+/* ==========================================================================
+   Desktop / Tall Viewports: Frame wächst mit dem Inhalt, damit nichts
+   abgeschnitten wird. Durch min-width + min-height ausgelöst – Smartphones
+   (Portrait UND Landscape) behalten den fixen 640px-Rahmen unverändert.
+   ========================================================================== */
+@media (min-width: 480px) and (min-height: 520px) {
+    .app-container {
+        height: auto;
+        min-height: 640px;
+        max-height: calc(100dvh - 40px);
+        overflow-y: auto;
+    }
+    .app-page {
+        overflow-y: visible;
     }
 }
 
@@ -184,6 +203,14 @@ body {
     background-color: var(--primary-hover);
 }
 
+.track-btn:disabled,
+.track-btn:disabled:hover {
+    background-color: var(--border-color);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
 .settings-input {
     width: 100%;
     padding: 12px;
@@ -240,7 +267,7 @@ body {
 .cell { padding: 14px 16px; display: flex; flex-direction: column; }
 .address-cell { flex: 1; min-width: 0; }
 .elevation-cell { flex-shrink: 0; }
-#res-elevation { font-size: 0.95rem; font-weight: 600; color: var(--text-strong); }
+#res-elevation { font-size: 0.95rem; font-weight: 500; color: var(--text-color); }
 .border-bottom { border-bottom: 1px solid var(--border-color); }
 .text-right { align-items: flex-end; text-align: right; }
 
@@ -252,7 +279,7 @@ body {
     text-transform: uppercase;
 }
 
-.value { font-size: 0.95rem; font-weight: 600; color: var(--text-strong); }
+.value { font-size: 0.95rem; font-weight: 500; color: var(--text-color); }
 .address-text { font-size: 0.85rem; font-weight: 400; line-height: 1.4; }
 
 .address-container {
@@ -267,8 +294,8 @@ body {
 
 #res-address-container {
     font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--text-strong);
+    font-weight: 500;
+    color: var(--text-color);
 }
 
 .res-tag-comment {
@@ -357,7 +384,7 @@ body {
 .history-list::-webkit-scrollbar-thumb { background-color: var(--border-color); border-radius: 4px; }
 
 .log-card {
-    background-color: var(--card-bg);
+    background-color: var(--card-tile-bg);
     border: 1.5px solid var(--card-border);
     border-radius: 12px;
     display: flex;
@@ -648,6 +675,33 @@ body {
 .settings-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--primary-dark); }
 .form-group { width: 100%; margin-bottom: 20px; display: flex; flex-direction: column; }
 .help-text { font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; }
+
+.request-user-id-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--surface-subtle);
+    color: var(--primary-dark);
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.request-user-id-link:hover {
+    background-color: var(--primary-tint);
+    border-color: var(--primary-color);
+}
+
+.request-user-id-link svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    flex-shrink: 0;
+}
 .settings-status { font-size: 0.85rem; text-align: center; font-weight: 500; min-height: 18px; }
 
 /* ==========================================================================
@@ -769,6 +823,13 @@ body {
 
 .locate-action-group .track-btn {
     margin-bottom: 0;
+}
+
+.demo-mode-note {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: center;
+    animation: pulse 1.5s infinite;
 }
 
 .track-btn--save {
@@ -1435,7 +1496,9 @@ body {
     transition: color 0.15s ease;
 }
 
-.attribution-link:hover {
+/* Nur echte Links (a) bekommen Hover-Verhalten; Plain-Text-Spans bleiben
+   statisch, damit "VERSION"-Einträge nicht wie Hyperlinks wirken. */
+a.attribution-link:hover {
     color: var(--primary-dark);
     text-decoration: underline;
 }

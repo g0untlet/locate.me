@@ -4,7 +4,19 @@
    Abhängigkeiten kommen als Parameter rein – kein direkter Modulimport nötig.
    ========================================================================== */
 
+/* ==========================================================================
+   Request-UserId-Link: info@locate-me.net – als Char-Codes gespeichert, um
+   Crawlern die eMail-Adresse vorzuenthalten. Wird erst zur Laufzeit dekodiert.
+   ========================================================================== */
+function initRequestUserIdLink() {
+    const codes = [105,110,102,111,64,108,111,99,97,116,101,45,109,101,46,110,101,116];
+    const link  = document.getElementById('request-user-id-link');
+    if (link) link.href = 'mailto:' + codes.map(c => String.fromCharCode(c)).join('');
+}
+
 export function initSettingsPage({ onSave, getActiveUserId }) {
+
+    initRequestUserIdLink();
 
     // --- Dark-Mode-Toggle --- 
     const darkToggle = document.getElementById('dark-mode-toggle'); 

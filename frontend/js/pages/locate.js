@@ -34,6 +34,18 @@ const GEO_OPTIONS = {
 };
 
 /* ==========================================================================
+   Fetch Button Busy Guard: verhindert, dass "Fetch Location"/"Refresh"
+   während GPS-Suche oder laufendem Backend-Request erneut geklickt wird.
+   ========================================================================== */
+let isFetching = false;
+
+function setFetchBusy(busy) {
+    isFetching = busy;
+    const btn = document.getElementById('btn-fetch-location');
+    if (btn) btn.disabled = busy;
+}
+
+/* ==========================================================================
    Predefined Tags – single-select vocabulary, must match backend PositionTag
    ========================================================================== */
 const PREDEFINED_TAGS = ['HOME', 'WORK', 'PARKING', 'SHOPPING', 'EATING', 'LEISURE', 'FRIENDS', 'HEALTH'];
@@ -219,10 +231,13 @@ function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus })
 
             showLocateMap(latitude, longitude);
             checkBackendStatus();
+
+            setFetchBusy(false);
         })
         .catch(err => {
             showError(`Fetch Error: ${err.message}`);
             checkBackendStatus();
+            setFetchBusy(false);
         });
 }
 
@@ -267,6 +282,9 @@ export function initLocatePage(deps) {
 
     // --- FETCH LOCATION Button ---
     document.getElementById('btn-fetch-location').addEventListener('click', () => {
+        if (isFetching) return;
+        setFetchBusy(true);
+
         const statusText  = document.getElementById('status');
         const responseCard = document.getElementById('response-card');
 
@@ -278,6 +296,7 @@ export function initLocatePage(deps) {
 
         if (!navigator.geolocation) {
             showError("Geolocation is not supported by your browser.");
+            setFetchBusy(false);
             return;
         }
 
@@ -292,6 +311,7 @@ export function initLocatePage(deps) {
                     fetchCurrentPosition(bestPosition, deps);
                 } else {
                     showError("GPS Timeout: No position found.");
+                    setFetchBusy(false);
                 }
             }
         }, GPS_MAX_WAIT_MS);
@@ -315,6 +335,7 @@ export function initLocatePage(deps) {
                     fetchCurrentPosition(bestPosition, deps);
                 } else {
                     showError(`GPS Error: ${error.message}`);
+                    setFetchBusy(false);
                 }
             },
             GEO_OPTIONS
