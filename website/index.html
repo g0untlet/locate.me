@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>locate.me – Know where you are. Remember where you've been.</title>
+    <title>locate.me – Mark the spot. Find it again.</title>
     <meta name="description" content="locate.me is a private, self-hosted geo-tracking PWA. Learn what it does and how to install it as an app on Android (Chrome, Brave) and iPhone (Safari).">
     <script>
         try {
@@ -49,15 +49,55 @@
     <main>
         <section class="hero">
             <div class="container">
-                <h1 class="hero-title">Know where you are. Remember where you've been.</h1>
+                <h1 class="hero-title">Mark the spot.<br>Find it again.</h1>
                 <p class="hero-subtitle">
-                    locate.me is a private, self-hosted geo-tracker for you and the people you trust.
+                    locate.me is a private, self-hosted, open-source geo-tracker for you and the people you trust.
                     Find out where you are right now &mdash; with your address, weather and more &mdash;
                     and keep a history of the places that matter.
                 </p>
                 <div class="cta-row">
                     <a class="btn btn-primary" href="https://locateme.srv64.de/" target="_blank" rel="noopener">Open App</a>
                     <a class="btn btn-secondary" href="#install">How to install</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Ways to use it</h2>
+                    <p class="section-intro">
+                        Just a few ideas &mdash; the places that matter to you, remembered automatically.
+                    </p>
+                </div>
+                <div class="feature-grid">
+                    <article class="feature-card">
+                        <div class="feature-head">
+                            <div class="feature-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"></rect><path d="M9 17V7h4a3 3 0 0 1 0 6H9"></path></svg>
+                            </div>
+                            <h3 class="feature-title">Never lose your parking spot</h3>
+                        </div>
+                        <p class="feature-text">Stressed city center? Save your spot with one tap and let locate.me guide you right back to the car.</p>
+                    </article>
+                    <article class="feature-card">
+                        <div class="feature-head">
+                            <div class="feature-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                            </div>
+                            <h3 class="feature-title">That one hidden gem</h3>
+                        </div>
+                        <p class="feature-text">The tiny Bavarian restaurant with the perfect schnitzel? Months later, your history still knows exactly where it was.</p>
+                    </article>
+                    <article class="feature-card">
+                        <div class="feature-head">
+                            <div class="feature-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                            </div>
+                            <h3 class="feature-title">The spot you'd never find twice</h3>
+                        </div>
+                        <p class="feature-text">A hidden beer garden, a perfect photo spot &mdash; stumbled upon, then lost forever? One tap saves it, and locate.me leads you right back.</p>
+                    </article>
                 </div>
             </div>
         </section>
@@ -125,7 +165,7 @@
                             </div>
                             <h3 class="feature-title">Private</h3>
                         </div>
-                        <p class="feature-text">Self-hosted and only accessible to people you trust. Your location stays yours.</p>
+                        <p class="feature-text">Open source and self-hosted &mdash; only accessible to the people you trust. Your location stays yours.</p>
                     </article>
                 </div>
             </div>
@@ -214,13 +254,14 @@
 
     <footer class="site-footer">
         <div class="container">
-            <p class="footer-brand">locate<span class="title-accent">.me</span></p>
+            <p class="footer-brand">locate<span class="title-accent">.me</span> <span class="footer-status">is currently <span class="status-label"></span><span class="status-dot" role="status"></span></span></p>
             <nav class="attribution" aria-label="Powered by">
-                <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">uses OpenStreetMap</a>
+                Built with <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>
                 <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>
                 <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>
             </nav>
-            <p class="footer-note">A private, self-hosted PWA for you and the people you trust.</p>
+            <p class="footer-open-source">Open source &mdash; <a href="https://github.com/g0untlet/locate.me" target="_blank" rel="noopener">view the code on GitHub</a>.</p>
+            <p class="footer-note">Your private places &mdash; for you and the people you trust.</p>
         </div>
     </footer>
 

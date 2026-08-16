@@ -44,4 +44,29 @@
     for (var i = 0; i < emailLinks.length; i++) {
         emailLinks[i].setAttribute('href', 'mailto:' + emailUser + '@' + emailDomain);
     }
+
+    var statusDot = document.querySelector('.status-dot');
+    var statusLabel = document.querySelector('.footer-status .status-label');
+    if (statusDot) {
+        var isDe = document.documentElement.lang === 'de';
+        var controller = new AbortController();
+        var timeoutId = setTimeout(function () { controller.abort(); }, 6000);
+        fetch('/api/system/info', { signal: controller.signal }).then(function (res) {
+            clearTimeout(timeoutId);
+            if (!res.ok) throw new Error('bad status');
+            return res.json();
+        }).then(function () {
+            statusDot.classList.remove('offline');
+            statusDot.classList.add('online');
+            statusDot.setAttribute('aria-label', 'Online');
+            statusLabel.textContent = 'Online';
+            statusDot.parentElement.title = isDe ? 'Backend erreichbar' : 'Backend reachable';
+        }).catch(function () {
+            statusDot.classList.remove('online');
+            statusDot.classList.add('offline');
+            statusDot.setAttribute('aria-label', 'Offline');
+            statusLabel.textContent = 'Offline';
+            statusDot.parentElement.title = isDe ? 'Backend nicht erreichbar' : 'Backend unreachable';
+        });
+    }
 })();

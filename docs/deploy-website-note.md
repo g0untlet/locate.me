@@ -197,10 +197,21 @@ The apex `locate-me.net` is **not** in the Caddyfile – the hoster forwards it 
 ```
 www.locate-me.net {
     root * /var/www/locate.me/website
-    file_server
+    handle /api* {
+        reverse_proxy 192.168.178.88:8080
+    }
+    handle {
+        file_server
+    }
     header Cache-Control "no-store"
 }
 ```
+
+The `/api*` handle makes `/api/system/info` reachable from this host's **own origin**,
+so the footer status indicator works on `www.locate-me.net` without CORS (the website
+uses a root-relative `/api/system/info` fetch; `locateme.srv64.de/website/` and the DEV
+site on `locateme-dev.folger.home64.de/website/` behave the same way through their
+existing `/api*` handles).
 
 **No-conflict guarantee.** The three path namespaces are disjoint and Caddy `handle`
 blocks are mutually exclusive (first match wins; the fallback only serves what no
@@ -248,6 +259,10 @@ docker compose ps
   available hoster-side).
 - The app must be unaffected: <https://locateme.srv64.de/>.
 - Also verify on a smartphone: layout, EN↔DE language switch, dark-mode toggle.
+- Status indicator: the footer dot must turn green + "Online" on
+  <https://locateme.srv64.de/website/>, <https://www.locate-me.net/> and the DEV site
+  (needs the respective backend up); "Offline" only when the backend is down.
+  API reachability check: <https://www.locate-me.net/api/system/info>.
 
 ---
 
