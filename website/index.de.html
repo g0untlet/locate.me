@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>locate.me – Wissen, wo du bist. Erinnern, wo du warst.</title>
-    <meta name="description" content="locate.me ist ein privater, selbst gehosteter Geo-Tracker als PWA. Erfahre, was die App kann und wie du sie als App auf Android (Chrome, Brave) und iPhone (Safari) installierst.">
+    <title>locate.me – Markiere den Ort. Finde ihn wieder.</title>
+    <meta name="description" content="locate.me ist ein privater, selbst gehosteter Open-Source Geo-Tracker. Erfahre, was die App kann und wie du sie als App auf Android (Chrome, Brave) und iPhone (Safari) installierst.">
     <script>
         try {
             var t = localStorage.getItem('theme');
@@ -49,11 +49,11 @@
     <main>
         <section class="hero">
             <div class="container">
-                <h1 class="hero-title">Wissen, wo du bist. Erinnern, wo du warst.</h1>
+                <h1 class="hero-title">Markiere den Ort.<br>Finde ihn wieder.</h1>
                 <p class="hero-subtitle">
-                    locate.me ist ein privater, selbst gehosteter Geo-Tracker f&uuml;r dich und die Menschen,
+                    locate.me ist ein privater, selbst gehosteter Open-Source Geo-Tracker f&uuml;r dich und die Menschen,
                     denen du vertraust. Finde heraus, wo du gerade bist &mdash; mit deiner Adresse, dem Wetter
-                    und mehr &mdash; und behalte eine Chronik der Orte, die dir wichtig sind.
+                    und mehr &mdash; und f&uuml;hre eine Chronik der Orte, die dir wichtig sind.
                 </p>
                 <div class="cta-row">
                     <a class="btn btn-primary" href="https://locateme.srv64.de/" target="_blank" rel="noopener">App &ouml;ffnen</a>
@@ -62,15 +62,55 @@
             </div>
         </section>
 
+        <section class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Ideen, wie du es nutzt</h2>
+                    <p class="section-intro">
+                        Nur ein paar Ideen &mdash; die Orte, die dir wichtig sind, automatisch gemerkt.
+                    </p>
+                </div>
+                <div class="feature-grid">
+                    <article class="feature-card">
+                        <div class="feature-head">
+                            <div class="feature-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"></rect><path d="M9 17V7h4a3 3 0 0 1 0 6H9"></path></svg>
+                            </div>
+                            <h3 class="feature-title">Nie den Parkplatz verlieren</h3>
+                        </div>
+                        <p class="feature-text">Chaotische Innenstadt? Speichere deinen Parkplatz mit einem Tipp &mdash; locate.me f&uuml;hrt dich direkt zur&uuml;ck zum Auto.</p>
+                    </article>
+                    <article class="feature-card">
+                        <div class="feature-head">
+                            <div class="feature-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                            </div>
+                            <h3 class="feature-title">Dieser eine Geheimtipp</h3>
+                        </div>
+                        <p class="feature-text">Das kleine bayerische Restaurant mit dem perfekten Schnitzel? Monate sp&auml;ter wei&szlig; deine Historie noch genau, wo es war.</p>
+                    </article>
+                    <article class="feature-card">
+                        <div class="feature-head">
+                            <div class="feature-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                            </div>
+                            <h3 class="feature-title">Der Ort, den du nie zweimal findest</h3>
+                        </div>
+                        <p class="feature-text">Ein versteckter Biergarten, ein perfekter Foto-Spot &mdash; zuf&auml;llig entdeckt und dann nie wieder gefunden? Ein Tipp speichert ihn &mdash; locate.me f&uuml;hrt dich zur&uuml;ck.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
         <section class="section section--subtle">
             <div class="container">
                 <div class="section-header">
                     <h2 class="section-title">Was ist locate.me?</h2>
-                    <p class="section-intro">
-                        Eine kleine Web-App, die dein Handy in ein smartes Orts-Notizbuch verwandelt.
-                        Ein Tab zeigt dir, wo du bist und wie es dort aussieht &mdash;
-                        ein weiterer Tab speichert den Ort, damit du immer den Weg zur&uuml;ck&shy;kennst.
-                    </p>
+                        <p class="section-intro">
+                            Eine kleine Web-App, die dein Handy in ein smartes Orts-Notizbuch verwandelt.
+                            Ein Tab zeigt dir, wo du bist und wie es dort aussieht &mdash;
+                            ein weiterer Tab speichert den Ort, damit du immer den Weg zur&uuml;ck&shy;findest.
+                        </p>
                 </div>
                 <div class="feature-grid">
                     <article class="feature-card">
@@ -125,7 +165,7 @@
                             </div>
                             <h3 class="feature-title">Privat</h3>
                         </div>
-                        <p class="feature-text">Selbst gehostet und nur f&uuml;r Menschen zug&auml;nglich, denen du vertraust. Dein Standort bleibt deins.</p>
+                        <p class="feature-text">Open Source und selbst gehostet &mdash; nur f&uuml;r die Menschen zug&auml;nglich, denen du vertraust. Deine Standorte bleiben deine.</p>
                     </article>
                 </div>
             </div>
@@ -175,7 +215,7 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><line x1="2" y1="8" x2="22" y2="8"></line></svg>
                             <h3 class="install-title">iOS &mdash; Safari</h3>
                         </div>
-                        <p class="install-subtitle">Nutze Safari, nicht einen anderen Browser oder eine In-App-Ansicht.</p>
+                        <p class="install-subtitle">Nutze Safari, keinen anderen Browser und keine In-App-Ansicht.</p>
                         <ol class="steps">
                             <li class="step">
                                 <span class="step-num"></span>
@@ -183,7 +223,7 @@
                             </li>
                             <li class="step">
                                 <span class="step-num"></span>
-                                <span class="step-text">Tippe auf die <strong>Teilen</strong>-Schaltfl&auml;che &mdash; das Quadrat mit dem Pfeil nach oben unten in der Leiste.</span>
+                                <span class="step-text">Tippe auf die <strong>Teilen</strong>-Schaltfl&auml;che &mdash; das Quadrat mit dem Pfeil nach oben, unten in der Leiste.</span>
                             </li>
                             <li class="step">
                                 <span class="step-num"></span>
@@ -200,7 +240,7 @@
 
                 <p class="install-notice">
                     <strong>Standort:</strong> Wenn der Browser <strong>Standort&shy;zugriff (GPS)</strong> anfragt, bitte erlauben.
-                    Diese Freigabe wird <strong>nur von dieser Website</strong> genutzt und von sonst nichts &mdash;
+                    Diese Freigabe wird <strong>nur von dieser Website</strong> genutzt und sonst von nichts &mdash;
                     sie wird nie an andere Apps oder Seiten weiter&shy;gegeben.
                 </p>
                 <p class="install-notice">
@@ -214,13 +254,14 @@
 
     <footer class="site-footer">
         <div class="container">
-            <p class="footer-brand">locate<span class="title-accent">.me</span></p>
+            <p class="footer-brand">locate<span class="title-accent">.me</span> <span class="footer-status">ist gerade <span class="status-label"></span><span class="status-dot" role="status"></span></span></p>
             <nav class="attribution" aria-label="Unterst&uuml;tzt durch">
-                <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">verwendet OpenStreetMap</a>
+                Erstellt mit <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>
                 <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>
                 <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>
             </nav>
-            <p class="footer-note">Eine private, selbst gehostete PWA f&uuml;r dich und die Menschen, denen du vertraust.</p>
+            <p class="footer-open-source">Open Source &ndash; <a href="https://github.com/g0untlet/locate.me" target="_blank" rel="noopener">Code auf GitHub ansehen</a>.</p>
+            <p class="footer-note">Deine privaten Orte &ndash; f&uuml;r dich und die Menschen, denen du vertraust.</p>
         </div>
     </footer>
 
