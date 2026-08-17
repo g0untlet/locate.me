@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 780" role="img" aria-label="locate.me history — a list of saved places with tags and travel times">
+  <defs>
+    <clipPath id="screen-clip">
+      <rect x="80" y="40" width="300" height="700" rx="28"/>
+    </clipPath>
+  </defs>
+
+  <rect x="70" y="30" width="320" height="720" rx="38" fill="#0b1220"/>
+  <rect x="195" y="54" width="70" height="14" rx="7" fill="#1e293b"/>
+
+  <g clip-path="url(#screen-clip)">
+    <rect x="80" y="40" width="300" height="700" fill="#f7f9fc"/>
+
+    <text x="112" y="96" font-size="20" font-weight="700" fill="#0f172a" font-family="system-ui, sans-serif">History</text>
+    <circle cx="346" cy="82" r="7" fill="none" stroke="#64748b" stroke-width="2.5"/>
+    <path d="M351 87 L358 94" stroke="#64748b" stroke-width="2.5" stroke-linecap="round"/>
+
+    <rect x="96" y="116" width="268" height="30" rx="15" fill="#eef2f7"/>
+    <circle cx="118" cy="131" r="5" fill="none" stroke="#94a3b8" stroke-width="2"/>
+    <path d="M121.5 134.5 L126 139" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+    <text x="138" y="135" font-size="11" fill="#94a3b8" font-family="system-ui, sans-serif">Search places…</text>
+
+    <text x="112" y="178" font-size="11" font-weight="600" fill="#94a3b8" font-family="system-ui, sans-serif">TODAY</text>
+
+    <rect x="96" y="190" width="268" height="128" rx="14" fill="#ffffff"/>
+    <text x="116" y="216" font-size="14" font-weight="700" fill="#0f172a" font-family="system-ui, sans-serif">Stachus</text>
+    <rect x="282" y="202" width="62" height="20" rx="10" fill="#e2edf7"/>
+    <text x="313" y="216" font-size="10" fill="#1a5f8c" text-anchor="middle" font-family="system-ui, sans-serif">Parking</text>
+    <text x="116" y="236" font-size="11" fill="#64748b" font-family="system-ui, sans-serif">80335 München · 14:32</text>
+    <line x1="116" y1="252" x2="344" y2="252" stroke="#f1f5f9"/>
+    <rect x="116" y="264" width="52" height="22" rx="11" fill="#f1f5f9"/>
+    <text x="142" y="279" font-size="10" fill="#334155" text-anchor="middle" font-family="system-ui, sans-serif">25 min</text>
+    <rect x="176" y="264" width="52" height="22" rx="11" fill="#f1f5f9"/>
+    <text x="202" y="279" font-size="10" fill="#334155" text-anchor="middle" font-family="system-ui, sans-serif">10 min</text>
+    <rect x="236" y="264" width="52" height="22" rx="11" fill="#f1f5f9"/>
+    <text x="262" y="279" font-size="10" fill="#334155" text-anchor="middle" font-family="system-ui, sans-serif">6 min</text>
+
+    <rect x="96" y="332" width="268" height="128" rx="14" fill="#ffffff"/>
+    <text x="116" y="358" font-size="14" font-weight="700" fill="#0f172a" font-family="system-ui, sans-serif">Marienplatz</text>
+    <rect x="272" y="344" width="72" height="20" rx="10" fill="#e2edf7"/>
+    <text x="308" y="358" font-size="10" fill="#1a5f8c" text-anchor="middle" font-family="system-ui, sans-serif">Shopping</text>
+    <text x="116" y="378" font-size="11" fill="#64748b" font-family="system-ui, sans-serif">80331 München · 11:05</text>
+    <line x1="116" y1="394" x2="344" y2="394" stroke="#f1f5f9"/>
+    <rect x="116" y="406" width="52" height="22" rx="11" fill="#f1f5f9"/>
+    <text x="142" y="421" font-size="10" fill="#334155" text-anchor="middle" font-family="system-ui, sans-serif">15 min</text>
+    <rect x="176" y="406" width="52" height="22" rx="11" fill="#f1f5f9"/>
+    <text x="202" y="421" font-size="10" fill="#334155" text-anchor="middle" font-family="system-ui, sans-serif">6 min</text>
+    <rect x="236" y="406" width="52" height="22" rx="11" fill="#f1f5f9"/>
+    <text x="262" y="421" font-size="10" fill="#334155" text-anchor="middle" font-family="system-ui, sans-serif">3 min</text>
+
+    <rect x="96" y="474" width="268" height="128" rx="14" fill="#ffffff"/>
+    <text x="116" y="500" font-size="14" font-weight="700" fill="#0f172a" font-family="system-ui, sans-serif">Allianz-Arena</text>
+    <rect x="292" y="486" width="52" height="20" rx="10" fill="#e2edf7"/>
+    <text x="318" y="500" font-size="10" fill="#1a5f8c" text-anchor="middle" font-family="system-ui, sans-serif">Leisure</text>
+    <text x="116" y="520" font-size="11" fill="#64748b" font-family="system-ui, sans-serif">80939 München · Yesterday</text>
+    <line x1="116" y1="536" x2="344" y2="536" stroke="#f1f5f9"/>
+    <rect x="116" y="548" width="52" height="22" rx="11" fill="#f1f5f9"/>
+    <text x="142" y="563" font-size="10" fill="#334155" text-anchor="middle" font-family="system-ui, sans-serif">32 min</text>
+    <rect x="176" y="548" width="52" height="22" rx="11" fill="#f1f5f9"/>
+    <text x="202" y="563" font-size="10" fill="#334155" text-anchor="middle" font-family="system-ui, sans-serif">12 min</text>
+    <rect x="236" y="548" width="52" height="22" rx="11" fill="#f1f5f9"/>
+    <text x="262" y="563" font-size="10" fill="#334155" text-anchor="middle" font-family="system-ui, sans-serif">9 min</text>
+  </g>
+</svg>

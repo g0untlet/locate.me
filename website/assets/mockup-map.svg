@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 780" role="img" aria-label="locate.me app preview — map with a saved location, weather, UV index and travel times">
+  <defs>
+    <filter id="card-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <clipPath id="screen-clip">
+      <rect x="80" y="40" width="300" height="700" rx="28"/>
+    </clipPath>
+  </defs>
+
+  <rect x="70" y="30" width="320" height="720" rx="38" fill="#0b1220"/>
+  <rect x="195" y="54" width="70" height="14" rx="7" fill="#1e293b"/>
+
+  <g clip-path="url(#screen-clip)">
+    <rect x="80" y="40" width="300" height="700" fill="#f2f6fb"/>
+
+    <rect x="80" y="40" width="300" height="430" fill="#e9eff6"/>
+    <rect x="130" y="90" width="90" height="70" rx="10" fill="#d3ecd4"/>
+    <rect x="260" y="80" width="90" height="70" rx="8" fill="#dde5f0"/>
+    <rect x="120" y="230" width="80" height="70" rx="8" fill="#dde5f0"/>
+    <rect x="250" y="250" width="100" height="70" rx="8" fill="#dde5f0"/>
+    <path d="M80 400 L380 340 L380 375 L80 435 Z" fill="#cfe4f8"/>
+    <path d="M80 200 H380" stroke="#ffffff" stroke-width="14"/>
+    <path d="M250 40 V470" stroke="#ffffff" stroke-width="12"/>
+    <text x="142" y="135" font-size="13" fill="#5b7a5e" font-family="system-ui, sans-serif">Hofgarten</text>
+    <text x="135" y="265" font-size="12" fill="#64748b" font-family="system-ui, sans-serif">Stachus</text>
+
+    <circle cx="250" cy="200" r="18" fill="#1a5f8c" opacity="0.12"/>
+    <circle cx="250" cy="200" r="11" fill="#1a5f8c" opacity="0.3"/>
+    <circle cx="250" cy="200" r="5.5" fill="#1a5f8c" stroke="#ffffff" stroke-width="2"/>
+
+    <rect x="100" y="470" width="260" height="210" rx="16" fill="#ffffff" filter="url(#card-shadow)"/>
+    <circle cx="126" cy="504" r="13" fill="#1a5f8c"/>
+    <circle cx="126" cy="504" r="4" fill="#ffffff"/>
+    <text x="148" y="500" font-size="15" font-weight="700" fill="#0f172a" font-family="system-ui, sans-serif">Marienplatz</text>
+    <text x="148" y="520" font-size="11" fill="#64748b" font-family="system-ui, sans-serif">80331 München</text>
+
+    <rect x="100" y="540" width="78" height="22" rx="11" fill="#e2edf7"/>
+    <text x="139" y="556" font-size="11" fill="#1a5f8c" text-anchor="middle" font-family="system-ui, sans-serif">Shopping</text>
+
+    <text x="112" y="588" font-size="12" font-weight="700" fill="#0f172a" font-family="system-ui, sans-serif">22°C</text>
+    <text x="165" y="588" font-size="11" fill="#475569" font-family="system-ui, sans-serif">UV 4.2</text>
+    <text x="232" y="588" font-size="11" fill="#475569" font-family="system-ui, sans-serif">315 m</text>
+
+    <line x1="100" y1="612" x2="360" y2="612" stroke="#e2e8f0"/>
+
+    <text x="112" y="638" font-size="11" fill="#64748b" font-family="system-ui, sans-serif">1.2 km</text>
+
+    <rect x="100" y="650" width="74" height="26" rx="13" fill="#f1f5f9"/>
+    <text x="137" y="667" font-size="11" fill="#334155" text-anchor="middle" font-family="system-ui, sans-serif">15 min</text>
+    <rect x="186" y="650" width="74" height="26" rx="13" fill="#f1f5f9"/>
+    <text x="223" y="667" font-size="11" fill="#334155" text-anchor="middle" font-family="system-ui, sans-serif">6 min</text>
+    <rect x="272" y="650" width="74" height="26" rx="13" fill="#f1f5f9"/>
+    <text x="309" y="667" font-size="11" fill="#334155" text-anchor="middle" font-family="system-ui, sans-serif">3 min</text>
+  </g>
+</svg>

@@ -714,3 +714,109 @@ a:hover {
         padding: 6px 10px;
     }
 }
+
+/* ==========================================================================
+   Phone mockups (experimental — remove this block, the hero-wrapper markup,
+   the showcase section in index.html/index.de.html and the two SVG assets
+   in /assets to fully revert)
+   ========================================================================== */
+.hero-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+}
+
+.hero-mock {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 240px;
+}
+
+.hero-mock img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.showcase {
+    padding: 56px 0;
+}
+
+.showcase-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+    align-items: center;
+}
+
+.showcase-mock {
+    max-width: 260px;
+    margin: 0 auto;
+}
+
+.showcase-mock img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.showcase-copy p {
+    color: var(--text-muted);
+    max-width: 56ch;
+    margin-bottom: 14px;
+}
+
+.showcase-copy ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.showcase-copy li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+    color: var(--text-muted);
+}
+
+.showcase-copy li::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    margin-top: 7px;
+}
+
+@media (min-width: 861px) {
+    .hero-inner {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 48px;
+        text-align: left;
+    }
+
+    .hero-text .hero-title {
+        margin-left: 0;
+    }
+
+    .hero-text .hero-subtitle {
+        margin-left: 0;
+    }
+
+    .hero-text .cta-row {
+        justify-content: flex-start;
+    }
+
+    .hero-mock {
+        max-width: 300px;
+    }
+
+    .showcase-grid {
+        grid-template-columns: 0.9fr 1.1fr;
+        gap: 48px;
+    }
+}
