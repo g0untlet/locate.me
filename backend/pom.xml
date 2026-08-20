@@ -6,7 +6,7 @@
 
     <groupId>net.gauntlet</groupId>
     <artifactId>locator-service</artifactId>
-    <version>0.3.0</version>
+    <version>0.4.0</version>
 
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
@@ -55,6 +55,12 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-jdbc-h2</artifactId>
+        </dependency>
+
+        <!-- Flyway database migrations -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-flyway</artifactId>
         </dependency>
 
         <!-- Bean Validation -->

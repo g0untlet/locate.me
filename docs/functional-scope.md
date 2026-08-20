@@ -102,17 +102,16 @@ The main business object is the `Position` entity, which has the following attri
 
 The selectable tags are defined by the `PositionTag` enum on the backend and mirrored in the `PREDEFINED_TAGS` list in the frontend (`frontend/js/pages/locate.js`).
 
-**Important – the database column type:** Hibernate creates the `tag` column as an H2 native `ENUM` whose allowed values are fixed when the column is created. Changing the vocabulary in the `PositionTag` enum does **not** update an existing column — saving a new tag value then fails with HTTP 500. The column must therefore be converted to a plain `VARCHAR` once per existing database (backend stopped first, the H2 file is locked while it runs):
+**Important – the database column type:** Since 0.4.0 the schema is managed by Flyway and `V1__baseline.sql` defines `tag` as `VARCHAR(32)` directly, so adding tags no longer requires a column conversion. For **pre-0.4.0** databases (converted during the 0.3.0 rollout) the column is already `VARCHAR(32)`. Note: on those older databases the column originally existed as an H2 native `ENUM` whose allowed values were fixed at column creation — changing the vocabulary did not update the column and saving a new tag value failed with HTTP 500. The column was converted to a plain `VARCHAR` once per existing database (backend stopped first, the H2 file is locked while it runs):
 
 ```sql
 ALTER TABLE positions ALTER COLUMN tag SET DATA TYPE VARCHAR(32) USING (CAST(tag AS VARCHAR));
 ```
 
 **Adding a tag**
-1. Convert the `tag` column to `VARCHAR` (see above) if not already done.
-2. Add the new value to the `PositionTag` enum (backend, `locator/entity` package).
-3. Add the same value to `PREDEFINED_TAGS` in `frontend/js/pages/locate.js` — the tag chips in the Locate view are generated from this list.
-4. Redeploy backend and frontend together (backend first). The backend rejects unknown tags with `400 Bad Request`, so a tag can only be saved once both sides know it.
+1. Add the new value to the `PositionTag` enum (backend, `locator/entity` package). No database change is needed — the `tag` column is `VARCHAR(32)`.
+2. Add the same value to `PREDEFINED_TAGS` in `frontend/js/pages/locate.js` — the tag chips in the Locate view are generated from this list.
+3. Redeploy backend and frontend together (backend first). The backend rejects unknown tags with `400 Bad Request`, so a tag can only be saved once both sides know it.
 
 **Removing a tag**
 Removing the enum constant is only safe once no saved position still uses the tag: the backend maps the stored value back to the enum on every read, and an unknown value breaks loading the affected history entries.
@@ -131,6 +130,7 @@ component breakdown lives in `docs/technical-landscape.md` → ECB Architecture.
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.4.0 | 2026-08-20 | Backend schema management switched to Flyway (versioned SQL migrations); no user-visible functional change. Existing databases are baselined and data is preserved (see `docs/technical-landscape.md` → Schema Management). |
 | 0.3.0 | 2026-08-03 | Added UV-Index and elevation fields to the `Position` entity (fetched from Open-Meteo); display UV-Index and elevation in the Locate and History views; fixed HTTP 500 on saving a location caused by an H2 2.4.240 enum CHECK constraint regression (see `docs/production-upgrade-0.3.0.md`). |
 | 0.3.0 | 2026-08-10 | Documentation alignment: technical details (incl. the BCE component breakdown) moved to `docs/technical-landscape.md`. |
 | 0.3.0 | 2026-08-10 | Save flow refactored: the Locate view now POSTs the already-fetched enriched data back to `POST /positions`, which persists it verbatim without re-resolving geocoding/weather. Enrichment happens only during `GET /positions/current`. |

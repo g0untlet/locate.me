@@ -18,7 +18,8 @@ address data enriched by a Quarkus backend. The functional scope is documented i
 | Mapping | Leaflet 1.9.4 + OpenStreetMap tile server |
 | Backend | Quarkus 3.33.2, Java 21 |
 | API | REST (Jakarta REST), JSON-B / JSON-P |
-| ORM | Hibernate ORM (schema generation = `update`) |
+| ORM | Hibernate ORM (schema generation = `none`) |
+| Migrations | Flyway (versioned SQL migrations, `quarkus-flyway`) |
 | Persistence | H2 2.4.240 (file-based prod, in-memory dev/test) |
 | Architecture | BCE (Boundary-Control-Entity) |
 | Reverse Proxy | Caddy2, Debian Linux |
@@ -205,13 +206,13 @@ Single table, no relationships.
 | `weatherCode` | `weather_code` | INT | via `WeatherCodeConverter` |
 | `timestamp` Instant | `timestamp` | TIMESTAMP | not null |
 | `osmCategory` … `country` | `osm_category`, `osm_type`, `osm_name`, `address_type`, `house_number`, `road`, `city`, `country` | VARCHAR(255) | |
-| `tag` PositionTag | `tag` | ENUM (H2 native) | `@Enumerated(EnumType.STRING)`; value list is baked in at column creation — vocabulary changes need a one-time `ALTER` to `VARCHAR` (see functional-scope §4.1) |
+| `tag` PositionTag | `tag` | VARCHAR(32) | `@Enumerated(EnumType.STRING)`; since 0.4.0 the column is defined as `VARCHAR(32)` by the Flyway `V1__baseline.sql` — pre-0.4.0 databases had a native H2 `ENUM` that was converted to `VARCHAR` in 0.3.0 |
 | `comment` String | `comment` | VARCHAR(255) | UI limit: 25 chars |
 
 ### Enumerations
 
 - `WeatherCode`: numeric WMO codes; persisted as `Integer`.
-- `PositionTag`: HOME, WORK, PARKING, SHOPPING, EATING, LEISURE, FRIENDS, HEALTH; persisted as String. Hibernate creates the `tag` column as an H2 native `ENUM` (not a plain VARCHAR) whose allowed values are fixed when the column is created; changing the vocabulary requires a one-time `ALTER TABLE positions ALTER COLUMN tag SET DATA TYPE VARCHAR(32) ...` per existing database.
+- `PositionTag`: HOME, WORK, PARKING, SHOPPING, EATING, LEISURE, FRIENDS, HEALTH; persisted as String. Since 0.4.0 the schema is managed by Flyway and `V1__baseline.sql` defines `tag` as `VARCHAR(32)` directly, so changing the vocabulary no longer requires a column conversion. (Pre-0.4.0 databases had the column as an H2 native `ENUM`; it was converted with `ALTER TABLE positions ALTER COLUMN tag SET DATA TYPE VARCHAR(32) ...` in 0.3.0.)
 
 ---
 
@@ -227,21 +228,49 @@ DEV/tests: in-memory (`jdbc:h2:mem:locator_dev`, `jdbc:h2:mem:locator_test`). Cr
 | Table | Purpose |
 |---------|---------|
 | `positions` | All saved positions |
+| `flyway_schema_history` | Flyway bookkeeping (applied migration versions/checksums) |
 
 ## Schema Management
 
-- Hibernate `database.generation=update`; no migration framework.
-- **H2 2.4.240 regression (issue #4308):** native enum `CHECK(... IN(...))` constraints
-  are compiled against one H2 session and crash inserts from newer sessions
-  (SQLState 23514, "The database has been closed"). Constraint is therefore removed
-  from all live databases, and schema changes must never re-create native enum CHECKs
-  (rollout procedure: `docs/production-upgrade-0.3.0.md`).
+Since 0.4.0 the schema is managed by **Flyway** (`quarkus-flyway`); Hibernate runs with
+`quarkus.hibernate-orm.database.generation=none` and never alters the schema.
+
+- Migrations are applied automatically at startup (`quarkus.flyway.migrate-at-start=true`).
+- Migration scripts live in `backend/src/main/resources/db/migration/`:
+  - `V1__baseline.sql` — snapshot of the 0.3.0 schema (extracted from the live DEV/PROD DBs).
+  - `V2__add_index_positions_user_timestamp.sql` — composite index
+    `idx_positions_user_timestamp (user_id, timestamp)` backing the history query
+    `WHERE user_id = ? ORDER BY timestamp DESC` (see Data Access).
+- **Existing databases** (DEV/PROD, already populated): on the first 0.4.0 start Flyway
+  baselines them at version 1 (`quarkus.flyway.baseline-on-migrate=true`,
+  `quarkus.flyway.baseline-version=1`). `V1__baseline.sql` is skipped and existing data is
+  left untouched; only the `flyway_schema_history` table is added.
+- **Fresh databases** (new file / in-memory test DB): Flyway applies `V1__baseline.sql`
+  and then all later migrations.
+- The integration-test suite runs all pending migrations against the in-memory H2 test
+  database, validating the migration chain on the exact H2 version in use.
+
+**Adding a migration**
+1. Create `backend/src/main/resources/db/migration/V<next>__<description>.sql` with a
+   version higher than the latest applied one (V1 is the immutable baseline).
+2. Never modify an already-applied migration — Flyway verifies checksums and fails on
+   drift (`flyway_schema_history` records checksums per version).
+3. Flyway applies the new migration automatically at startup on all environments
+   (local, DEV, PROD, tests).
+
+**H2 2.4.240 regression (issue #4308):** native enum `CHECK(... IN(...))` constraints
+are compiled against one H2 session and crash inserts from newer sessions
+(SQLState 23514, "The database has been closed"). Constraint is therefore removed
+from all live databases, and schema changes must never re-create native enum CHECKs
+(rollout procedure: `docs/production-upgrade-0.3.0.md`).
 
 ## Data Access
 
 No repository layer — control components use the Hibernate `EntityManager` directly
 with parameterized JPQL (`findByUserId`, `findAll`, `find`/`remove`); SQL is never
-built by string concatenation.
+built by string concatenation. The history query `findByUserId`
+(`WHERE user_id = ? ORDER BY timestamp DESC`) is served by the composite index
+`idx_positions_user_timestamp` defined in `V2__add_index_positions_user_timestamp.sql`.
 
 ---
 
@@ -317,7 +346,9 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 |------------|------------|
 | `quarkus.package.jar.type=uber-jar` | Single executable JAR |
 | `quarkus.datasource.*` (`%dev`, `%test`) | H2 URLs + credentials |
-| `quarkus.hibernate-orm.database.generation` | `update` |
+| `quarkus.hibernate-orm.database.generation` | `none` (schema owned by Flyway) |
+| `quarkus.flyway.migrate-at-start` | `true` — apply pending migrations on startup |
+| `quarkus.flyway.baseline-on-migrate`, `quarkus.flyway.baseline-version` | `true` / `1` — baseline existing non-empty DBs at v1, skipping `V1__baseline.sql` |
 | `allowed.user.ids` (+ `%dev`, `%test`) | Authorized users per profile |
 | `nominatim_uri/mp-rest/url`, `weather_uri/mp-rest/url` | REST client base URLs |
 | `%dev.quarkus.http.port=8090` | DEV port |
@@ -370,7 +401,7 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 
 | ID | Description | Priority |
 |------|------|------|
-| TD-001 | Schema managed by Hibernate `update`; fixes require manual per-DB constraint handling; no migration framework | Medium |
+| TD-001 | Schema managed by Hibernate `update`; fixes require manual per-DB constraint handling; no migration framework — **resolved in 0.4.0** (Flyway owns the schema, Hibernate `generation=none`) | Medium |
 
 ---
 
@@ -378,7 +409,7 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 
 | ID | Description | Status |
 |------|------|------|
-| TI-001 | Adopt Flyway for versioned, explicit schema migrations (Hibernate `update` → `validate`) | Planned |
+| TI-001 | Adopt Flyway for versioned, explicit schema migrations (Hibernate `update` → `none`; existing DBs baselined at v1) | Done (0.4.0) |
 
 ---
 
@@ -386,6 +417,8 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 
 | Version | Date | Description |
 |---------|---------|---------|
+| 0.4.0 | 2026-08-20 | Adopted Flyway for versioned schema migrations (`quarkus-flyway`); Hibernate `database.generation` switched `update` → `none`; existing DEV/PROD databases baselined at v1 (`V1__baseline.sql`), no data migration. |
+| 0.4.0 | 2026-08-20 | Added `V2__add_index_positions_user_timestamp.sql` — composite index `idx_positions_user_timestamp (user_id, timestamp)` serving the `WHERE user_id = ? ORDER BY timestamp DESC` history query. |
 | 0.3.0 | 2026-08-10 | Initial version (replaces the template placeholder) |
 | 0.3.0 | 2026-08-10 | Save flow refactored: `Positions` control split into `enrich` (preview) and persist-only `create`; `POST /positions` no longer resolves geocoding/weather; `GET /positions/current` is the only enrichment path. |
 | 0.3.0 | 2026-08-10 | Caching policy: Caddy sends `Cache-Control: no-store` on all environments (DEV/PROD/`:8070`); PWA always fetches fresh `index.html`/assets. |
