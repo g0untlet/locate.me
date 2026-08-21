@@ -26,7 +26,8 @@ metadata:
 - Cache-busting via query parameter in `index.html`: `style.css?v=X` and `app.js?v=X`
 - Service Worker: `sw.js` with Workbox 7.3.0 (Google CDN, no build step), **Network-First**
   caching for `index.html` and same-origin JS/CSS. Fresh content online, cache only as
-  offline fallback. Third-party (Leaflet CDN, map tiles) is NOT cached.
+  offline fallback. Only the Leaflet CDN JS/CSS are cached too (offline map support,
+  Network-First); map tiles are NOT cached.
 - Deployment: Debian Linux + Caddy2 reverse proxy, HTTPS
 
 ---
@@ -45,8 +46,8 @@ frontend/
     │                          formatWalkingTime, getWeatherText,
     │                          getWeatherIconSvg, getLocationIconSvg
     ├── api.js              – apiGetSystemInfo, apiGetPositions,
-    │                          apiGetCurrentPosition, apiPostPosition,
-    │                          apiDeletePosition
+    │                          apiGetPositionsWithMeta, apiGetCurrentPosition,
+    │                          apiPostPosition, apiDeletePosition
     ├── state.js            – historyMap, historyMapData, currentHistoryView,
     │                          cachedLocatePosition, locateMap, locateMarker
     ├── ui/
@@ -118,8 +119,18 @@ script in `<head>` before the CSS link tag.
   next load without a second visit.
 - Caddy's `Cache-Control: no-store` header is unrelated to the SW: the Cache Storage
   API is independent of HTTP cache headers, so Network-First works alongside `no-store`.
-- Registered from `app.js` (`registerServiceWorker()` at module top-level). API calls and
-  third-party resources (Leaflet, map tiles) are intentionally not routed through the SW.
+- Registered from `app.js` (`registerServiceWorker()` at module top-level).
+- **Leaflet offline map:** the two cdnjs Leaflet assets (JS/CSS) are precached
+  (`THIRD_PARTY`) and routed Network-First (cache `locateme-thirdparty`). This keeps the
+  global `L` defined on pages loaded while offline, so map init never crashes. Map tiles
+  are NOT routed/cached. As defense-in-depth, `map.js` guards all map init with
+  `typeof L === 'undefined'` (skip map, never throw).
+- **History offline fallback:** `GET /api/positions` is routed Network-First (cache
+  `locateme-history`). The cache key is normalized to `pathname + userId` (lat/lon
+  ignored) so offline fetches match despite GPS variation; cached responses get the
+  `X-LocateMe-Cache` header, which `apiGetPositionsWithMeta` (api.js) surfaces as
+  `fromCache` so `history.js` shows the slim offline banner. All other API calls
+  (POST/DELETE, `/positions/current`, `/system/info`) remain uncached.
 - Testing offline in DevTools: make sure **"Bypass for network"** is NOT ticked in
   Application → Service Workers — otherwise the SW is skipped for all requests and an
   offline reload fails with `ERR_INTERNET_DISCONNECTED` despite a populated cache.

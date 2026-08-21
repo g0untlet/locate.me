@@ -42,6 +42,13 @@ function initOrRefreshMap() {
     const mapEl = document.getElementById('history-map');
     if (!mapEl) return;
 
+    // Leaflet (global L) may be missing on pages loaded while offline before the
+    // first online visit. Degrade gracefully instead of crashing.
+    if (typeof L === 'undefined') {
+        console.warn('Leaflet not loaded – history map unavailable.');
+        return;
+    }
+
     if (!getHistoryMap()) {
         const map = L.map('history-map', { zoomControl: true });
         L.tileLayer(OSM_TILE_URL, { attribution: OSM_ATTRIBUTION, maxZoom: 19 }).addTo(map);
@@ -61,6 +68,7 @@ function initOrRefreshMap() {
 export function renderMapMarkers() {
     const map = getHistoryMap();
     if (!map) return;
+    if (typeof L === 'undefined') return;
 
     // Clear existing markers
     map.eachLayer(layer => {
@@ -114,6 +122,13 @@ export function renderMapMarkers() {
 export function showLocateMap(lat, lon) {
     const mapEl = document.getElementById('locate-map');
     if (!mapEl) return;
+
+    // Leaflet may be missing on pages loaded while offline before the first
+    // online visit. The fetch result still renders; only the map is skipped.
+    if (typeof L === 'undefined') {
+        console.warn('Leaflet not loaded – locate map unavailable.');
+        return;
+    }
 
     if (!getLocateMap()) {
         const map = L.map('locate-map', { zoomControl: false });

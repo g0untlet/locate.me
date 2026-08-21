@@ -15,11 +15,21 @@ importScripts('https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox
    always fresh while online. */
 const SHELL = ['/', '/index.html'];
 const ASSETS = [
-    '/app.js?v=0.3.1_31',
-    '/css/style.css?v=0.3.1_25',
+    '/app.js?v=0.3.1_33',
+    '/css/style.css?v=0.3.1_26',
     '/js/config.js', '/js/utils.js', '/js/api.js', '/js/state.js',
     '/js/ui/toast.js', '/js/ui/badge.js', '/js/ui/status.js', '/js/ui/map.js',
     '/js/pages/settings.js', '/js/pages/locate.js', '/js/pages/history.js'
+];
+
+// Third-party assets cached for offline map support. NetworkFirst keeps them
+// fresh when online (network wins); the cache is only the offline fallback.
+// Map tiles are intentionally NOT cached. cdnjs sends Access-Control-Allow-Origin:
+// *, so these are CORS-readable and cacheable; the SRI integrity check on the
+// <script>/<link> tags stays satisfied because the identical file is served.
+const THIRD_PARTY = [
+    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'
 ];
 
 // Install: pre-populate the caches so the offline fallback exists after the
@@ -28,8 +38,10 @@ self.addEventListener('install', (event) => {
     event.waitUntil((async () => {
         const shellCache = await caches.open('locateme-shell');
         const assetsCache = await caches.open('locateme-assets');
+        const thirdPartyCache = await caches.open('locateme-thirdparty');
         await Promise.allSettled(SHELL.map(url => shellCache.add(url)));
         await Promise.allSettled(ASSETS.map(url => assetsCache.add(url)));
+        await Promise.allSettled(THIRD_PARTY.map(url => thirdPartyCache.add(url)));
         self.skipWaiting();
     })());
 });
@@ -69,6 +81,61 @@ if (!self.workbox) {
             plugins: [
                 new CacheableResponsePlugin({ statuses: [0, 200] }),
                 new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+            ],
+        })
+    );
+
+    // GET /api/positions (history) – network-first, offline fallback.
+    // Deterministic custom handler (raw Cache API): the cache key is normalized
+    // to pathname + userId (lat/lon ignored), so an offline fetch matches
+    // regardless of GPS variation. Cached responses get the X-LocateMe-Cache
+    // header so the frontend can flag "cached data". All other API calls
+    // (POST/DELETE, /positions/current, /system/info) stay unrouted.
+    async function historyHandler({ request }) {
+        const cache = await caches.open('locateme-history');
+        const url = new URL(request.url);
+        const key = `${url.origin}/api/positions?userId=${encodeURIComponent(url.searchParams.get('userId') || '')}`;
+
+        try {
+            const response = await fetch(request);
+            if (response.ok) {
+                try { await cache.put(key, response.clone()); } catch (e) { /* quota etc. */ }
+            }
+            return response;
+        } catch (err) {
+            const cached = await cache.match(key);
+            if (!cached) throw err;
+            const flagged = new Response(cached.body, {
+                status: cached.status,
+                statusText: cached.statusText,
+                headers: cached.headers
+            });
+            flagged.headers.set('X-LocateMe-Cache', '1');
+            return flagged;
+        }
+    }
+
+    registerRoute(
+        ({ request, url }) =>
+            request.method === 'GET' &&
+            url.origin === self.location.origin &&
+            url.pathname === '/api/positions',
+        historyHandler
+    );
+
+    // Leaflet CDN assets (JS/CSS) – network-first, so the map keeps working on
+    // pages that were loaded while offline (L stays defined). Network wins
+    // online; the cached copy is only the offline fallback.
+    registerRoute(
+        ({ request, url }) =>
+            request.method === 'GET' &&
+            url.hostname === 'cdnjs.cloudflare.com' &&
+            url.pathname.startsWith('/ajax/libs/leaflet/'),
+        new NetworkFirst({
+            cacheName: 'locateme-thirdparty',
+            plugins: [
+                new CacheableResponsePlugin({ statuses: [0, 200] }),
+                new ExpirationPlugin({ maxEntries: 10, maxAgeSeconds: 30 * 24 * 60 * 60 }),
             ],
         })
     );

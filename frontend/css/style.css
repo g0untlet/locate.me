@@ -1455,6 +1455,29 @@ body {
     padding: 8px 0 4px;
 }
 
+/* ==========================================================================
+   Offline-Banner (History) – schlanker Hinweis bei gecachter Datenanzeige
+   ========================================================================== */
+.offline-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background-color: var(--surface-subtle);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 6px 10px;
+    margin: 12px 0 16px;
+}
+
+.offline-banner svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
 .app-container {
     overscroll-behavior-y: contain;
 }

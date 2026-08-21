@@ -58,14 +58,24 @@ Browser (PWA) --HTTPS--> Caddy2 --/api--> Quarkus REST (Boundary /api)
 - PWA: installable via `manifest.json` with icons; service worker (`sw.js`) built on
   Workbox 7.3.0 (loaded from Google CDN), **Network-First** caching for `index.html`
   and same-origin JS/CSS. Online always serves fresh content; the cache is only a
-  fallback for offline use. Third-party resources (Leaflet CDN, map tiles) are not
-  cached. `skipWaiting` + `clientsClaim` let a new SW take control immediately;
+  fallback for offline use. The two Leaflet CDN assets (JS/CSS) are cached as well so
+  the map keeps working on pages loaded offline; map tiles are not cached.
+  `skipWaiting` + `clientsClaim` let a new SW take control immediately;
   `activate` purges legacy caches.
 - Precache on install: `sw.js` pre-populates `locateme-shell`/`locateme-assets` from a
   static `SHELL`/`ASSETS` manifest so the offline fallback exists after a single online
   visit. **Keep this manifest in sync** with the `?v=` cache-busters in `index.html` and
   the `js/` module tree (it is only a fallback — Network-First remains the serving
   strategy, so there is no staleness risk).
+- History offline fallback: `GET /api/positions` is routed Network-First (cache
+  `locateme-history`) with a per-user normalized cache key (pathname + `userId`,
+  ignoring `lat`/`lon`). Cached responses carry the `X-LocateMe-Cache` header; the
+  History page shows a slim offline banner when data comes from cache. Other API calls
+  (POST/DELETE, `/positions/current`, `/system/info`) are not cached.
+- Leaflet offline map: the cdnjs Leaflet JS/CSS are precached (`THIRD_PARTY`) and routed
+  Network-First (`locateme-thirdparty`) so the global `L` stays defined on offline-loaded
+  pages; `map.js` additionally guards all map init with `typeof L === 'undefined'` so a
+  missing Leaflet degrades gracefully instead of crashing.
 
 ## Main Modules
 
@@ -430,6 +440,8 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 
 | Version | Date | Description |
 |---------|---------|---------|
+| 0.3.1 | 2026-08-21 | Frontend: offline map robustness — Leaflet CDN JS/CSS are now precached and routed Network-First (`locateme-thirdparty`) so `L` stays defined on pages loaded offline (fixes "Fetch Error: L is not defined" after offline load → online). `map.js` guards all map init with `typeof L === 'undefined'` to degrade gracefully. Cache-buster app.js `_33`. |
+| 0.3.1 | 2026-08-21 | Frontend: history offline fallback — `GET /api/positions` served Network-First via the service worker (`locateme-history`, per-user normalized cache key ignoring lat/lon); cached responses flagged with `X-LocateMe-Cache` and shown via a slim offline banner in the History list. Other API calls remain uncached. Cache-busters bumped (css `_26`, app.js `_32`), version stays 0.3.1 / 20260821. |
 | 0.3.1 | 2026-08-21 | Frontend: service worker (`sw.js`) reintroduced with Workbox 7.3.0 (Google CDN, no bundler); Network-First strategy for `index.html` and same-origin JS/CSS so the app always picks up fresh content online and only falls back to cache offline. `skipWaiting` + `clientsClaim`; `activate` purges legacy caches. Precache-on-install (`SHELL`/`ASSETS` manifest) populates the caches on first visit, so the offline fallback is reliable and independent of SW control timing. Caddy `no-store` unchanged (Cache Storage is independent). App version/build bumped to 0.3.1 / 20260821. |
 | 0.4.0 | 2026-08-20 | Adopted Flyway for versioned schema migrations (`quarkus-flyway`); Hibernate `database.generation` switched `update` → `none`; existing DEV/PROD databases baselined at v1 (`V1__baseline.sql`), no data migration. |
 | 0.4.0 | 2026-08-20 | Added `V2__add_index_positions_user_timestamp.sql` — composite index `idx_positions_user_timestamp (user_id, timestamp)` serving the `WHERE user_id = ? ORDER BY timestamp DESC` history query. |
