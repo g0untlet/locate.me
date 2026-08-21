@@ -55,14 +55,24 @@ Browser (PWA) --HTTPS--> Caddy2 --/api--> Quarkus REST (Boundary /api)
 ## Application Type
 
 - Single Page Application (SPA)
-- PWA: installable via `manifest.json` with icons; **no service worker** (explicitly
-  deregistered at startup, no caching layer)
+- PWA: installable via `manifest.json` with icons; service worker (`sw.js`) built on
+  Workbox 7.3.0 (loaded from Google CDN), **Network-First** caching for `index.html`
+  and same-origin JS/CSS. Online always serves fresh content; the cache is only a
+  fallback for offline use. Third-party resources (Leaflet CDN, map tiles) are not
+  cached. `skipWaiting` + `clientsClaim` let a new SW take control immediately;
+  `activate` purges legacy caches.
+- Precache on install: `sw.js` pre-populates `locateme-shell`/`locateme-assets` from a
+  static `SHELL`/`ASSETS` manifest so the offline fallback exists after a single online
+  visit. **Keep this manifest in sync** with the `?v=` cache-busters in `index.html` and
+  the `js/` module tree (it is only a fallback — Network-First remains the serving
+  strategy, so there is no staleness risk).
 
 ## Main Modules
 
 | Module | Purpose |
 |----------|----------|
-| `app.js` | Entry point: bootstrap, tab navigation, backend status polling |
+| `app.js` | Entry point: bootstrap, tab navigation, backend status polling, service worker registration |
+| `sw.js` | Service worker: Workbox Network-First caching (app shell, same-origin JS/CSS) |
 | `js/config.js` | API base URL resolution (dev port vs. relative proxy paths) |
 | `js/api.js` | Fetch wrappers for all REST endpoints |
 | `js/state.js` | Central mutable state (maps, cached fix, history data) |
@@ -383,14 +393,17 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 - BCE must be preserved (`boundary`/`control`/`entity` packages, stereotypes).
 - REST API is the only public backend interface.
 - Business logic resides in Controls; persistence is encapsulated in Controls.
-- Frontend stays SPA/PWA; native ES6 modules, no bundler; no service worker/caching.
+- Frontend stays SPA/PWA; native ES6 modules, no bundler; Workbox service worker with
+  Network-First caching (app shell + same-origin assets).
 
 ## Technology
 
 - Quarkus 3.33.2, Java 21, H2 2.4.240.
 - Caddy2 reverse proxy with HTTPS. All responses (static + `/api`) are sent with
-  `Cache-Control: no-store` in every site block (DEV, PROD, `:8070` tunnel) — nothing
-  is cached on clients; `?v=` cache-busting query tokens remain as a safety net.
+  `Cache-Control: no-store` in every site block (DEV, PROD, `:8070` tunnel) — the
+  browser HTTP cache is never used; `?v=` cache-busting query tokens remain as a
+  safety net. The Workbox service worker's Cache Storage is independent of this
+  header, so Network-First fallback caching works alongside `no-store`.
 - HTTP/JSON communication; REST clients for Open-Meteo and Nominatim.
 - Parameterized queries only — never SQL built from user input.
 - H2 native enum CHECK constraints must not be (re-)created in the schema (2.4.240 regression; see Persistence).
@@ -417,6 +430,7 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 
 | Version | Date | Description |
 |---------|---------|---------|
+| 0.3.1 | 2026-08-21 | Frontend: service worker (`sw.js`) reintroduced with Workbox 7.3.0 (Google CDN, no bundler); Network-First strategy for `index.html` and same-origin JS/CSS so the app always picks up fresh content online and only falls back to cache offline. `skipWaiting` + `clientsClaim`; `activate` purges legacy caches. Precache-on-install (`SHELL`/`ASSETS` manifest) populates the caches on first visit, so the offline fallback is reliable and independent of SW control timing. Caddy `no-store` unchanged (Cache Storage is independent). App version/build bumped to 0.3.1 / 20260821. |
 | 0.4.0 | 2026-08-20 | Adopted Flyway for versioned schema migrations (`quarkus-flyway`); Hibernate `database.generation` switched `update` → `none`; existing DEV/PROD databases baselined at v1 (`V1__baseline.sql`), no data migration. |
 | 0.4.0 | 2026-08-20 | Added `V2__add_index_positions_user_timestamp.sql` — composite index `idx_positions_user_timestamp (user_id, timestamp)` serving the `WHERE user_id = ? ORDER BY timestamp DESC` history query. |
 | 0.3.0 | 2026-08-10 | Initial version (replaces the template placeholder) |
