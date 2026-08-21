@@ -63,6 +63,13 @@
             <artifactId>quarkus-flyway</artifactId>
         </dependency>
 
+        <!-- Geohash encoding for the places cache -->
+        <dependency>
+            <groupId>ch.hsr</groupId>
+            <artifactId>geohash</artifactId>
+            <version>1.4.0</version>
+        </dependency>
+
         <!-- Bean Validation -->
         <dependency>
             <groupId>io.quarkus</groupId>
