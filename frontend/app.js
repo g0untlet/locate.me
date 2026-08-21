@@ -53,17 +53,14 @@ function initNavigation() {
 }
 
 /* ==========================================================================
-   PWA Service Worker – Deregistrierung
-   SW wird nicht mehr benötigt (Passthrough ohne Mehrwert, verursacht
-   Cache-Probleme bei Updates). Bestehende Registrierungen werden bereinigt.
+   PWA Service Worker – Registrierung
+   Workbox-basierter SW (Network-First, siehe sw.js): liefert index.html,
+   JS-Module und CSS online immer frisch und dient offline als Fallback.
    ========================================================================== */
-function unregisterServiceWorker() {
+function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(registrations => {
-            registrations.forEach(reg => {
-                reg.unregister();
-                console.log('Service Worker deregistriert:', reg.scope);
-            });
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+            console.error('Service Worker registration failed:', err);
         });
     }
 }
@@ -112,4 +109,4 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-unregisterServiceWorker();
+registerServiceWorker();

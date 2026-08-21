@@ -25,6 +25,17 @@ export async function apiGetSystemInfo() {
    Throws on network error or non-ok response.
    ========================================================================== */
 export async function apiGetPositions(userId, lat = null, lon = null) {
+    return (await apiGetPositionsWithMeta(userId, lat, lon)).data;
+}
+
+/* ==========================================================================
+   GET /api/positions – wie apiGetPositions, liefert zusätzlich das
+   fromCache-Flag (X-LocateMe-Cache-Header vom Service Worker), damit die UI
+   offline angezeigte, gecachte History kennzeichnen kann.
+   Returns: { data, fromCache }.
+   Throws on network error or non-ok response.
+   ========================================================================== */
+export async function apiGetPositionsWithMeta(userId, lat = null, lon = null) {
     let url = `${API_BASE_URL}${API_PATH}/positions?userId=${encodeURIComponent(userId)}`;
     if (lat !== null && lon !== null) {
         url += `&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
@@ -32,7 +43,8 @@ export async function apiGetPositions(userId, lat = null, lon = null) {
 
     const response = await fetch(url);
     if (!response.ok) throw new Error("Could not fetch history");
-    return response.json();
+    const data = await response.json();
+    return { data, fromCache: response.headers.get('X-LocateMe-Cache') === '1' };
 }
 
 /* ==========================================================================

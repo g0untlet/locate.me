@@ -24,7 +24,10 @@ metadata:
 - **No framework** – Vanilla JS, HTML, CSS only
 - **No TypeScript**
 - Cache-busting via query parameter in `index.html`: `style.css?v=X` and `app.js?v=X`
-- No Service Worker (deactivated due to cache invalidation issues)
+- Service Worker: `sw.js` with Workbox 7.3.0 (Google CDN, no build step), **Network-First**
+  caching for `index.html` and same-origin JS/CSS. Fresh content online, cache only as
+  offline fallback. Only the Leaflet CDN JS/CSS are cached too (offline map support,
+  Network-First); map tiles are NOT cached.
 - Deployment: Debian Linux + Caddy2 reverse proxy, HTTPS
 
 ---
@@ -33,9 +36,9 @@ metadata:
 
 ```
 frontend/
-├── app.js                  ← Entry point, bootstrap, navigation, SW deregistration
+├── app.js                  ← Entry point, bootstrap, navigation, SW registration
 ├── index.html              ← SPA shell, FOUC script in <head>, cache-busters
-├── sw.js                   ← Passthrough, actively deregistered (not used)
+├── sw.js                   ← Service worker: Workbox Network-First (app shell, JS/CSS)
 ├── css/style.css
 └── js/
     ├── config.js           – API_BASE_URL, API_PATH
@@ -43,8 +46,8 @@ frontend/
     │                          formatWalkingTime, getWeatherText,
     │                          getWeatherIconSvg, getLocationIconSvg
     ├── api.js              – apiGetSystemInfo, apiGetPositions,
-    │                          apiGetCurrentPosition, apiPostPosition,
-    │                          apiDeletePosition
+    │                          apiGetPositionsWithMeta, apiGetCurrentPosition,
+    │                          apiPostPosition, apiDeletePosition
     ├── state.js            – historyMap, historyMapData, currentHistoryView,
     │                          cachedLocatePosition, locateMap, locateMarker
     ├── ui/
@@ -95,6 +98,42 @@ script in `<head>` before the CSS link tag.
 ---
 
 ## Key Patterns
+
+### Service Worker (Workbox Network-First)
+- `sw.js` loads Workbox 7.3.0 from `https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox-sw.js`
+  via `importScripts` (no bundler/build step). Guard `if (!self.workbox) return;` so a
+  CDN outage degrades gracefully (no caching) instead of failing.
+- Network-First is intentional: `index.html`, JS modules and CSS must never be served
+  stale. When online the network response is returned and cached; offline the Cache
+  Storage entry is the fallback.
+- **Precache manifest in `sw.js`:** an `install` handler pre-populates the caches
+  (`SHELL`/`ASSETS` arrays) so offline works after a single online visit. **RULE:** keep
+  this list in sync with `index.html` (`?v=` cache-busters) and any new/removed file in
+  the `js/` tree — otherwise offline falls back to a missing file. Only cache what the
+  serving routes actually cover (navigations + same-origin script/style): do NOT add
+  `manifest.json`, `favicon` or icons (they are not intercepted by the SW). Precache is
+  only a fallback; the Network-First routes are the sole serving strategy (no staleness).
+- Caches are namespaced `locateme-*` (`locateme-shell` for navigations,
+  `locateme-assets` for same-origin script/style); `activate` purges any other cache.
+- `workbox.core.skipWaiting()` + `clientsClaim()` let a deployed SW take control on the
+  next load without a second visit.
+- Caddy's `Cache-Control: no-store` header is unrelated to the SW: the Cache Storage
+  API is independent of HTTP cache headers, so Network-First works alongside `no-store`.
+- Registered from `app.js` (`registerServiceWorker()` at module top-level).
+- **Leaflet offline map:** the two cdnjs Leaflet assets (JS/CSS) are precached
+  (`THIRD_PARTY`) and routed Network-First (cache `locateme-thirdparty`). This keeps the
+  global `L` defined on pages loaded while offline, so map init never crashes. Map tiles
+  are NOT routed/cached. As defense-in-depth, `map.js` guards all map init with
+  `typeof L === 'undefined'` (skip map, never throw).
+- **History offline fallback:** `GET /api/positions` is routed Network-First (cache
+  `locateme-history`). The cache key is normalized to `pathname + userId` (lat/lon
+  ignored) so offline fetches match despite GPS variation; cached responses get the
+  `X-LocateMe-Cache` header, which `apiGetPositionsWithMeta` (api.js) surfaces as
+  `fromCache` so `history.js` shows the slim offline banner. All other API calls
+  (POST/DELETE, `/positions/current`, `/system/info`) remain uncached.
+- Testing offline in DevTools: make sure **"Bypass for network"** is NOT ticked in
+  Application → Service Workers — otherwise the SW is skipped for all requests and an
+  offline reload fails with `ERR_INTERNET_DISCONNECTED` despite a populated cache.
 
 ### Avoiding Circular Dependencies
 Pages receive dependencies as callbacks (deps pattern):

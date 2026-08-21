@@ -1,4 +1,4 @@
-import { apiGetPositions, apiDeletePosition } from '../api.js';
+import { apiGetPositionsWithMeta, apiDeletePosition } from '../api.js';
 import { setHistoryMapData, getCurrentHistoryView } from '../state.js';
 import { renderMapMarkers } from '../ui/map.js';
 import { updateHistoryBadge } from '../ui/badge.js';
@@ -485,6 +485,40 @@ function resetSearchBar() {
 }
 
 /* ==========================================================================
+   Offline-Banner – zeigt an, dass die History aus dem SW-Cache stammt
+   (X-LocateMe-Cache-Header), nicht vom Backend.
+   ========================================================================== */
+const OFFLINE_BANNER_ID = 'offline-banner';
+
+function ensureOfflineBanner() {
+    if (document.getElementById(OFFLINE_BANNER_ID)) return;
+    const page = document.getElementById('page-history');
+    if (!page) return;
+    const banner = document.createElement('div');
+    banner.id = OFFLINE_BANNER_ID;
+    banner.className = 'offline-banner hidden';
+    banner.setAttribute('role', 'status');
+    banner.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 1l22 22"></path>
+            <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+            <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+            <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
+            <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+            <line x1="12" y1="20" x2="12.01" y2="20"></line>
+        </svg>
+        <span>Offline — showing cached data</span>`;
+    page.insertBefore(banner, page.firstChild);
+}
+
+function setOfflineBanner(show) {
+    const banner = document.getElementById(OFFLINE_BANNER_ID);
+    if (banner) banner.classList.toggle('hidden', !show);
+}
+
+/* ==========================================================================
    fetchAndRenderHistory – Haupt-Einstiegspunkt, wird beim Tab-Wechsel aufgerufen
    deps = { getActiveUserId, checkBackendStatus }
    ========================================================================== */
@@ -508,8 +542,10 @@ export function fetchAndRenderHistory(deps) {
     const activeUserId = getActiveUserId();
 
     const fetchWithCoords = (lat, lon) => {
-        apiGetPositions(activeUserId, lat, lon)
-            .then(data => {
+        ensureOfflineBanner();
+        apiGetPositionsWithMeta(activeUserId, lat, lon)
+            .then(({ data, fromCache }) => {
+                setOfflineBanner(fromCache);
                 listContainer.innerHTML = "";
 
                 if (!data || !Array.isArray(data) || data.length === 0) {
@@ -543,7 +579,12 @@ export function fetchAndRenderHistory(deps) {
                 checkBackendStatus();
             })
             .catch(err => {
-                listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--error-color, #dc2626); font-size:0.9rem; padding:20px 0;">Error: ${err.message}</div>`;
+                setOfflineBanner(false);
+                if (!navigator.onLine) {
+                    listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">Offline — no cached history yet. Open History once while online to enable offline access.</div>`;
+                } else {
+                    listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--error-color, #dc2626); font-size:0.9rem; padding:20px 0;">Error: ${err.message}</div>`;
+                }
                 checkBackendStatus();
             });
     };

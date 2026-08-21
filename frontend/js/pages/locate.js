@@ -203,6 +203,42 @@ function renderLocationCard(data) {
 }
 
 /* ==========================================================================
+   Offline-Banner – schlanker Hinweis bei fehlender Verbindung auf der
+   Locate-Seite (analog zur History, dort für gecachte Daten).
+   Eigene ID, damit keine Kollision mit dem History-Banner entsteht.
+   ========================================================================== */
+const OFFLINE_BANNER_ID = 'offline-banner-locate';
+const OFFLINE_BANNER_TEXT = "Offline — you're offline. Preview unavailable.";
+
+function ensureOfflineBanner() {
+    if (document.getElementById(OFFLINE_BANNER_ID)) return;
+    const page = document.getElementById('page-locate');
+    if (!page) return;
+    const banner = document.createElement('div');
+    banner.id = OFFLINE_BANNER_ID;
+    banner.className = 'offline-banner hidden';
+    banner.setAttribute('role', 'status');
+    banner.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 1l22 22"></path>
+            <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+            <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+            <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
+            <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+            <line x1="12" y1="20" x2="12.01" y2="20"></line>
+        </svg>
+        <span>${OFFLINE_BANNER_TEXT}</span>`;
+    page.insertBefore(banner, page.firstChild);
+}
+
+function setOfflineBanner(show) {
+    const banner = document.getElementById(OFFLINE_BANNER_ID);
+    if (banner) banner.classList.toggle('hidden', !show);
+}
+
+/* ==========================================================================
    Step 1: GET /api/positions/current – Preview Renderer
    ========================================================================== */
 function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus }) {
@@ -232,9 +268,14 @@ function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus })
             showLocateMap(latitude, longitude);
             checkBackendStatus();
 
+            setOfflineBanner(false);
             setFetchBusy(false);
         })
         .catch(err => {
+            if (!navigator.onLine) {
+                ensureOfflineBanner();
+                setOfflineBanner(true);
+            }
             showError(`Fetch Error: ${err.message}`);
             checkBackendStatus();
             setFetchBusy(false);
@@ -310,6 +351,10 @@ export function initLocatePage(deps) {
                     statusText.innerText = "Timeout reached. Fetching best available...";
                     fetchCurrentPosition(bestPosition, deps);
                 } else {
+                    if (!navigator.onLine) {
+                        ensureOfflineBanner();
+                        setOfflineBanner(true);
+                    }
                     showError("GPS Timeout: No position found.");
                     setFetchBusy(false);
                 }
@@ -334,6 +379,10 @@ export function initLocatePage(deps) {
                 if (bestPosition) {
                     fetchCurrentPosition(bestPosition, deps);
                 } else {
+                    if (!navigator.onLine) {
+                        ensureOfflineBanner();
+                        setOfflineBanner(true);
+                    }
                     showError(`GPS Error: ${error.message}`);
                     setFetchBusy(false);
                 }
