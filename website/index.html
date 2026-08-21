@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>locate.me – Mark the spot. Find it again.</title>
+    <title>locate.me – Your places, always within reach.</title>
     <meta name="description" content="locate.me is a private, self-hosted geo-tracking PWA. Learn what it does and how to install it as an app on Android (Chrome, Brave) and iPhone (Safari).">
     <script>
         try {
@@ -51,7 +51,7 @@
             <div class="container">
                 <div class="hero-inner">
                     <div class="hero-text">
-                        <h1 class="hero-title">Mark the spot.<br>Find it again.</h1>
+                        <h1 class="hero-title">Your places.<br>Always within reach.</h1>
                         <p class="hero-subtitle">
                             locate.me is a private, self-hosted, open-source geo-tracker for you and the people you trust.
                             Find out where you are right now &mdash; with your address, weather and more &mdash;
@@ -175,13 +175,39 @@
                         <p class="feature-text">Open source and self-hosted &mdash; only accessible to the people you trust. Your location stays yours.</p>
                     </article>
                 </div>
+                <div class="trust-grid">
+                    <article class="feature-card trust-card">
+                        <div class="feature-head">
+                            <div class="feature-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            </div>
+                            <h3 class="feature-title">Encrypted</h3>
+                        </div>
+                        <p class="feature-text">All communication between your phone and locate.me is encrypted (HTTPS).</p>
+                    </article>
+                    <article class="feature-card trust-card">
+                        <div class="feature-head">
+                            <div class="feature-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"></path><path d="M21 8h-3a2 2 0 0 1-2-2V3"></path><path d="M3 16h3a2 2 0 0 1 2 2v3"></path><path d="M16 21v-3a2 2 0 0 1 2-2h3"></path></svg>
+                            </div>
+                            <h3 class="feature-title">Purpose limitation</h3>
+                        </div>
+                        <p class="feature-text">Your data is never used outside of locate.me.</p>
+                    </article>
+                </div>
+
+                <p class="install-notice">
+                    <strong>Getting started:</strong> You don't need an account &mdash; try the shared demo user
+                    <span class="app-url">user123</span>. Want your own private user?
+                    <a class="email-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>Contact us</a>.
+                </p>
             </div>
         </section>
 
         <section class="section section--subtle showcase">
             <div class="container">
                 <div class="section-header">
-                    <h2 class="section-title">Your places, always within reach</h2>
+                    <h2 class="section-title">Mark the spot. Find it again.</h2>
                     <p class="section-intro">
                         Each saved place lines up in a clear history &mdash; with its tag, your comment,
                         and how long it takes to get there by foot, bike or car.
@@ -224,7 +250,7 @@
                         <ol class="steps">
                             <li class="step">
                                 <span class="step-num"></span>
-                                <span class="step-text">Open <span class="app-url">https://locateme.srv64.de/</span> in Chrome or Brave.</span>
+                                <span class="step-text">Open <a class="app-url" href="https://locateme.srv64.de/" target="_blank" rel="noopener">https://locateme.srv64.de/</a> in Chrome or Brave.</span>
                             </li>
                             <li class="step">
                                 <span class="step-num"></span>
@@ -251,7 +277,7 @@
                         <ol class="steps">
                             <li class="step">
                                 <span class="step-num"></span>
-                                <span class="step-text">Open <span class="app-url">https://locateme.srv64.de/</span> in Safari.</span>
+                                <span class="step-text">Open <a class="app-url" href="https://locateme.srv64.de/" target="_blank" rel="noopener">https://locateme.srv64.de/</a> in Safari.</span>
                             </li>
                             <li class="step">
                                 <span class="step-num"></span>
@@ -275,11 +301,6 @@
                     This permission is used <strong>only by this website</strong> and nothing else &mdash;
                     it is never shared with other apps or sites.
                 </p>
-                <p class="install-notice">
-                    <strong>Getting started:</strong> You don't need an account &mdash; try the shared demo user
-                    <span class="app-url">user123</span>. Want your own private user?
-                    <a class="email-link" href="#">Contact us</a>.
-                </p>
             </div>
         </section>
     </main>
@@ -294,6 +315,7 @@
             </nav>
             <p class="footer-open-source">Open source &mdash; <a href="https://github.com/g0untlet/locate.me" target="_blank" rel="noopener">view the code on GitHub</a>.</p>
             <p class="footer-note">Your private places &mdash; for you and the people you trust.</p>
+            <p class="footer-updated">Website last update: August 20, 2026</p>
         </div>
     </footer>
 

@@ -10,6 +10,7 @@ GitHub: https://github.com/g0untlet/locate.me
 | Backend | Quarkus 3, Java 21, Hibernate ORM, H2 file-based |
 | Architecture | BCE (Boundry, Control, Entity) (~20 classes), separate skill available |
 | Frontend | Vanilla JS, ES6 modules, HTML/CSS, no bundler, separate skill available |
+| Website | Static bilingual (EN/DE) marketing/install site, Vanilla HTML/CSS/JS, separate skill available |
 | Reverse Proxy | Caddy2 on Debian Linux |
 | Clients | Android Chrome PWA, Android Brave, iOS Safari PWA |
 | Mapping | Leaflet.js + OpenStreetMap/Nominatim |
