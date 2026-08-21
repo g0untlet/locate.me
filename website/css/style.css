@@ -367,11 +367,11 @@ a:hover {
 .trust-card {
     background-color: var(--primary-tint);
     border: 1.5px solid var(--primary-color);
-    padding: 16px 22px;
+    padding: 12px 22px;
 }
 
 .trust-card .feature-head {
-    margin-bottom: 8px;
+    margin-bottom: 5px;
 }
 
 .trust-card .feature-icon {
@@ -483,6 +483,15 @@ a:hover {
     font-size: 0.88rem;
 }
 
+a.app-url {
+    text-decoration: underline;
+    transition: var(--transition);
+}
+
+a.app-url:hover {
+    color: var(--primary-color);
+}
+
 .install-notice {
     margin-top: 26px;
     background-color: var(--primary-tint);
@@ -554,6 +563,12 @@ a:hover {
 }
 
 .footer-open-source {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+}
+
+.footer-updated {
     font-size: 0.78rem;
     color: var(--text-muted);
     margin-top: 8px;

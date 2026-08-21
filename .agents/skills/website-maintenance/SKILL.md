@@ -68,8 +68,11 @@ website/
 - **Relative links only** – no `<base>` tag (the site is served under `/website/` and at
   the root of `www.locate-me.net`).
 - **Footer:** brand + status dot, attribution (OpenStreetMap, Leaflet, Open-Meteo),
-  open-source GitHub link, footer note. The status dot polls `/api/system/info`
-  (6 s timeout) and shows Online/Offline – `js/main.js` handles it.
+  open-source GitHub link, footer note, and a `Website last update:` date line
+  (`Website zuletzt aktualisiert:` in DE). **This date refers to the website content,
+  not the app release – bump it to today on every website content change.** The status
+  dot polls `/api/system/info` (6 s timeout) and shows Online/Offline – `js/main.js`
+  handles it.
 - **Contact links:** use `class="email-link"`; the real mailto is built in `js/main.js`
   (obfuscated `info@locate-me.net`). Never hardcode the address in HTML.
 - **App URL** referenced on the install pages: `https://locateme.srv64.de/`.
@@ -138,4 +141,5 @@ app version ships:
 - [ ] Layout is correct at smartphone width first, then desktop (860px / 640px breakpoints).
 - [ ] No hardcoded colors; design tokens only.
 - [ ] App URL and status-dot fetch unchanged unless intended.
+- [ ] Footer "Website last update" date bumped to today on all 4 pages.
 - [ ] Release notes: newest version on top, consistent `vX.Y.Z`, dates in correct format.
