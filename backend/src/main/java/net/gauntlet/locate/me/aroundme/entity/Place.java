@@ -49,6 +49,10 @@ public class Place {
     @Column(name = "primary_category", length = 255)
     String primaryCategory;
 
+    @Size(max = 255)
+    @Column(name = "secondary_category", length = 255)
+    String secondaryCategory;
+
     @Size(max = 512)
     @Column(name = "formatted_address", length = 512)
     String formattedAddress;
@@ -156,6 +160,15 @@ public class Place {
 
     public Place primaryCategory(String primaryCategory) {
         this.primaryCategory = primaryCategory;
+        return this;
+    }
+
+    public String secondaryCategory() {
+        return this.secondaryCategory;
+    }
+
+    public Place secondaryCategory(String secondaryCategory) {
+        this.secondaryCategory = secondaryCategory;
         return this;
     }
 
@@ -273,6 +286,9 @@ public class Place {
         }
         if (this.primaryCategory != null) {
             builder.add("primaryCategory", this.primaryCategory);
+        }
+        if (this.secondaryCategory != null) {
+            builder.add("secondaryCategory", this.secondaryCategory);
         }
         if (this.formattedAddress != null) {
             builder.add("formattedAddress", this.formattedAddress);

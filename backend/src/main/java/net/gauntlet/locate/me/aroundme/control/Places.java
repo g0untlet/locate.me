@@ -59,14 +59,14 @@ public class Places {
     @ConfigProperty(name = "geoapify.api-key")
     Optional<String> apiKey;
 
-    public List<Place> findNear(double lat, double lon) {
+    public List<Place> findNear(double lat, double lon, String acceptLanguage) {
         LOG.log(System.Logger.Level.DEBUG, "Looking up cached places near ({0}, {1})", lat, lon);
         List<Place> cached = findCached(lat, lon);
         if (!cached.isEmpty()) {
             LOG.log(System.Logger.Level.DEBUG, "Cache hit: returning {0} place(s) from the H2 cache", cached.size());
             return cached;
         }
-        return fetchAndStore(lat, lon);
+        return fetchAndStore(lat, lon, acceptLanguage);
     }
 
     private List<Place> findCached(double lat, double lon) {
@@ -94,14 +94,15 @@ public class Places {
                 .toList();
     }
 
-    private List<Place> fetchAndStore(double lat, double lon) {
+    private List<Place> fetchAndStore(double lat, double lon, String acceptLanguage) {
         LOG.log(System.Logger.Level.DEBUG, "Cache miss: fetching places from Geoapify near ({0}, {1})", lat, lon);
+        String lang = ClientLanguage.fromAcceptLanguage(acceptLanguage);
         String filter = "circle:" + lon + "," + lat + "," + this.radius;
         String bias = "proximity:" + lon + "," + lat;
 
         JsonObject response;
         try {
-            response = this.geoapifyPlacesClient.places(this.categories, filter, bias, this.limit, this.format, this.apiKey.orElse(""));
+            response = this.geoapifyPlacesClient.places(this.categories, filter, bias, this.limit, this.format, this.apiKey.orElse(""), lang);
         } catch (Exception e) {
             LOG.log(System.Logger.Level.WARNING, "Geoapify places request failed: {0}", e.getMessage());
             throw new WebApplicationException(Response.status(Response.Status.SERVICE_UNAVAILABLE)
@@ -146,7 +147,9 @@ public class Places {
         place.latitude(lat);
         place.longitude(lon);
         place.name(string(props, "name"));
-        place.primaryCategory(primaryCategory(categories));
+        String primary = primaryCategory(categories);
+        place.primaryCategory(primary);
+        place.secondaryCategory(secondaryCategory(primary, categories));
         place.formattedAddress(string(props, "formatted"));
         place.street(string(props, "street"));
         place.houseNumber(string(props, "housenumber"));
@@ -178,6 +181,20 @@ public class Places {
         String first = categories.getString(0);
         int dot = first.indexOf('.');
         return dot > 0 ? first.substring(0, dot) : first;
+    }
+
+    private String secondaryCategory(String primary, JsonArray categories) {
+        if (primary == null || categories == null) {
+            return null;
+        }
+        String prefix = primary + ".";
+        for (int i = 0; i < categories.size(); i++) {
+            String category = categories.getString(i);
+            if (category.startsWith(prefix)) {
+                return category.substring(prefix.length());
+            }
+        }
+        return null;
     }
 
     private String wheelchair(JsonArray categories) {

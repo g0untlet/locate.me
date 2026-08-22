@@ -13,10 +13,12 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -79,12 +81,13 @@ public class PlacesResource {
     public Response getPlaces(
             @QueryParam("userId") String userId,
             @QueryParam("lat") Double lat,
-            @QueryParam("lon") Double lon) {
+            @QueryParam("lon") Double lon,
+            @HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) String acceptLanguage) {
         LOG.log(System.Logger.Level.DEBUG, "Received GET places request for user {0} (lat={1}, lon={2})", userId, lat, lon);
         validateAndAuthorize(userId);
         validateCoordinates(lat, lon);
 
-        List<Place> list = this.places.findNear(lat, lon);
+        List<Place> list = this.places.findNear(lat, lon, acceptLanguage);
 
         JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
         list.stream()

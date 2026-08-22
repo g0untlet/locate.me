@@ -10,6 +10,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -50,13 +51,13 @@ public class PlacesResourceIT {
     public void setup() {
         em.createQuery("DELETE FROM Place").executeUpdate();
         // Default mock: empty result to prevent real Geoapify calls in tests that don't care
-        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString()))
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection());
     }
 
     @Test
     void fetchPlacesStoresAndReturnsMappedFeatures() {
-        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString()))
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection(feature("Isar Kebaphaus", PLACE_ID, 48.1355319, 11.605952,
                         Json.createArrayBuilder().add("catering").add("catering.fast_food").add("wheelchair").add("wheelchair.yes").build(),
                         Json.createObjectBuilder().add("phone", "+49 89 23542405").build())));
@@ -69,6 +70,7 @@ public class PlacesResourceIT {
                 .body("[0].name", is("Isar Kebaphaus"))
                 .body("[0].placeId", is(PLACE_ID))
                 .body("[0].primaryCategory", is("catering"))
+                .body("[0].secondaryCategory", is("fast_food"))
                 .body("[0].wheelchair", is("yes"))
                 .body("[0].phone", is("+49 89 23542405"))
                 .body("[0].formattedAddress", is("Isar Kebaphaus, Einsteinstraße 84, 81675 Munich, Germany"))
@@ -134,7 +136,7 @@ public class PlacesResourceIT {
 
     @Test
     void fetchPlacesOnGeoapifyFailureReturns503() {
-        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString()))
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenThrow(new RuntimeException("geoapify down"));
 
         given()
@@ -146,7 +148,7 @@ public class PlacesResourceIT {
 
     @Test
     void refetchingSamePlaceIdUpdatesInsteadOfDuplicating() throws InterruptedException {
-        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString()))
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection(feature("Isar Kebaphaus", PLACE_ID, 48.1355319, 11.605952,
                         Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
                         Json.createObjectBuilder().build())));
@@ -163,7 +165,7 @@ public class PlacesResourceIT {
 
         Thread.sleep(20);
 
-        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString()))
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection(feature("Isar Kebaphaus Renovated", PLACE_ID, 48.1355319, 11.605952,
                         Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
                         Json.createObjectBuilder().build())));
@@ -185,7 +187,7 @@ public class PlacesResourceIT {
 
     @Test
     void distinctPlaceIdsWithSameCoordinatesCoexist() {
-        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString()))
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection(
                         feature("Tenant A", PLACE_ID, 48.1355319, 11.605952,
                                 Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
@@ -206,7 +208,7 @@ public class PlacesResourceIT {
 
     @Test
     void cacheHitReturnsStoredPlacesWithoutCallingGeoapify() {
-        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString()))
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection(
                         feature("Tenant A", PLACE_ID, 48.1356, 11.6058,
                                 Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
@@ -230,7 +232,7 @@ public class PlacesResourceIT {
                 .statusCode(200)
                 .body("size()", is(2));
 
-        verify(geoapifyPlacesClient, times(1)).places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString());
+        verify(geoapifyPlacesClient, times(1)).places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString());
         assertThat(countPlaces()).isEqualTo(2);
     }
 
@@ -238,7 +240,7 @@ public class PlacesResourceIT {
     void cacheHitSortedByDistanceAscending() {
         double lat = 48.1356;
         double lon = 11.6058;
-        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString()))
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection(
                         feature("Fifty Meters", "p-50m", lat + Geoboxing.deltaLat(50.0), lon,
                                 Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
@@ -275,12 +277,12 @@ public class PlacesResourceIT {
                 .body("[1].name", is("Thirty Meters"))
                 .body("[2].name", is("Fifty Meters"));
 
-        verify(geoapifyPlacesClient, times(1)).places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString());
+        verify(geoapifyPlacesClient, times(1)).places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString());
     }
 
     @Test
     void cacheMissAtFarCoordinateFetchesFromGeoapify() {
-        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString()))
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection(feature("Munich Place", PLACE_ID, 48.1356, 11.6058,
                         Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
                         Json.createObjectBuilder().build())));
@@ -300,7 +302,7 @@ public class PlacesResourceIT {
                 .statusCode(200)
                 .body("size()", is(1));
 
-        verify(geoapifyPlacesClient, times(2)).places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString());
+        verify(geoapifyPlacesClient, times(2)).places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString());
     }
 
     @Test
@@ -309,7 +311,7 @@ public class PlacesResourceIT {
         double lon = 11.6058;
         double dLat = Geoboxing.deltaLat(60.0);
         double dLon = Geoboxing.deltaLon(60.0, lat);
-        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString()))
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection(feature("Corner Place", PLACE_ID, lat + 0.75 * dLat, lon + 0.75 * dLon,
                         Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
                         Json.createObjectBuilder().build())));
@@ -332,7 +334,36 @@ public class PlacesResourceIT {
                 .statusCode(200)
                 .body("size()", is(1));
 
-        verify(geoapifyPlacesClient, times(2)).places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString());
+        verify(geoapifyPlacesClient, times(2)).places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void passesClientLanguageToGeoapify() {
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
+                .thenReturn(featureCollection());
+
+        given()
+                .header("Accept-Language", "fr-FR,fr;q=0.9,en;q=0.8")
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200);
+
+        verify(geoapifyPlacesClient).places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), eq("fr"));
+    }
+
+    @Test
+    void defaultsLanguageToEnglishWhenHeaderMissing() {
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
+                .thenReturn(featureCollection());
+
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200);
+
+        verify(geoapifyPlacesClient).places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), eq("en"));
     }
 
     private JsonObject feature(String name, String placeId, double lat, double lon, JsonArray categories, JsonObject contact) {

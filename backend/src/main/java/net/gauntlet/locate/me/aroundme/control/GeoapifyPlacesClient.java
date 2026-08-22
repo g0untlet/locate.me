@@ -23,5 +23,6 @@ public interface GeoapifyPlacesClient {
             @QueryParam("bias") String bias,
             @QueryParam("limit") int limit,
             @QueryParam("format") String format,
-            @QueryParam("apiKey") String apiKey);
+            @QueryParam("apiKey") String apiKey,
+            @QueryParam("lang") String lang);
 }

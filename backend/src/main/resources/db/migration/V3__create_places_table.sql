@@ -22,6 +22,7 @@ CREATE TABLE places (
     -- Core POI & Address Attributes
     name              VARCHAR(255),
     primary_category   VARCHAR(255),
+    secondary_category VARCHAR(255),
     formatted_address VARCHAR(512),
     street            VARCHAR(255),
     house_number      VARCHAR(64),

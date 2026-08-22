@@ -22,6 +22,7 @@ class PlaceTest {
                 .longitude(11.6059)
                 .name("Isar Kebaphaus")
                 .primaryCategory("catering")
+                .secondaryCategory("fast_food")
                 .formattedAddress("Isar Kebaphaus, Einsteinstraße 84, 81675 Munich, Germany")
                 .street("Einsteinstraße")
                 .houseNumber("84")
@@ -43,6 +44,7 @@ class PlaceTest {
         assertThat(json.getJsonNumber("longitude").doubleValue()).isEqualTo(11.6059);
         assertThat(json.getString("name")).isEqualTo("Isar Kebaphaus");
         assertThat(json.getString("primaryCategory")).isEqualTo("catering");
+        assertThat(json.getString("secondaryCategory")).isEqualTo("fast_food");
         assertThat(json.getString("formattedAddress")).isEqualTo("Isar Kebaphaus, Einsteinstraße 84, 81675 Munich, Germany");
         assertThat(json.getString("street")).isEqualTo("Einsteinstraße");
         assertThat(json.getString("houseNumber")).isEqualTo("84");
