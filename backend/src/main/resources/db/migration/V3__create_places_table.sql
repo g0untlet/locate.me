@@ -20,7 +20,7 @@ CREATE TABLE places (
     longitude         FLOAT(53) NOT NULL,
 
     -- Core POI & Address Attributes
-    name              VARCHAR(255),
+    name              VARCHAR(255) NOT NULL,
     primary_category   VARCHAR(255),
     secondary_category VARCHAR(255),
     formatted_address VARCHAR(512),

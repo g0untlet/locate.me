@@ -146,10 +146,11 @@ public class Places {
         place.geohash(GeoHash.withCharacterPrecision(lat, lon, 9).toBase32());
         place.latitude(lat);
         place.longitude(lon);
-        place.name(string(props, "name"));
         String primary = primaryCategory(categories);
+        String secondary = secondaryCategory(primary, categories);
+        place.name(PlaceNames.resolve(props, primary, secondary));
         place.primaryCategory(primary);
-        place.secondaryCategory(secondaryCategory(primary, categories));
+        place.secondaryCategory(secondary);
         place.formattedAddress(string(props, "formatted"));
         place.street(string(props, "street"));
         place.houseNumber(string(props, "housenumber"));

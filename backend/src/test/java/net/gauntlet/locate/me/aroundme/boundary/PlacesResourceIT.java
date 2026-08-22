@@ -22,6 +22,7 @@ import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObject;
+import jakarta.json.JsonObjectBuilder;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
@@ -366,6 +367,63 @@ public class PlacesResourceIT {
         verify(geoapifyPlacesClient).places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), eq("en"));
     }
 
+    @Test
+    void anonymousPlaceGetsSyntheticNameFromCategoryAndStreet() {
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
+                .thenReturn(featureCollection(anonymousFeature("anon-1", 48.1356, 11.6058,
+                        Json.createArrayBuilder().add("leisure").add("leisure.playground").build(),
+                        "Lucile-Grahn-Straße", null, null, null)));
+
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("[0].name", is("Playground (Lucile-Grahn-Straße)"));
+    }
+
+    @Test
+    void anonymousPlaceFallsBackToAddressLine1() {
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
+                .thenReturn(featureCollection(anonymousFeature("anon-2", 48.1356, 11.6058,
+                        null, null, null, "Line One Address", "Full Formatted Address")));
+
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("[0].name", is("Line One Address"));
+    }
+
+    @Test
+    void anonymousPlaceFallsBackToFormatted() {
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
+                .thenReturn(featureCollection(anonymousFeature("anon-3", 48.1356, 11.6058,
+                        null, null, null, null, "Full Formatted Address")));
+
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("[0].name", is("Full Formatted Address"));
+    }
+
+    @Test
+    void anonymousPlaceWithoutAnyContextUsesUnknownPlace() {
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
+                .thenReturn(featureCollection(anonymousFeature("anon-4", 48.1356, 11.6058,
+                        null, null, null, null, null)));
+
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("[0].name", is("Unknown Place"));
+    }
+
     private JsonObject feature(String name, String placeId, double lat, double lon, JsonArray categories, JsonObject contact) {
         return Json.createObjectBuilder()
                 .add("type", "Feature")
@@ -381,6 +439,34 @@ public class PlacesResourceIT {
                         .add("contact", contact)
                         .add("opening_hours", "Mo-Sa 10:30-21:00")
                         .add("place_id", placeId))
+                .add("geometry", Json.createObjectBuilder()
+                        .add("type", "Point")
+                        .add("coordinates", Json.createArrayBuilder().add(lon).add(lat)))
+                .build();
+    }
+
+    private JsonObject anonymousFeature(String placeId, double lat, double lon, JsonArray categories,
+                                        String street, String city, String addressLine1, String formatted) {
+        JsonObjectBuilder props = Json.createObjectBuilder();
+        if (categories != null) {
+            props.add("categories", categories);
+        }
+        if (street != null) {
+            props.add("street", street);
+        }
+        if (city != null) {
+            props.add("city", city);
+        }
+        if (addressLine1 != null) {
+            props.add("address_line1", addressLine1);
+        }
+        if (formatted != null) {
+            props.add("formatted", formatted);
+        }
+        props.add("place_id", placeId);
+        return Json.createObjectBuilder()
+                .add("type", "Feature")
+                .add("properties", props)
                 .add("geometry", Json.createObjectBuilder()
                         .add("type", "Point")
                         .add("coordinates", Json.createArrayBuilder().add(lon).add(lat)))

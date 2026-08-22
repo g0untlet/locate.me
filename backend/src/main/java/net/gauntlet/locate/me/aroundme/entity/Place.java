@@ -41,8 +41,9 @@ public class Place {
     @Column(nullable = false)
     double longitude;
 
+    @NotBlank
     @Size(max = 255)
-    @Column(length = 255)
+    @Column(nullable = false, length = 255)
     String name;
 
     @Size(max = 255)
