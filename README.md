@@ -9,6 +9,7 @@ A personal geo-location tracking application: a mobile-first **Progressive Web A
 - Weather, UV index, and elevation enrichment (Open-Meteo)
 - Location history with distance and estimated walking, biking and driving times
 - Optional tags and comments on saved locations (shown in history and after saving)
+- Places around you — POI discovery near a location (Geoapify), cached and served nearest-first
 - Installable PWA (no service worker, no client-side caching)
 
 ## Tech Stack
@@ -21,6 +22,7 @@ A personal geo-location tracking application: a mobile-first **Progressive Web A
 | Reverse Proxy | Caddy2 |
 | Mapping | Leaflet.js + OpenStreetMap |
 | Weather | Open-Meteo API |
+| Places | Geoapify Places API |
 
 ## Project Structure
 
@@ -51,6 +53,11 @@ mvn quarkus:dev
 
 - Application: <http://localhost:8090>
 - Swagger UI: <http://localhost:8090/q/swagger-ui>
+- The places feature needs a Geoapify API key, passed via the `GEOAPIFY_API_KEY` environment variable (it is not stored in `application.properties`):
+
+  ```bash
+  GEOAPIFY_API_KEY=<key> mvn quarkus:dev
+  ```
 
 ### Frontend
 
@@ -78,6 +85,7 @@ mvn clean verify
 
 ```bash
 curl -X GET "http://localhost:8090/api/positions?userId=user123"
+curl -X GET "http://localhost:8090/api/places?userId=user123&lat=48.135617&lon=11.605802"
 ```
 
 ## Documentation

@@ -6,7 +6,9 @@
 
 Technical architecture of locate.me, a self-hosted geo-tracking PWA: a vanilla-JS
 frontend records the current position together with weather, UV index, elevation and
-address data enriched by a Quarkus backend. The functional scope is documented in
+address data enriched by a Quarkus backend. A POI ("places around me") capability
+caches points of interest fetched from the Geoapify Places API and serves them
+nearest-first. The functional scope is documented in
 `docs/functional-scope.md`; this document covers the technical architecture only.
 
 ### Technology Stack
@@ -16,6 +18,7 @@ address data enriched by a Quarkus backend. The functional scope is documented i
 | Frontend | HTML5, Vanilla JavaScript (ES6 modules, no bundler), CSS3 (custom properties) |
 | Frontend | Progressive Web App (PWA, installable) |
 | Mapping | Leaflet 1.9.4 + OpenStreetMap tile server |
+| Places | Geoapify Places API (POI discovery) |
 | Backend | Quarkus 3.33.2, Java 21 |
 | API | REST (Jakarta REST), JSON-B / JSON-P |
 | ORM | Hibernate ORM (schema generation = `none`) |
@@ -41,12 +44,13 @@ Browser (PWA) --HTTPS--> Caddy2 --/api--> Quarkus REST (Boundary /api)
                                             |
        Quarkus --REST--> Open-Meteo    (temperature, weather code, UV index, elevation)
        Quarkus --REST--> Nominatim/OSM (reverse geocoding)
+       Quarkus --REST--> Geoapify      (POI places around a coordinate)
        Browser --HTTPS--> OSM tile server (Leaflet map tiles)
 ```
 
 - All REST endpoints live under `/api` (`@ApplicationPath("/api")`).
 - The frontend reaches `/api` directly through the Caddy2 proxy; map tiles and the
-  two enrichment APIs (Open-Meteo, Nominatim) are the only external calls.
+  three enrichment APIs (Open-Meteo, Nominatim, Geoapify) are the only external calls.
 
 ---
 
@@ -127,6 +131,10 @@ net.gauntlet.locate.me
 │   ├── boundary/   PositionsResource, DatabaseHealthCheck
 │   ├── control/    Positions, DistanceCalculator, GeocodingClient, WeatherClient
 │   └── entity/     Position, PositionTag, WeatherCode, WeatherCodeConverter
+├── aroundme/                   places-around-me feature (BCE)
+│   ├── boundary/   PlacesResource
+│   ├── control/    Places, GeoapifyPlacesClient, Geoboxing, ClientLanguage, PlaceNames
+│   └── entity/     Place
 └── system/                     system info feature (BCE)
     ├── boundary/   SystemBoundary
     └── control/    SystemInfo
@@ -137,6 +145,7 @@ net.gauntlet.locate.me
 | Module | Purpose |
 |---------|---------|
 | `locator` | Position lifecycle (create/read/delete), geocoding + weather enrichment, distance/travel-time (walking, biking, driving) |
+| `aroundme` | Places around a coordinate: Geoapify fetch + H2 cache (cache-first geoboxing lookup, deduplicated by place_id), distance-sorted responses |
 | `system` | Application info endpoint and startup timestamp |
 
 ---
@@ -151,6 +160,7 @@ net.gauntlet.locate.me
 | `PositionTag` | Fixed tag vocabulary (enum) |
 | `WeatherCode` | WMO weather-code vocabulary incl. German descriptions (enum) |
 | `WeatherCodeConverter` | JPA AttributeConverter: `WeatherCode` ⇄ `Integer` (autoApply) |
+| `Place` | Cached Geoapify POI; persistent business state; JSON mapping (`toJSON`) |
 
 ## Control Components
 
@@ -161,6 +171,11 @@ net.gauntlet.locate.me
 | `SystemInfo` | Application metadata (artifactId, version, startupTime) |
 | `GeocodingClient` | MicroProfile REST client → Nominatim reverse geocoding |
 | `WeatherClient` | MicroProfile REST client → Open-Meteo forecast |
+| `Places` | Cache-first lookup: geoboxing query (cache hit) or Geoapify fetch + upsert (miss); sole `EntityManager` access for places |
+| `GeoapifyPlacesClient` | MicroProfile REST client → Geoapify Places API (`/v2/places`) |
+| `Geoboxing` | Bounding-box spans (`deltaLat`/`deltaLon`) + haversine distance (static util) |
+| `ClientLanguage` | `Accept-Language` → lowercased 2-letter ISO-639-1 code (static util) |
+| `PlaceNames` | `name` fallback cascade for anonymous POIs (static util) |
 
 ## Boundary Components
 
@@ -169,6 +184,7 @@ net.gauntlet.locate.me
 | `PositionsResource` | REST `/positions`: create, delete, list, current; validation + userId authorization |
 | `SystemBoundary` | REST `/system` → `/info` |
 | `DatabaseHealthCheck` | SmallRye readiness check (`SELECT 1`) |
+| `PlacesResource` | REST `/places`: GET list (cache-first); validation + userId authorization; adds response-only `distance` |
 
 ### Rules
 
@@ -199,6 +215,14 @@ Common errors: 400 invalid/missing `userId` or body; 401 userId not in allow-lis
 ## SystemBoundary (`/system`)
 
 | GET | `/api/system/info` | 200 `{artifactId, version, startupTime}` |
+
+## PlacesResource (`/places`)
+
+| Method | Endpoint | Notes |
+|----------|----------|----------|
+| GET | `/api/places?userId=&lat=&lon=` | 200 places cached around the coordinate, served nearest-first; the `Accept-Language` header (optional) selects the Geoapify `lang`; cache-first lookup via a geoboxing box (`aroundme.cache-radius`), Geoapify fetch + upsert on cache miss; each place includes a response-only `distance` (meters) |
+
+Common errors: 400 invalid/missing `userId` or `lat`/`lon`; 401 userId not in allow-list; 503 Geoapify unavailable.
 
 ## Health & Tooling
 
@@ -234,6 +258,37 @@ Single table, no relationships.
 - `WeatherCode`: numeric WMO codes; persisted as `Integer`.
 - `PositionTag`: HOME, WORK, PARKING, SHOPPING, EATING, LEISURE, FRIENDS, HEALTH; persisted as String. Since 0.4.0 the schema is managed by Flyway and `V1__baseline.sql` defines `tag` as `VARCHAR(32)` directly, so changing the vocabulary no longer requires a column conversion. (Pre-0.4.0 databases had the column as an H2 native `ENUM`; it was converted with `ALTER TABLE positions ALTER COLUMN tag SET DATA TYPE VARCHAR(32) ...` in 0.3.0.)
 
+## Entity: `Place` (table `places`)
+
+Deduplicated cache of POIs fetched from the Geoapify Places API, keyed by the
+Geoapify `place_id`; re-fetching the same POI updates the row.
+
+| Attribute (Java) | DB Column | DB Type | Notes |
+|-------------|-------------|-------------|-------------|
+| `placeId` String | `place_id` | VARCHAR(255) | PK |
+| `cachedAt` Instant | `cached_at` | TIMESTAMP(6) WITH TIME ZONE | not null; refreshed on every upsert |
+| `geohash` String | `geohash` | VARCHAR(9) | not null; 9-char geohash via `ch.hsr:geohash` |
+| `latitude`, `longitude` double | `latitude`, `longitude` | DOUBLE | not null |
+| `name` String | `name` | VARCHAR(255) | not null; `PlaceNames` fallback cascade — never blank |
+| `primaryCategory` String | `primary_category` | VARCHAR(255) | top-level segment of the first category |
+| `secondaryCategory` String | `secondary_category` | VARCHAR(255) | first sub-category of the primary |
+| `formattedAddress` String | `formatted_address` | VARCHAR(512) | |
+| `street` String | `street` | VARCHAR(255) | |
+| `houseNumber` String | `house_number` | VARCHAR(64) | |
+| `postcode` String | `postcode` | VARCHAR(32) | |
+| `city` String | `city` | VARCHAR(255) | |
+| `country` String | `country` | VARCHAR(255) | |
+| `phone` String | `phone` | VARCHAR(64) | |
+| `website` String | `website` | VARCHAR(512) | |
+| `openingHours` String | `opening_hours` | VARCHAR(512) | |
+| `wheelchair` String | `wheelchair` | VARCHAR(64) | `yes` / `no` / null |
+| `rawJson` String | `raw_json` | CLOB | full raw Geoapify feature payload (excluded from `toJSON()`) |
+
+**Name resolution:** `name` is guaranteed non-blank. For anonymous POIs
+`PlaceNames` builds a synthetic name from the category (secondary preferred, else
+primary) plus the street (or city) context, falling back to `address_line1`,
+`formatted`, then `"Unknown Place"`.
+
 ---
 
 # Persistence
@@ -248,6 +303,7 @@ DEV/tests: in-memory (`jdbc:h2:mem:locator_dev`, `jdbc:h2:mem:locator_test`). Cr
 | Table | Purpose |
 |---------|---------|
 | `positions` | All saved positions |
+| `places` | Deduplicated cache of Geoapify POIs (keyed by place_id) |
 | `flyway_schema_history` | Flyway bookkeeping (applied migration versions/checksums) |
 
 ## Schema Management
@@ -261,6 +317,9 @@ Since 0.4.0 the schema is managed by **Flyway** (`quarkus-flyway`); Hibernate ru
   - `V2__add_index_positions_user_timestamp.sql` — composite index
     `idx_positions_user_timestamp (user_id, timestamp)` backing the history query
     `WHERE user_id = ? ORDER BY timestamp DESC` (see Data Access).
+  - `V3__create_places_table.sql` — `places` POI cache table with the geohash and
+    coordinate indexes (`idx_places_geohash`, `idx_places_coords`) backing the
+    cache geoboxing lookup.
 - **Existing databases** (DEV/PROD, already populated): on the first 0.4.0 start Flyway
   baselines them at version 1 (`quarkus.flyway.baseline-on-migrate=true`,
   `quarkus.flyway.baseline-version=1`). `V1__baseline.sql` is skipped and existing data is
@@ -292,6 +351,11 @@ built by string concatenation. The history query `findByUserId`
 (`WHERE user_id = ? ORDER BY timestamp DESC`) is served by the composite index
 `idx_positions_user_timestamp` defined in `V2__add_index_positions_user_timestamp.sql`.
 
+The places cache is queried with a geoboxing range query
+(`latitude`/`longitude` BETWEEN, served by `idx_places_coords`); the candidates
+are then verified against the exact haversine distance (≤ `aroundme.cache-radius`),
+sorted ascending and capped at `geoapify.limit` in memory (see `Places.findCached`).
+
 ---
 
 # External Interfaces
@@ -309,6 +373,7 @@ built by string concatenation. The history query `findByUserId`
 |------------|------------|------------|
 | Open-Meteo | REST/JSON | Current `temperature_2m`, `weather_code`, `uv_index`, `elevation` per position save |
 | Nominatim (OSM) | REST/JSON | Reverse geocoding → display name + address parts |
+| Geoapify | REST/JSON | POI places around a coordinate (categories, radius, limit, `lang`) |
 | OSM tile server | HTTPS | Map tiles (browser-direct, Leaflet) |
 | Google Maps | HTTPS | Share link from map popups (native share) |
 
@@ -322,9 +387,10 @@ None — private application for a trusted, small user base; not publicly expose
 
 ## Authorization
 
-`userId` query parameter is validated in `PositionsResource.validateAndAuthorize`
-against `allowed.user.ids` (per profile, overridable via env `ALLOWED_USER_IDS`):
-400 on missing/non-alphanumeric/>16 chars, 401 on unknown user.
+The `userId` query parameter is validated against `allowed.user.ids` (per profile,
+overridable via env `ALLOWED_USER_IDS`): 400 on missing/non-alphanumeric/>16 chars,
+401 on unknown user. The same `validateAndAuthorize` pattern is used by
+`PositionsResource` and `PlacesResource`.
 
 ## Session Management
 
@@ -371,6 +437,8 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 | `quarkus.flyway.baseline-on-migrate`, `quarkus.flyway.baseline-version` | `true` / `1` — baseline existing non-empty DBs at v1, skipping `V1__baseline.sql` |
 | `allowed.user.ids` (+ `%dev`, `%test`) | Authorized users per profile |
 | `nominatim_uri/mp-rest/url`, `weather_uri/mp-rest/url` | REST client base URLs |
+| `geoapify_uri/mp-rest/url`, `geoapify.categories`, `geoapify.limit`, `geoapify.radius`, `geoapify.format`, `geoapify.api-key` | Geoapify Places client: base URL, category filter, result limit, fetch radius (m), format, API key (`${GEOAPIFY_API_KEY:}`) |
+| `aroundme.cache-radius` | Cache bounding-box radius (m) for the cache-first lookup |
 | `%dev.quarkus.http.port=8090` | DEV port |
 | `quarkus.log.*` | Console DEBUG for project package |
 
@@ -382,7 +450,8 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 
 | Test Type | Scope |
 |------------|------------|
-| Integration tests (IT) | REST + persistence + enrichment on in-memory H2 (`PositionsResourceIT`, incl. `createWithTagAndComment` and `createWithInvalidTag`) |
+| Integration tests (IT) | REST + persistence + enrichment on in-memory H2 (`PositionsResourceIT`, incl. `createWithTagAndComment` and `createWithInvalidTag`; `PlacesResourceIT` — cache hit/miss, distance sorting, dedup, anonymous names, language) |
+| Unit tests | `DistanceCalculatorTest`, `GeoboxingTest`, `ClientLanguageTest`, `PlaceNamesTest` |
 | System tests (`backend-st`) | Run against a live backend on 8090 (`PositionsSystemIT` + `PositionsResourceClient`) |
 | Manual E2E | Real devices/browsers against DEV (Android Chrome/Brave, iOS Safari) |
 
@@ -414,7 +483,7 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
   browser HTTP cache is never used; `?v=` cache-busting query tokens remain as a
   safety net. The Workbox service worker's Cache Storage is independent of this
   header, so Network-First fallback caching works alongside `no-store`.
-- HTTP/JSON communication; REST clients for Open-Meteo and Nominatim.
+- HTTP/JSON communication; REST clients for Open-Meteo, Nominatim and Geoapify.
 - Parameterized queries only — never SQL built from user input.
 - H2 native enum CHECK constraints must not be (re-)created in the schema (2.4.240 regression; see Persistence).
 
@@ -440,6 +509,9 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 
 | Version | Date | Description |
 |---------|---------|---------|
+| 0.4.0 | 2026-08-22 | New `aroundme` BC: `GET /places` fetches POIs from the Geoapify Places API and caches them in the new `places` table (Flyway `V3__create_places_table.sql`, deduplicated by `place_id`). Cache-first lookup via a configurable geobox (`aroundme.cache-radius`, default 60 m): on a hit results are served from H2, on a miss Geoapify is queried and the result is upserted; responses are sorted ascending by distance with a response-only `distance` (meters). The client's `Accept-Language` header is passed to Geoapify as `lang`. |
+| 0.4.0 | 2026-08-22 | Anonymous POI handling: `places.name` is `NOT NULL` and guaranteed non-blank via a fallback cascade (`PlaceNames`) — `properties.name`, a synthetic `<Category> (<street|city>)` (secondary category preferred), `address_line1`, `formatted`, `Unknown Place`. |
+| 0.4.0 | 2026-08-22 | `DatabaseHealthCheck` runs `SELECT 1` inside a transaction (`@Transactional`), fixing a `ContextNotActiveException` on vert.x worker threads. |
 | 0.3.1 | 2026-08-21 | Frontend: offline map robustness — Leaflet CDN JS/CSS are now precached and routed Network-First (`locateme-thirdparty`) so `L` stays defined on pages loaded offline (fixes "Fetch Error: L is not defined" after offline load → online). `map.js` guards all map init with `typeof L === 'undefined'` to degrade gracefully. Cache-buster app.js `_33`. |
 | 0.3.1 | 2026-08-21 | Frontend: history offline fallback — `GET /api/positions` served Network-First via the service worker (`locateme-history`, per-user normalized cache key ignoring lat/lon); cached responses flagged with `X-LocateMe-Cache` and shown via a slim offline banner in the History list. Other API calls remain uncached. Cache-busters bumped (css `_26`, app.js `_32`), version stays 0.3.1 / 20260821. |
 | 0.3.1 | 2026-08-21 | Frontend: service worker (`sw.js`) reintroduced with Workbox 7.3.0 (Google CDN, no bundler); Network-First strategy for `index.html` and same-origin JS/CSS so the app always picks up fresh content online and only falls back to cache offline. `skipWaiting` + `clientsClaim`; `activate` purges legacy caches. Precache-on-install (`SHELL`/`ASSETS` manifest) populates the caches on first visit, so the offline fallback is reliable and independent of SW control timing. Caddy `no-store` unchanged (Cache Storage is independent). App version/build bumped to 0.3.1 / 20260821. |
