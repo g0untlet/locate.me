@@ -5,6 +5,7 @@ package net.gauntlet.locate.me.aroundme.control;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import ch.hsr.geohash.GeoHash;
@@ -47,6 +48,10 @@ public class Places {
     int radius;
 
     @Inject
+    @ConfigProperty(name = "aroundme.cache-radius")
+    int cacheRadius;
+
+    @Inject
     @ConfigProperty(name = "geoapify.format")
     String format;
 
@@ -55,7 +60,42 @@ public class Places {
     Optional<String> apiKey;
 
     public List<Place> findNear(double lat, double lon) {
-        LOG.log(System.Logger.Level.DEBUG, "Fetching places near ({0}, {1})", lat, lon);
+        LOG.log(System.Logger.Level.DEBUG, "Looking up cached places near ({0}, {1})", lat, lon);
+        List<Place> cached = findCached(lat, lon);
+        if (!cached.isEmpty()) {
+            LOG.log(System.Logger.Level.DEBUG, "Cache hit: returning {0} place(s) from the H2 cache", cached.size());
+            return cached;
+        }
+        return fetchAndStore(lat, lon);
+    }
+
+    private List<Place> findCached(double lat, double lon) {
+        if (this.cacheRadius <= 0) {
+            return List.of();
+        }
+        double deltaLat = Geoboxing.deltaLat(this.cacheRadius);
+        double deltaLon = Geoboxing.deltaLon(this.cacheRadius, lat);
+        List<Place> candidates = this.em.createQuery(
+                "SELECT p FROM Place p WHERE p.latitude BETWEEN :minLat AND :maxLat "
+                        + "AND p.longitude BETWEEN :minLon AND :maxLon",
+                Place.class)
+                .setParameter("minLat", lat - deltaLat)
+                .setParameter("maxLat", lat + deltaLat)
+                .setParameter("minLon", lon - deltaLon)
+                .setParameter("maxLon", lon + deltaLon)
+                .getResultList();
+
+        return candidates.stream()
+                .map(p -> new NearPlace(p, Geoboxing.distanceMeters(lat, lon, p.latitude(), p.longitude())))
+                .filter(np -> np.distance() <= this.cacheRadius)
+                .sorted(Comparator.comparingDouble(NearPlace::distance).thenComparing(np -> np.place().placeId()))
+                .limit(this.limit)
+                .map(NearPlace::place)
+                .toList();
+    }
+
+    private List<Place> fetchAndStore(double lat, double lon) {
+        LOG.log(System.Logger.Level.DEBUG, "Cache miss: fetching places from Geoapify near ({0}, {1})", lat, lon);
         String filter = "circle:" + lon + "," + lat + "," + this.radius;
         String bias = "proximity:" + lon + "," + lat;
 
@@ -74,12 +114,22 @@ public class Places {
         if (response != null && response.containsKey("features") && !response.isNull("features")) {
             JsonArray features = response.getJsonArray("features");
             for (int i = 0; i < features.size(); i++) {
-                JsonObject feature = features.getJsonObject(i);
-                Place place = toPlace(feature);
-                places.add(this.em.merge(place));
+                places.add(this.em.merge(toPlace(features.getJsonObject(i))));
             }
         }
-        return places;
+
+        List<Place> stored = places.stream()
+                .map(p -> new NearPlace(p, Geoboxing.distanceMeters(lat, lon, p.latitude(), p.longitude())))
+                .sorted(Comparator.comparingDouble(NearPlace::distance).thenComparing(np -> np.place().placeId()))
+                .limit(this.limit)
+                .map(NearPlace::place)
+                .toList();
+
+        LOG.log(System.Logger.Level.DEBUG, "Stored {0} place(s) in the H2 places cache", places.size());
+        return stored;
+    }
+
+    private record NearPlace(Place place, double distance) {
     }
 
     private Place toPlace(JsonObject feature) {

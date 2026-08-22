@@ -21,6 +21,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import net.gauntlet.locate.me.Boundary;
+import net.gauntlet.locate.me.aroundme.control.Geoboxing;
 import net.gauntlet.locate.me.aroundme.control.Places;
 import net.gauntlet.locate.me.aroundme.entity.Place;
 
@@ -87,7 +88,9 @@ public class PlacesResource {
 
         JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
         list.stream()
-            .map(Place::toJSON)
+            .map(place -> Json.createObjectBuilder(place.toJSON())
+                    .add("distance", Geoboxing.distanceMeters(lat, lon, place.latitude(), place.longitude()))
+                    .build())
             .forEach(arrayBuilder::add);
 
         return Response.ok(arrayBuilder.build()).build();

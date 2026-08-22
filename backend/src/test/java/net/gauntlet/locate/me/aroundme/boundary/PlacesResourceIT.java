@@ -5,10 +5,13 @@ package net.gauntlet.locate.me.aroundme.boundary;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -26,7 +29,9 @@ import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
+import io.restassured.response.Response;
 import net.gauntlet.locate.me.aroundme.control.GeoapifyPlacesClient;
+import net.gauntlet.locate.me.aroundme.control.Geoboxing;
 
 @QuarkusTest
 public class PlacesResourceIT {
@@ -165,7 +170,7 @@ public class PlacesResourceIT {
 
         String secondCachedAt = given()
                 .when()
-                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .get("/api/places?userId=validUser&lat=52.5200&lon=13.4050")
                 .then()
                 .statusCode(200)
                 .body("size()", is(1))
@@ -197,6 +202,137 @@ public class PlacesResourceIT {
                 .body("size()", is(2));
 
         assertThat(countPlaces()).isEqualTo(2);
+    }
+
+    @Test
+    void cacheHitReturnsStoredPlacesWithoutCallingGeoapify() {
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString()))
+                .thenReturn(featureCollection(
+                        feature("Tenant A", PLACE_ID, 48.1356, 11.6058,
+                                Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
+                                Json.createObjectBuilder().build()),
+                        feature("Tenant B", "second-place-id", 48.1360, 11.6060,
+                                Json.createArrayBuilder().add("catering").add("catering.bar").build(),
+                                Json.createObjectBuilder().build())));
+
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("size()", is(2));
+
+        // Same coordinates again: served from the H2 cache, no Geoapify call.
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("size()", is(2));
+
+        verify(geoapifyPlacesClient, times(1)).places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString());
+        assertThat(countPlaces()).isEqualTo(2);
+    }
+
+    @Test
+    void cacheHitSortedByDistanceAscending() {
+        double lat = 48.1356;
+        double lon = 11.6058;
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString()))
+                .thenReturn(featureCollection(
+                        feature("Fifty Meters", "p-50m", lat + Geoboxing.deltaLat(50.0), lon,
+                                Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
+                                Json.createObjectBuilder().build()),
+                        feature("Thirty Meters", "p-30m", lat + Geoboxing.deltaLat(30.0), lon,
+                                Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
+                                Json.createObjectBuilder().build()),
+                        feature("At Point", "p-0m", lat, lon,
+                                Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
+                                Json.createObjectBuilder().build())));
+
+        Response first = given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("[0].name", is("At Point"))
+                .body("[1].name", is("Thirty Meters"))
+                .body("[2].name", is("Fifty Meters"))
+                .extract()
+                .response();
+
+        assertThat(((Number) first.jsonPath().get("[0].distance")).doubleValue()).isCloseTo(0.0, within(1.0));
+        assertThat(((Number) first.jsonPath().get("[1].distance")).doubleValue()).isCloseTo(30.0, within(1.0));
+        assertThat(((Number) first.jsonPath().get("[2].distance")).doubleValue()).isCloseTo(50.0, within(1.0));
+
+        // Cache hit keeps the same ascending order without re-fetching.
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("[0].name", is("At Point"))
+                .body("[1].name", is("Thirty Meters"))
+                .body("[2].name", is("Fifty Meters"));
+
+        verify(geoapifyPlacesClient, times(1)).places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString());
+    }
+
+    @Test
+    void cacheMissAtFarCoordinateFetchesFromGeoapify() {
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString()))
+                .thenReturn(featureCollection(feature("Munich Place", PLACE_ID, 48.1356, 11.6058,
+                        Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
+                        Json.createObjectBuilder().build())));
+
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("size()", is(1));
+
+        // Far away coordinate: the cache box is empty, so Geoapify is queried again.
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=52.5200&lon=13.4050")
+                .then()
+                .statusCode(200)
+                .body("size()", is(1));
+
+        verify(geoapifyPlacesClient, times(2)).places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString());
+    }
+
+    @Test
+    void cacheHitExcludesPlacesBeyondRadius() {
+        double lat = 48.1356;
+        double lon = 11.6058;
+        double dLat = Geoboxing.deltaLat(60.0);
+        double dLon = Geoboxing.deltaLon(60.0, lat);
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString()))
+                .thenReturn(featureCollection(feature("Corner Place", PLACE_ID, lat + 0.75 * dLat, lon + 0.75 * dLon,
+                        Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
+                        Json.createObjectBuilder().build())));
+
+        // First request: cache miss, place stored.
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("size()", is(1));
+
+        // Second request: the place lies inside the 60 m box but outside the 60 m circle
+        // (0.75 * 60 m north-east -> ~63 m), so it is not served from the cache
+        // and Geoapify is queried again.
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("size()", is(1));
+
+        verify(geoapifyPlacesClient, times(2)).places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString());
     }
 
     private JsonObject feature(String name, String placeId, double lat, double lon, JsonArray categories, JsonObject contact) {
