@@ -16,7 +16,6 @@ class PlaceTest {
         Instant now = Instant.now();
         Place place = new Place()
                 .placeId("p1")
-                .userId("user123")
                 .cachedAt(now)
                 .geohash("u281z0x7d")
                 .latitude(48.1355)
@@ -38,7 +37,6 @@ class PlaceTest {
         JsonObject json = place.toJSON();
 
         assertThat(json.getString("placeId")).isEqualTo("p1");
-        assertThat(json.getString("userId")).isEqualTo("user123");
         assertThat(json.getString("cachedAt")).isEqualTo(now.toString());
         assertThat(json.getString("geohash")).isEqualTo("u281z0x7d");
         assertThat(json.getJsonNumber("latitude").doubleValue()).isEqualTo(48.1355);

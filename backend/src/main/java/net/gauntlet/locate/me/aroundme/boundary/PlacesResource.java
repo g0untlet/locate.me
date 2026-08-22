@@ -83,7 +83,7 @@ public class PlacesResource {
         validateAndAuthorize(userId);
         validateCoordinates(lat, lon);
 
-        List<Place> list = this.places.findNear(lat, lon, userId);
+        List<Place> list = this.places.findNear(lat, lon);
 
         JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
         list.stream()

@@ -54,8 +54,8 @@ public class Places {
     @ConfigProperty(name = "geoapify.api-key")
     Optional<String> apiKey;
 
-    public List<Place> findNear(double lat, double lon, String userId) {
-        LOG.log(System.Logger.Level.DEBUG, "Fetching places near ({0}, {1}) for user {2}", lat, lon, userId);
+    public List<Place> findNear(double lat, double lon) {
+        LOG.log(System.Logger.Level.DEBUG, "Fetching places near ({0}, {1})", lat, lon);
         String filter = "circle:" + lon + "," + lat + "," + this.radius;
         String bias = "proximity:" + lon + "," + lat;
 
@@ -75,14 +75,14 @@ public class Places {
             JsonArray features = response.getJsonArray("features");
             for (int i = 0; i < features.size(); i++) {
                 JsonObject feature = features.getJsonObject(i);
-                Place place = toPlace(feature, userId);
+                Place place = toPlace(feature);
                 places.add(this.em.merge(place));
             }
         }
         return places;
     }
 
-    private Place toPlace(JsonObject feature, String userId) {
+    private Place toPlace(JsonObject feature) {
         JsonObject props = feature.getJsonObject("properties");
         JsonArray coordinates = feature.getJsonObject("geometry").getJsonArray("coordinates");
         double lon = coordinates.getJsonNumber(0).doubleValue();
@@ -91,7 +91,6 @@ public class Places {
 
         Place place = new Place();
         place.placeId(string(props, "place_id"));
-        place.userId(userId);
         place.cachedAt(Instant.now());
         place.geohash(GeoHash.withCharacterPrecision(lat, lon, 9).toBase32());
         place.latitude(lat);

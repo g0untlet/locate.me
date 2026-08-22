@@ -26,11 +26,6 @@ public class Place {
     @Column(name = "place_id", length = 255, nullable = false)
     String placeId;
 
-    @NotBlank
-    @Size(max = 32)
-    @Column(name = "user_id", length = 32, nullable = false)
-    String userId;
-
     @NotNull
     @Column(name = "cached_at", nullable = false)
     Instant cachedAt;
@@ -107,15 +102,6 @@ public class Place {
 
     public Place placeId(String placeId) {
         this.placeId = placeId;
-        return this;
-    }
-
-    public String userId() {
-        return this.userId;
-    }
-
-    public Place userId(String userId) {
-        this.userId = userId;
         return this;
     }
 
@@ -277,8 +263,7 @@ public class Place {
         if (this.placeId != null) {
             builder.add("placeId", this.placeId);
         }
-        builder.add("userId", this.userId != null ? this.userId : "")
-               .add("cachedAt", this.cachedAt != null ? this.cachedAt.toString() : "")
+        builder.add("cachedAt", this.cachedAt != null ? this.cachedAt.toString() : "")
                .add("geohash", this.geohash != null ? this.geohash : "")
                .add("latitude", this.latitude)
                .add("longitude", this.longitude);

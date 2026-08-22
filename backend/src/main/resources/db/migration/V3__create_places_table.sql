@@ -2,7 +2,6 @@
 -- V3__create_places_table.sql
 -- Caches places fetched from the Geoapify Places API. The table is a deduplicated
 -- cache keyed by the Geoapify place_id: re-fetching the same POI upserts the row.
--- user_id records which locate.me user requested the place (for later reference);
 -- cached_at and geohash support future cache reads and range queries.
 --
 -- H2 2.4.240 regression (issue #4308): native enum CHECK(... IN(...)) constraints
@@ -13,7 +12,6 @@
 
 CREATE TABLE places (
     place_id          VARCHAR(255) NOT NULL,
-    user_id           VARCHAR(32) NOT NULL,
     cached_at         TIMESTAMP(6) WITH TIME ZONE NOT NULL,
     geohash           VARCHAR(9) NOT NULL,
 

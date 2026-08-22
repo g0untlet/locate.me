@@ -11,6 +11,8 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
+
 import jakarta.inject.Inject;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
@@ -135,6 +137,66 @@ public class PlacesResourceIT {
                 .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
                 .then()
                 .statusCode(503);
+    }
+
+    @Test
+    void refetchingSamePlaceIdUpdatesInsteadOfDuplicating() throws InterruptedException {
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString()))
+                .thenReturn(featureCollection(feature("Isar Kebaphaus", PLACE_ID, 48.1355319, 11.605952,
+                        Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
+                        Json.createObjectBuilder().build())));
+
+        String firstCachedAt = given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("size()", is(1))
+                .body("[0].placeId", is(PLACE_ID))
+                .extract()
+                .path("[0].cachedAt");
+
+        Thread.sleep(20);
+
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString()))
+                .thenReturn(featureCollection(feature("Isar Kebaphaus Renovated", PLACE_ID, 48.1355319, 11.605952,
+                        Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
+                        Json.createObjectBuilder().build())));
+
+        String secondCachedAt = given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("size()", is(1))
+                .body("[0].name", is("Isar Kebaphaus Renovated"))
+                .body("[0].placeId", is(PLACE_ID))
+                .extract()
+                .path("[0].cachedAt");
+
+        assertThat(Instant.parse(secondCachedAt)).isAfter(Instant.parse(firstCachedAt));
+        assertThat(countPlaces()).isEqualTo(1);
+    }
+
+    @Test
+    void distinctPlaceIdsWithSameCoordinatesCoexist() {
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString()))
+                .thenReturn(featureCollection(
+                        feature("Tenant A", PLACE_ID, 48.1355319, 11.605952,
+                                Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
+                                Json.createObjectBuilder().build()),
+                        feature("Tenant B", "second-place-id", 48.1355319, 11.605952,
+                                Json.createArrayBuilder().add("catering").add("catering.bar").build(),
+                                Json.createObjectBuilder().build())));
+
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("size()", is(2));
+
+        assertThat(countPlaces()).isEqualTo(2);
     }
 
     private JsonObject feature(String name, String placeId, double lat, double lon, JsonArray categories, JsonObject contact) {
