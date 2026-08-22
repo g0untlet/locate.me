@@ -1,7 +1,7 @@
 //==============================================================================
 // Copyright (c) 2026 g0untlet. All rights reserved.
 //==============================================================================
-package net.gauntlet.locate.me.place.boundary;
+package net.gauntlet.locate.me.aroundme.boundary;
 
 import java.util.List;
 import jakarta.annotation.security.PermitAll;
@@ -21,8 +21,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import net.gauntlet.locate.me.Boundary;
-import net.gauntlet.locate.me.place.control.Places;
-import net.gauntlet.locate.me.place.entity.Place;
+import net.gauntlet.locate.me.aroundme.control.Places;
+import net.gauntlet.locate.me.aroundme.entity.Place;
 
 @Boundary
 @Path("/places")

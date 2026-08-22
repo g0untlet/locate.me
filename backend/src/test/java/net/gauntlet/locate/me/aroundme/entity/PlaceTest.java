@@ -1,7 +1,7 @@
 //==============================================================================
 // Copyright (c) 2026 g0untlet. All rights reserved.
 //==============================================================================
-package net.gauntlet.locate.me.place.entity;
+package net.gauntlet.locate.me.aroundme.entity;
 
 import java.time.Instant;
 import jakarta.json.Json;

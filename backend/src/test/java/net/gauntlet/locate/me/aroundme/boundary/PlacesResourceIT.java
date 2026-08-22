@@ -1,7 +1,7 @@
 //==============================================================================
 // Copyright (c) 2026 g0untlet. All rights reserved.
 //==============================================================================
-package net.gauntlet.locate.me.place.boundary;
+package net.gauntlet.locate.me.aroundme.boundary;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
-import net.gauntlet.locate.me.place.control.GeoapifyPlacesClient;
+import net.gauntlet.locate.me.aroundme.control.GeoapifyPlacesClient;
 
 @QuarkusTest
 public class PlacesResourceIT {

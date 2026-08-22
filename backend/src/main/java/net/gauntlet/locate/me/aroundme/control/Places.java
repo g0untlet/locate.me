@@ -1,7 +1,7 @@
 //==============================================================================
 // Copyright (c) 2026 g0untlet. All rights reserved.
 //==============================================================================
-package net.gauntlet.locate.me.place.control;
+package net.gauntlet.locate.me.aroundme.control;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -20,7 +20,7 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import net.gauntlet.locate.me.Control;
-import net.gauntlet.locate.me.place.entity.Place;
+import net.gauntlet.locate.me.aroundme.entity.Place;
 
 @Control
 public class Places {
