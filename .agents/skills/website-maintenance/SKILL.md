@@ -39,7 +39,8 @@ metadata:
 5. **Deployment note (technical).** The website is physically hosted at
    `https://locateme.srv64.de/website/`. `www.locate-me.net` points there via a CNAME
    (`www.locate-me.net` → `locateme.srv64.de`); the hoster forwards the apex
-   `locate-me.net` → `www`. The app itself stays at `https://locateme.srv64.de/`.
+   `locate-me.net` → `www`. The app itself is served at `https://app.locate-me.net/`
+   (a CNAME → `locateme.srv64.de`).
 
 ---
 
@@ -83,7 +84,7 @@ website/
   and shows Online/Offline – `js/main.js` handles it.
 - **Contact links:** use `class="email-link"`; the real mailto is built in `js/main.js`
   (obfuscated `info@locate-me.net`). Never hardcode the address in HTML.
-- **App URL** referenced on the install pages: `https://locateme.srv64.de/`.
+- **App URL** referenced on the install pages: `https://app.locate-me.net/`.
 
 ---
 
