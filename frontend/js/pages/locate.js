@@ -1,4 +1,4 @@
-import { apiGetCurrentPosition, apiPostPosition } from '../api.js';
+import { apiGetCurrentPosition, apiGetPlaces, apiPostPosition } from '../api.js';
 import { getCachedLocatePosition, setCachedLocatePosition } from '../state.js';
 import { showLocateMap } from '../ui/map.js';
 import { showError } from '../ui/status.js';
@@ -6,7 +6,9 @@ import {
     getWeatherIconSvg,
     getWeatherText,
     formatElevation,
+    formatDistanceMeters,
     getLocationIconSvg,
+    getPlaceIconSvg,
     formatShortAddress
 } from '../utils.js';
 
@@ -23,6 +25,9 @@ const GPS_MAX_WAIT_MS = 8000;
 // Success gate: a fix as accurate as this (or better) is used immediately.
 // 30m matches the app's own "good" accuracy band (history flags >30m as low).
 const GPS_TARGET_ACCURACY_M = 30;
+
+// Maximum number of "Places around me" rows shown on the chooser view.
+const MAX_PLACES = 5;
 
 /* ==========================================================================
    Shared GPS Options
@@ -49,6 +54,13 @@ function setFetchBusy(busy) {
    Predefined Tags – single-select vocabulary, must match backend PositionTag
    ========================================================================== */
 const PREDEFINED_TAGS = ['HOME', 'WORK', 'PARKING', 'SHOPPING', 'EATING', 'LEISURE', 'FRIENDS', 'HEALTH'];
+
+/* ==========================================================================
+   Locate Page Selection State
+   selectedPlace === null  -> the resolved address is the selected location
+   selectedPlace === place -> a "Places around me" row is selected (label only)
+   ========================================================================== */
+let selectedPlace = null;
 
 /* ==========================================================================
    Internal: Save Options (Tag + Comment) helpers
@@ -150,56 +162,163 @@ function initSaveOptions() {
 }
 
 /* ==========================================================================
-   Internal: Reset Locate Page to initial state
+   Internal: View Switching (chooser <-> saver)
    ========================================================================== */
-function resetLocatePage() {
-    document.getElementById('btn-fetch-location').textContent = 'FETCH LOCATION';
-    document.getElementById('track-btn').style.display = 'none';
-    resetSaveOptions();
-    setCachedLocatePosition(null);
+function showView(view) {
+    const chooser = document.getElementById('locate-chooser');
+    const saver   = document.getElementById('locate-saver');
+    const saverActive = view === 'saver';
+    if (chooser) chooser.classList.toggle('hidden', saverActive);
+    if (saver)   saver.classList.toggle('hidden', !saverActive);
+}
+
+function hideViews() {
+    const chooser = document.getElementById('locate-chooser');
+    const saver   = document.getElementById('locate-saver');
+    if (chooser) chooser.classList.add('hidden');
+    if (saver)   saver.classList.add('hidden');
 }
 
 /* ==========================================================================
-   Internal: Render weather + address data into the response card
-   Shared by fetchCurrentPosition and sendPositionToBackend.
+   Internal: Render helpers
    ========================================================================== */
-function renderLocationCard(data) {
-    const tagComment    = document.getElementById('res-tag-comment');
-    const tagPill       = document.getElementById('res-tag-pill');
-    const commentText   = document.getElementById('res-comment-text');
-    const hasTag        = Boolean(data.tag);
-    const hasComment    = data.comment && data.comment.trim() !== '';
+function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+}
 
-    if (tagPill) {
-        tagPill.textContent = data.tag || '';
-        tagPill.classList.toggle('hidden', !hasTag);
+function fillWeather({ icon, temp, weather, uv }, data) {
+    if (icon) {
+        icon.innerHTML = getWeatherIconSvg(data.weatherCode);
+        const mainIconSvg = icon.querySelector('svg');
+        if (mainIconSvg) mainIconSvg.style.stroke = "#1a5f8c";
     }
-    if (commentText) commentText.textContent = hasComment ? data.comment : '';
-    if (tagComment) tagComment.classList.toggle('hidden', !hasTag && !hasComment);
+    if (temp) {
+        temp.innerText = (data.temperature != null) ? `${parseFloat(data.temperature).toFixed(1)} \u00B0C` : '-';
+    }
+    if (weather) weather.innerText = getWeatherText(data.weatherCode);
+    if (uv) {
+        uv.innerText = (data.uvIndex != null) ? parseFloat(data.uvIndex).toFixed(1) : '-';
+    }
+}
 
-    document.getElementById('res-temp').innerText =
-        (data.temperature != null) ? `${parseFloat(data.temperature).toFixed(1)} \u00B0C` : '-';
-
-    const iconContainer = document.getElementById('res-weather-icon-container');
-    iconContainer.innerHTML = getWeatherIconSvg(data.weatherCode);
-    const mainIconSvg = iconContainer.querySelector('svg');
-    if (mainIconSvg) mainIconSvg.style.stroke = "#1a5f8c";
-
-    document.getElementById('res-weather').innerText = getWeatherText(data.weatherCode);
-
-    document.getElementById('res-uv').innerText =
-        (data.uvIndex != null) ? parseFloat(data.uvIndex).toFixed(1) : '-';
-
-    document.getElementById('res-elevation').innerText = formatElevation(data.elevation) || '-';
-
-    const addressContainer = document.getElementById('res-address-container');
-    addressContainer.innerHTML = `
+function fillAddress(container, data) {
+    if (!container) return;
+    container.innerHTML = `
         ${getLocationIconSvg(data.osmCategory, data.osmType)}
         <span>${formatShortAddress(data)}</span>
     `;
-    addressContainer.title = data.displayName || "No detailed address available.";
+    container.title = data.displayName || "No detailed address available.";
+}
 
-    document.getElementById('response-card').classList.remove('hidden');
+function setElevation(el, data) {
+    if (el) el.innerText = formatElevation(data.elevation) || '-';
+}
+
+function chooserWeatherIds() {
+    return {
+        icon:    document.getElementById('chooser-weather-icon-container'),
+        temp:    document.getElementById('chooser-temp'),
+        weather: document.getElementById('chooser-weather'),
+        uv:      document.getElementById('chooser-uv')
+    };
+}
+
+function saverWeatherIds() {
+    return {
+        icon:    document.getElementById('saver-weather-icon-container'),
+        temp:    document.getElementById('saver-temp'),
+        weather: document.getElementById('saver-weather'),
+        uv:      document.getElementById('saver-uv')
+    };
+}
+
+/* ==========================================================================
+   Internal: Places around me (chooser list)
+   ========================================================================== */
+function renderPlacesList(places) {
+    const card  = document.getElementById('places-card');
+    const list  = document.getElementById('places-list');
+    const count = document.getElementById('places-count');
+    if (!card || !list) return;
+
+    list.innerHTML = '';
+    const top = Array.isArray(places) ? places.slice(0, MAX_PLACES) : [];
+
+    if (top.length === 0) {
+        card.classList.add('hidden');
+        return;
+    }
+
+    card.classList.remove('hidden');
+    if (count) {
+        count.textContent = top.length >= MAX_PLACES
+            ? `${MAX_PLACES} nearest`
+            : `${top.length} place${top.length === 1 ? '' : 's'}`;
+    }
+
+    top.forEach(place => {
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'place-row';
+        row.setAttribute('aria-pressed', 'false');
+        row.innerHTML = `
+            ${getPlaceIconSvg(place.primaryCategory)}
+            <span class="place-row-name">${escapeHtml(place.name || place.formattedAddress || 'Unknown place')}</span>
+            <span class="place-row-distance">${formatDistanceMeters(place.distance)}</span>
+        `;
+        row.addEventListener('click', () => selectPlace(place, row));
+        list.appendChild(row);
+    });
+}
+
+function selectPlace(place, row) {
+    selectedPlace = place;
+
+    document.querySelectorAll('.place-row').forEach(r => {
+        const isActive = r === row;
+        r.classList.toggle('place-row--selected', isActive);
+        r.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+    document.getElementById('res-address-select').classList.remove('locate-select-row--selected');
+
+    const container = document.getElementById('chooser-address-container');
+    if (container) {
+        const label = place.name || place.formattedAddress || 'Selected place';
+        container.innerHTML = `${getPlaceIconSvg(place.primaryCategory)}<span>${escapeHtml(label)}</span>`;
+        container.title = place.formattedAddress || '';
+    }
+}
+
+function selectResolvedAddress() {
+    selectedPlace = null;
+
+    document.querySelectorAll('.place-row').forEach(r => {
+        r.classList.remove('place-row--selected');
+        r.setAttribute('aria-pressed', 'false');
+    });
+    document.getElementById('res-address-select').classList.add('locate-select-row--selected');
+
+    const cached = getCachedLocatePosition();
+    if (cached) fillAddress(document.getElementById('chooser-address-container'), cached);
+}
+
+/* ==========================================================================
+   Internal: Chooser renderer – fills weather, address and places after a
+   successful preview fetch.
+   ========================================================================== */
+function renderChooser(data, places) {
+    selectedPlace = null;
+
+    fillWeather(chooserWeatherIds(), data);
+    fillAddress(document.getElementById('chooser-address-container'), data);
+    setElevation(document.getElementById('chooser-elevation'), data);
+
+    const addressSelect = document.getElementById('res-address-select');
+    if (addressSelect) addressSelect.classList.add('locate-select-row--selected');
+
+    renderPlacesList(places);
 }
 
 /* ==========================================================================
@@ -239,7 +358,9 @@ function setOfflineBanner(show) {
 }
 
 /* ==========================================================================
-   Step 1: GET /api/positions/current – Preview Renderer
+   Step 1: GET /api/positions/current + GET /api/places – Preview Renderer
+   Fetches the enriched preview (weather/address) and the nearby places in
+   parallel. A places failure degrades gracefully to the address-only chooser.
    ========================================================================== */
 function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus }) {
     const statusText = document.getElementById('status');
@@ -249,37 +370,40 @@ function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus })
     statusText.className = "status-loading";
 
     const { latitude, longitude } = position.coords;
+    const userId = getActiveUserId();
 
-    apiGetCurrentPosition(getActiveUserId(), latitude, longitude)
-        .then(data => {
-            const timeLabel = new Date().toLocaleString('de-DE', {
-                hour: '2-digit', minute: '2-digit'
-            });
+    const placesPromise = apiGetPlaces(userId, latitude, longitude).catch(() => []);
 
-            renderLocationCard(data);
-
-            setCachedLocatePosition({ ...data, accuracy: position.coords.accuracy });
-            fetchBtn.textContent = 'Refresh';
-            document.getElementById('track-btn').style.display = 'block';
-            showSaveOptions();
-            statusText.innerText = `Preview from ${timeLabel} \u2014 not yet saved.`;
-            statusText.className = "status-preview";
-
-            showLocateMap(latitude, longitude);
-            checkBackendStatus();
-
-            setOfflineBanner(false);
-            setFetchBusy(false);
-        })
-        .catch(err => {
-            if (!navigator.onLine) {
-                ensureOfflineBanner();
-                setOfflineBanner(true);
-            }
-            showError(`Fetch Error: ${err.message}`);
-            checkBackendStatus();
-            setFetchBusy(false);
+    Promise.all([
+        apiGetCurrentPosition(userId, latitude, longitude),
+        placesPromise
+    ])
+    .then(([data, places]) => {
+        const timeLabel = new Date().toLocaleString('de-DE', {
+            hour: '2-digit', minute: '2-digit'
         });
+
+        renderChooser(data, places);
+
+        setCachedLocatePosition({ ...data, accuracy: position.coords.accuracy });
+        fetchBtn.textContent = 'Refresh';
+        showView('chooser');
+        statusText.innerText = `Preview from ${timeLabel} \u2014 not yet saved.`;
+        statusText.className = "status-preview";
+
+        checkBackendStatus();
+        setOfflineBanner(false);
+        setFetchBusy(false);
+    })
+    .catch(err => {
+        if (!navigator.onLine) {
+            ensureOfflineBanner();
+            setOfflineBanner(true);
+        }
+        showError(`Fetch Error: ${err.message}`);
+        checkBackendStatus();
+        setFetchBusy(false);
+    });
 }
 
 /* ==========================================================================
@@ -291,18 +415,15 @@ function sendPositionToBackend(payload, { getActiveUserId, checkBackendStatus, s
     statusText.innerText = "Sending to backend...";
 
     apiPostPosition(getActiveUserId(), payload)
-        .then(data => {
-            renderLocationCard(data);
-
-            document.getElementById('track-btn').style.display = 'none';
-            document.getElementById('btn-fetch-location').textContent = 'FETCH LOCATION';
+        .then(() => {
+            hideViews();
             resetSaveOptions();
             setCachedLocatePosition(null);
+            selectedPlace = null;
+            document.getElementById('btn-fetch-location').textContent = 'FETCH LOCATION';
 
             statusText.innerText = "Location successfully saved.";
             statusText.className = "status-success";
-
-            showLocateMap(payload.latitude, payload.longitude);
 
             silentBadgeSync(getActiveUserId());
             checkBackendStatus();
@@ -314,6 +435,48 @@ function sendPositionToBackend(payload, { getActiveUserId, checkBackendStatus, s
 }
 
 /* ==========================================================================
+   Internal: When a place is selected, use it as the saved label only.
+   The GPS coordinates (and with them weather/elevation/accuracy) stay untouched.
+   ========================================================================== */
+function applySelectedPlace(payload) {
+    if (!selectedPlace) return;
+    const place = selectedPlace;
+    if (place.name) payload.osmName = place.name;
+    if (place.formattedAddress) payload.displayName = place.formattedAddress;
+    if (place.city) payload.city = place.city;
+    if (place.country) payload.country = place.country;
+}
+
+/* ==========================================================================
+   Internal: CONTINUE – switch to the saver view, pre-filled with the
+   selected location (resolved address or chosen place).
+   ========================================================================== */
+function handleContinue() {
+    const cached = getCachedLocatePosition();
+    if (!cached) {
+        showError("No position available. Please fetch first.");
+        return;
+    }
+
+    fillWeather(saverWeatherIds(), cached);
+    setElevation(document.getElementById('saver-elevation'), cached);
+
+    const locationContainer = document.getElementById('saver-location-container');
+    if (selectedPlace) {
+        const place = selectedPlace;
+        const label = place.name || place.formattedAddress || 'Selected place';
+        locationContainer.innerHTML = `${getPlaceIconSvg(place.primaryCategory)}<span>${escapeHtml(label)}</span>`;
+        locationContainer.title = place.formattedAddress || '';
+    } else {
+        fillAddress(locationContainer, cached);
+    }
+
+    showSaveOptions();
+    showView('saver');
+    showLocateMap(cached.latitude, cached.longitude);
+}
+
+/* ==========================================================================
    Page Init: Bindet alle Locate-Listener.
    deps = { getActiveUserId, checkBackendStatus, silentBadgeSync }
    ========================================================================== */
@@ -321,18 +484,17 @@ export function initLocatePage(deps) {
 
     initSaveOptions();
 
-    // --- FETCH LOCATION Button ---
+    // --- FETCH LOCATION / REFRESH Button ---
     document.getElementById('btn-fetch-location').addEventListener('click', () => {
         if (isFetching) return;
         setFetchBusy(true);
 
-        const statusText  = document.getElementById('status');
-        const responseCard = document.getElementById('response-card');
+        const statusText = document.getElementById('status');
 
         statusText.innerText = "Searching for GPS signal...";
         statusText.className = "status-loading";
-        responseCard.classList.add('hidden');
-        document.getElementById('track-btn').style.display = 'none';
+        hideViews();
+        selectedPlace = null;
         setCachedLocatePosition(null);
 
         if (!navigator.geolocation) {
@@ -391,6 +553,18 @@ export function initLocatePage(deps) {
         );
     });
 
+    // --- Chooser: select resolved address ---
+    document.getElementById('res-address-select').addEventListener('click', selectResolvedAddress);
+
+    // --- Chooser: CONTINUE to saver view ---
+    document.getElementById('btn-locate-continue').addEventListener('click', handleContinue);
+
+    // --- Saver: BACK to chooser (selection preserved) ---
+    document.getElementById('btn-locate-back').addEventListener('click', () => {
+        setSaveOptionsExpanded(false);
+        showView('chooser');
+    });
+
     // --- SAVE LOCATION Button ---
     document.getElementById('track-btn').addEventListener('click', () => {
         const cached = getCachedLocatePosition();
@@ -422,6 +596,8 @@ export function initLocatePage(deps) {
         } else {
             delete payload.comment;
         }
+
+        applySelectedPlace(payload);
 
         sendPositionToBackend(payload, deps);
     });

@@ -54,6 +54,13 @@ export function formatShortAddress(pos) {
 /* ==========================================================================
    Utilities
    ========================================================================== */
+export function formatDistanceMeters(meters) {
+    const m = parseFloat(meters);
+    if (isNaN(m)) return '';
+    if (m < 1000) return `${Math.round(m)} m`;
+    return `${(m / 1000).toFixed(1)} km`;
+}
+
 export function formatTravelTime(minutes, compact = false) {
     const total = Math.round(minutes);
     if (compact) {
@@ -186,6 +193,28 @@ export function getLocationIconSvg(category, type) {
             return `<svg ${svgAttrs}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
         case 'waterway':
             return `<svg ${svgAttrs}><path d="M12 22a7 7 0 0 0 7-7c0-4-7-13-7-13s-7 9-7 13a7 7 0 0 0 7 7z"></path></svg>`;
+        default:
+            return defaultIcon;
+    }
+}
+
+/* ==========================================================================
+   Global Helper: Inline SVG Place Icon Renderer (AroundMe places)
+   Geoapify categories: catering / commercial / healthcare / leisure.
+   ========================================================================== */
+export function getPlaceIconSvg(primaryCategory) {
+    const svgAttrs = `viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"`;
+    const defaultIcon = `<svg ${svgAttrs}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`;
+
+    switch (primaryCategory) {
+        case 'catering':
+            return `<svg ${svgAttrs}><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>`;
+        case 'commercial':
+            return `<svg ${svgAttrs}><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`;
+        case 'healthcare':
+            return `<svg ${svgAttrs}><path d="M12 21s-7-5.46-7-11a7 7 0 0 1 14 0c0 5.54-7 11-7 11z"></path><path d="M9 11h6M12 8v6"></path></svg>`;
+        case 'leisure':
+            return `<svg ${svgAttrs}><path d="M12 19V5M12 5a4 4 0 0 0-4 4c0 2.5 2.5 5 4 7m0-11a4 4 0 0 1 4 4c0 2.5-2.5 5-4 7m-3 3h6"></path></svg>`;
         default:
             return defaultIcon;
     }

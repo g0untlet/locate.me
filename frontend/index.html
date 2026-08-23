@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>locate.me</title>
     <script>
-        const APP_VERSION = '0.3.1';
-        const APP_BUILD   = '20260821';
+        const APP_VERSION = '0.4.0';
+        const APP_BUILD   = '20260823';
         document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light';
     </script>
-    <link rel="stylesheet" href="css/style.css?v=0.3.1_26">
+    <link rel="stylesheet" href="css/style.css?v=0.4.0_1">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -18,7 +18,7 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 <body>
-    <script type="module" src="app.js?v=0.3.1_33"></script>
+    <script type="module" src="app.js?v=0.4.0_2"></script>
 
     <div class="app-container">
         <header class="app-header">
@@ -34,81 +34,132 @@
                 <button id="btn-fetch-location" class="track-btn">
                     FETCH LOCATION
                 </button>
-                <button id="track-btn" class="track-btn track-btn--save" style="display: none;">
-                    SAVE LOCATION
-                </button>
             </div>
 
             <div class="status-container">
                 <div id="status" class="status-ready">Ready</div>
             </div>
 
-            <div id="save-options" class="save-options hidden">
-                <button id="save-options-toggle" class="save-options-toggle" type="button" aria-expanded="false">
-                    <svg class="save-options-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"></path>
-                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
-                    </svg>
-                    <span class="save-options-toggle-label">TAG &amp; COMMENT</span>
-                    <span id="save-options-summary" class="save-options-summary hidden"></span>
-                    <svg class="save-options-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                </button>
-                <div class="save-options-body">
-                    <div class="save-options-inner">
-                        <div class="save-options-row">
-                            <span class="label">TAG</span>
-                            <div id="tag-chips" class="tag-chips"></div>
+            <!-- ================= VIEW 1: CHOOSER ================= -->
+            <div id="locate-chooser" class="locate-view hidden">
+                <div class="response-card">
+                    <div class="flex-rows">
+                        <div class="row-split border-bottom">
+                            <div class="cell">
+                                <span class="label">TEMPERATURE</span>
+                                <div class="temp-display-wrapper">
+                                    <span id="chooser-weather-icon-container"></span>
+                                    <span id="chooser-temp" class="value">-</span>
+                                </div>
+                            </div>
+                            <div class="cell text-right">
+                                <span class="label">CONDITION</span>
+                                <span id="chooser-weather" class="value">-</span>
+                            </div>
+                            <div class="cell text-right">
+                                <span class="label">UV-INDEX</span>
+                                <span id="chooser-uv" class="value">-</span>
+                            </div>
                         </div>
-                        <div class="save-options-row">
-                            <span class="label">COMMENT</span>
-                            <div class="comment-input-wrapper">
-                                <input id="comment-input" class="comment-input" type="text"
-                                       maxlength="25" placeholder="Add a comment (optional)…" autocomplete="off">
-                                <span id="comment-counter" class="comment-counter">0/25</span>
+                        <button id="res-address-select" type="button" class="locate-select-row locate-select-row--selected">
+                            <span class="locate-select-row-main">
+                                <span class="label">RESOLVED ADDRESS</span>
+                                <span id="chooser-address-container" class="value address-container">-</span>
+                            </span>
+                            <span class="locate-select-row-side text-right">
+                                <span class="label">ELEVATION</span>
+                                <span id="chooser-elevation" class="value">-</span>
+                            </span>
+                            <span class="locate-select-check" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="places-card" class="response-card places-card hidden">
+                    <div class="places-header">
+                        <span class="label">PLACES AROUND ME</span>
+                        <span id="places-count" class="places-count"></span>
+                    </div>
+                    <div id="places-list" class="places-list"></div>
+                </div>
+
+                <button id="btn-locate-continue" class="track-btn">CONTINUE</button>
+            </div>
+
+            <!-- ================= VIEW 2: SAVER ================= -->
+            <div id="locate-saver" class="locate-view hidden">
+                <div id="save-options" class="save-options hidden">
+                    <button id="save-options-toggle" class="save-options-toggle" type="button" aria-expanded="false">
+                        <svg class="save-options-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"></path>
+                            <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                        </svg>
+                        <span class="save-options-toggle-label">TAG &amp; COMMENT</span>
+                        <span id="save-options-summary" class="save-options-summary hidden"></span>
+                        <svg class="save-options-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
+                    <div class="save-options-body">
+                        <div class="save-options-inner">
+                            <div class="save-options-row">
+                                <span class="label">TAG</span>
+                                <div id="tag-chips" class="tag-chips"></div>
+                            </div>
+                            <div class="save-options-row">
+                                <span class="label">COMMENT</span>
+                                <div class="comment-input-wrapper">
+                                    <input id="comment-input" class="comment-input" type="text"
+                                           maxlength="25" placeholder="Add a comment (optional)…" autocomplete="off">
+                                    <span id="comment-counter" class="comment-counter">0/25</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div id="response-card" class="response-card hidden">
-                <div class="flex-rows">
-                    <div id="res-tag-comment" class="res-tag-comment border-bottom hidden">
-                        <span id="res-tag-pill" class="res-tag-pill hidden"></span>
-                        <span id="res-comment-text" class="res-comment-text"></span>
-                    </div>
-                    <div class="row-split border-bottom">
-                        <div class="cell">
-                            <span class="label">TEMPERATURE</span>
-                            <div class="temp-display-wrapper">
-                                <span id="res-weather-icon-container"></span>
-                                <span id="res-temp" class="value">-</span>
+                <div class="response-card">
+                    <div class="flex-rows">
+                        <div class="row-split border-bottom">
+                            <div class="cell">
+                                <span class="label">TEMPERATURE</span>
+                                <div class="temp-display-wrapper">
+                                    <span id="saver-weather-icon-container"></span>
+                                    <span id="saver-temp" class="value">-</span>
+                                </div>
+                            </div>
+                            <div class="cell text-right">
+                                <span class="label">CONDITION</span>
+                                <span id="saver-weather" class="value">-</span>
+                            </div>
+                            <div class="cell text-right">
+                                <span class="label">UV-INDEX</span>
+                                <span id="saver-uv" class="value">-</span>
                             </div>
                         </div>
-                        <div class="cell text-right">
-                            <span class="label">CONDITION</span>
-                            <span id="res-weather" class="value">-</span>
+                        <div class="row-split">
+                            <div class="cell address-cell">
+                                <span class="label">LOCATION</span>
+                                <div id="saver-location-container" class="value address-container">-</div>
+                            </div>
+                            <div class="cell text-right elevation-cell">
+                                <span class="label">ELEVATION</span>
+                                <span id="saver-elevation" class="value">-</span>
+                            </div>
                         </div>
-                        <div class="cell text-right">
-                            <span class="label">UV-INDEX</span>
-                            <span id="res-uv" class="value">-</span>
-                        </div>
-                    </div>
-                    <div class="row-split">
-                        <div class="cell address-cell">
-                            <span class="label">RESOLVED ADDRESS</span>
-                            <div id="res-address-container" class="value address-container">-</div>
-                        </div>
-                        <div class="cell text-right elevation-cell">
-                            <span class="label">ELEVATION</span>
-                            <span id="res-elevation" class="value">-</span>
+                        <div class="row-full">
+                            <div id="locate-map" class="locate-map"></div>
                         </div>
                     </div>
-                    <div class="row-full">
-                        <div id="locate-map" class="locate-map"></div>
-                    </div>
+                </div>
+
+                <div class="saver-action-group">
+                    <button id="btn-locate-back" class="track-btn track-btn--ghost">BACK</button>
+                    <button id="track-btn" class="track-btn track-btn--save">SAVE LOCATION</button>
                 </div>
             </div>
         </section>

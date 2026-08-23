@@ -63,6 +63,21 @@ export async function apiGetCurrentPosition(userId, lat, lon) {
 }
 
 /* ==========================================================================
+   GET /api/places (AroundMe)
+   Liefert die nächsten POIs um die GPS-Position (distanzsortiert, aufsteigend).
+   Returns: Array of place objects, jeweils mit distance (Meter).
+   Throws on network error or non-ok response.
+   ========================================================================== */
+export async function apiGetPlaces(userId, lat, lon) {
+    const url = `${API_BASE_URL}${API_PATH}/places` +
+        `?userId=${encodeURIComponent(userId)}&lat=${lat}&lon=${lon}`;
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Server returned status ${response.status}`);
+    return response.json();
+}
+
+/* ==========================================================================
    POST /api/positions
    Speichert eine neue Position.
    Returns: gespeichertes position object inkl. Wetter-Daten vom Backend.

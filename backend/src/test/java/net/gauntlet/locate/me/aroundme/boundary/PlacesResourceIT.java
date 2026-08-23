@@ -310,8 +310,8 @@ public class PlacesResourceIT {
     void cacheHitExcludesPlacesBeyondRadius() {
         double lat = 48.1356;
         double lon = 11.6058;
-        double dLat = Geoboxing.deltaLat(60.0);
-        double dLon = Geoboxing.deltaLon(60.0, lat);
+        double dLat = Geoboxing.deltaLat(600.0);
+        double dLon = Geoboxing.deltaLon(600.0, lat);
         when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection(feature("Corner Place", PLACE_ID, lat + 0.75 * dLat, lon + 0.75 * dLon,
                         Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
@@ -325,9 +325,9 @@ public class PlacesResourceIT {
                 .statusCode(200)
                 .body("size()", is(1));
 
-        // Second request: the place lies inside the 60 m box but outside the 60 m circle
-        // (0.75 * 60 m north-east -> ~63 m), so it is not served from the cache
-        // and Geoapify is queried again.
+        // Second request: the place lies inside the 600 m box but outside the
+        // 500 m cache radius (0.75 * 600 m north-east -> ~636 m), so it is not
+        // served from the cache and Geoapify is queried again.
         given()
                 .when()
                 .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")

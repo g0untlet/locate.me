@@ -267,7 +267,6 @@ body {
 .cell { padding: 14px 16px; display: flex; flex-direction: column; }
 .address-cell { flex: 1; min-width: 0; }
 .elevation-cell { flex-shrink: 0; }
-#res-elevation { font-size: 0.95rem; font-weight: 500; color: var(--text-color); }
 .border-bottom { border-bottom: 1px solid var(--border-color); }
 .text-right { align-items: flex-end; text-align: right; }
 
@@ -290,43 +289,6 @@ body {
     font-weight: 400;
     line-height: 1.4;
     color: var(--text-color);
-}
-
-#res-address-container {
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: var(--text-color);
-}
-
-.res-tag-comment {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    padding: 10px 16px;
-}
-
-.res-tag-pill {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 8px;
-    border-radius: 6px;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    color: var(--primary-dark);
-    background-color: var(--primary-tint);
-    border: 1px solid var(--border-color);
-}
-
-.res-comment-text {
-    flex: 1;
-    min-width: 0;
-    font-size: 0.82rem;
-    color: var(--text-color);
-    line-height: 1.4;
-    word-break: break-word;
 }
 
 .address-container span {
@@ -844,6 +806,189 @@ body {
 }
 
 /* ==========================================================================
+   Locate Page: Chooser & Saver Views
+   ========================================================================== */
+.locate-view {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Kompaktere Zellen auf den Locate-Views, damit alles in den 640px-Rahmen
+   bzw. auf dem Smartphone ohne Scrollen Platz hat. */
+.locate-view .cell {
+    padding: 10px 14px;
+}
+
+#chooser-address-container,
+#saver-location-container {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+#chooser-elevation,
+#saver-elevation {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+/* --- Chooser: selectable resolved address row --- */
+.locate-select-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 14px;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.locate-select-row:hover {
+    background-color: var(--surface-subtle);
+}
+
+.locate-select-row--selected {
+    background-color: var(--primary-tint);
+}
+
+.locate-select-row-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.locate-select-row-side {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.locate-select-check svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    stroke: var(--primary-color);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.locate-select-row--selected .locate-select-check svg {
+    opacity: 1;
+}
+
+/* --- Chooser: Places around me --- */
+.places-card {
+    margin-bottom: 0;
+}
+
+.places-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px 4px;
+}
+
+.places-count {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.places-list {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-height: 170px;
+    overflow-y: auto;
+    padding-bottom: 4px;
+}
+
+.place-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 6px 16px;
+    background: none;
+    border: none;
+    border-top: 1px solid var(--border-color);
+    text-align: left;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.place-row:hover {
+    background-color: var(--surface-subtle);
+}
+
+.place-row--selected {
+    background-color: var(--primary-tint);
+}
+
+.place-row svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    stroke: var(--text-muted);
+}
+
+.place-row--selected svg {
+    stroke: var(--primary-color);
+}
+
+.place-row-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.place-row-distance {
+    flex-shrink: 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+/* --- Saver: BACK + SAVE action row --- */
+.saver-action-group {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 280px;
+}
+
+.saver-action-group .track-btn {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.track-btn--ghost {
+    background-color: transparent;
+    color: var(--text-muted);
+    border: 1.5px solid var(--border-color);
+    box-shadow: none;
+}
+
+.track-btn--ghost:hover {
+    background-color: var(--surface-subtle);
+    color: var(--text-color);
+}
+
+/* ==========================================================================
    Locate Page: Save Options (Tag + Comment) – Collapsible Disclosure
    Erscheint nur im Vorschau-Modus (parallel zum Save-Button).
    Standardmäßig eingeklappt; erweitert per Klick auf den Toggle.
@@ -1261,7 +1406,7 @@ body {
    ========================================================================== */
 .locate-map {
     width: 100%;
-    height: 180px;
+    height: 130px;
     border-top: 1px solid var(--border-color);
     flex-shrink: 0;
 }

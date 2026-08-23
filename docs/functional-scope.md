@@ -39,7 +39,7 @@
 - Fetched places are cached in the database (deduplicated by the Geoapify place ID) and served nearest-first; a cache hit avoids a repeated external request.
 - Each place provides a name (with a fallback for anonymous POIs), primary/secondary category, address, contact and wheelchair information.
 - The client language (from the HTTP `Accept-Language` header) is passed to Geoapify so POI names can be returned in the user's language.
-- **Status:** currently a backend capability (`GET /places`); frontend UI integration is planned but not yet present in the app.
+- **Status:** fully integrated into the Locate view (0.4.0): the 5 nearest places are shown with their distance; the user can adopt a place as the label of the saved location.
 
 ## 2. User Interface
 
@@ -48,12 +48,11 @@ The application is a single-page application (SPA) with three main views:
 ### 2.1. Locate View
 - This is the main view of the application.
 - It displays a button to fetch the current location.
-- When the location is fetched, it is displayed on a map.
-- The view also shows the current weather and address information.
-- The current UV-Index and the elevation are displayed alongside the address.
-- A "Save Location" button allows the user to save the current location to their history.
+- Fetching runs a GPS accuracy loop; once a fix is found, the view splits into two steps:
+  - **Chooser step:** shows the current weather (temperature, condition, UV-Index), a selectable **Resolved Address** row (with elevation) and a **"Places around me"** list of up to the 5 nearest POIs (category icon + name + distance in m/km). The resolved address is selected by default. The user either keeps it or taps one of the place rows to adopt it as the location label. A "CONTINUE" button proceeds to the save step. The fetch button now reads "Refresh" and re-runs the GPS + preview fetch from the current coordinates.
+  - **Save step:** shows the collapsible "TAG & COMMENT" section, the weather again, a **LOCATION** row with the chosen location (resolved address or adopted place name) and the elevation (from the fetched weather data), and an OpenStreetMap snippet of the GPS position. "SAVE LOCATION" persists the position; "BACK" returns to the chooser without losing the selection.
+- The saved coordinates are always the GPS position — a chosen place only overrides the stored label (`osmName`/`displayName`, plus the place's city/country). Weather, elevation and accuracy therefore stay valid.
 - Before saving, a collapsible "TAG & COMMENT" section allows the user to select a single predefined tag and optionally enter a comment (max. 25 characters).
-- After saving, the chosen tag and comment are shown at the top of the location card, above the temperature section.
 
 ### 2.2. History View
 - This view displays the user's saved locations.
@@ -151,7 +150,8 @@ component.
 
 | Version | Date | Description |
 |---------|------|-------------|
-| 0.4.0 | 2026-08-22 | New backend capability "Places Around Me": `GET /places?userId=&lat=&lon=` returns points of interest near a coordinate (Geoapify Places API), cached in a new `places` table and served nearest-first (cache-first geoboxing). Anonymous POIs receive a synthetic name; the client language is honored via `Accept-Language`. Frontend UI integration is planned but not yet present. |
+| 0.4.0 | 2026-08-23 | Locate view integrated with the "Places around me" backend: after fetching a position the view now offers two steps — a chooser (weather, selectable resolved address with elevation, and the up-to-5 nearest places with distance) and a save step (TAG & COMMENT, weather, chosen location + elevation, map snippet, SAVE). The user can adopt a place as the location label while the saved coordinates stay the GPS fix. The Geoapify search radius was raised from 50 m to 500 m so the list is usually populated. |
+| 0.4.0 | 2026-08-22 | New backend capability "Places Around Me": `GET /places?userId=&lat=&lon=` returns points of interest near a coordinate (Geoapify Places API), cached in a new `places` table and served nearest-first (cache-first geoboxing). Anonymous POIs receive a synthetic name; the client language is honored via `Accept-Language`. |
 | 0.4.0 | 2026-08-20 | Backend schema management switched to Flyway (versioned SQL migrations); no user-visible functional change. Existing databases are baselined and data is preserved (see `docs/technical-landscape.md` → Schema Management). |
 | 0.3.0 | 2026-08-03 | Added UV-Index and elevation fields to the `Position` entity (fetched from Open-Meteo); display UV-Index and elevation in the Locate and History views; fixed HTTP 500 on saving a location caused by an H2 2.4.240 enum CHECK constraint regression (see `docs/production-upgrade-0.3.0.md`). |
 | 0.3.0 | 2026-08-10 | Documentation alignment: technical details (incl. the BCE component breakdown) moved to `docs/technical-landscape.md`. |
