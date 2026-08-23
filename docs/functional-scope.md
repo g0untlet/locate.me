@@ -34,6 +34,13 @@
 - For a given location, the application fetches and displays the corresponding address.
 - This is done by an external API (OpenStreetMap/Nominatim).
 
+### 1.7. Places Around Me (POI Discovery)
+- For a given location, the backend can fetch points of interest (POIs) around it from the Geoapify Places API (categories: catering, commercial, healthcare, leisure).
+- Fetched places are cached in the database (deduplicated by the Geoapify place ID) and served nearest-first; a cache hit avoids a repeated external request.
+- Each place provides a name (with a fallback for anonymous POIs), primary/secondary category, address, contact and wheelchair information.
+- The client language (from the HTTP `Accept-Language` header) is passed to Geoapify so POI names can be returned in the user's language.
+- **Status:** currently a backend capability (`GET /places`); frontend UI integration is planned but not yet present in the app.
+
 ## 2. User Interface
 
 The application is a single-page application (SPA) with three main views:
@@ -74,6 +81,7 @@ The backend provides a REST API with the following endpoints:
 - `DELETE /positions/{id}?userId={userId}`: Deletes a position by its ID.
 - `GET /positions?userId={userId}&lat={lat}&lon={lon}`: Retrieves all positions for a user. If `lat` and `lon` are provided, it also calculates the distance and travel times (walking, biking, driving) to each position.
 - `GET /positions/current?userId={userId}&lat={lat}&lon={lon}`: Resolves the address (Nominatim) and weather/UV/elevation (Open-Meteo) for the given coordinates and returns a preview without persisting it. This is used by the Locate view to fetch the current location before saving.
+- `GET /places?userId={userId}&lat={lat}&lon={lon}`: Returns cached places around the given coordinate, nearest-first. On a cache miss the backend fetches from the Geoapify Places API and stores the results (deduplicated by place ID). An optional `Accept-Language` header selects the language of POI names. Each place includes a response-only `distance` (meters) to the given coordinate.
 
 Position responses include the weather-related fields `temperature`, `weatherCode`, `uvIndex`, and `elevation`. No new endpoints were introduced for UV-Index and elevation; they are persisted and returned by the existing endpoints above.
 
@@ -97,6 +105,17 @@ The main business object is the `Position` entity, which has the following attri
 - `osmCategory`, `osmType`, `osmName`, `addressType`, `houseNumber`, `road`, `city`, `country`: Geocoding information from OpenStreetMap.
 - `tag`: An optional predefined tag for the position (`HOME`, `WORK`, `PARKING`, `SHOPPING`, `EATING`, `LEISURE`, `FRIENDS`, `HEALTH`).
 - `comment`: An optional user-provided comment (max. 25 characters in the UI, 255 in the database).
+
+A second business object is the `Place`, which represents a cached point of interest fetched from Geoapify:
+
+- `placeId`: The primary key (the Geoapify place ID).
+- `cachedAt`: When the place was last (re-)fetched.
+- `geohash`: A 9-character geohash of the coordinates.
+- `latitude`, `longitude`: The coordinates of the place.
+- `name`: A display name; never blank — anonymous POIs get a synthetic name from the category plus street/city context (fallback: address line, formatted address, `"Unknown Place"`).
+- `primaryCategory`, `secondaryCategory`: The POI category (e.g. leisure / playground).
+- `formattedAddress`, `street`, `houseNumber`, `postcode`, `city`, `country`: Address attributes.
+- `phone`, `website`, `openingHours`, `wheelchair`: Additional POI metadata.
 
 ### 4.1. Managing the Tag Vocabulary (`PositionTag`)
 
@@ -125,11 +144,14 @@ every functional area is implemented as a set of boundaries (REST resources),
 controls (business logic) and entities (business objects). This documentation
 describes the system from a functional point of view; the complete technical
 component breakdown lives in `docs/technical-landscape.md` → ECB Architecture.
+Each feature — `locator` for positions, `aroundme` for places — is a separate BCE
+component.
 
 ## 6. Change Log
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.4.0 | 2026-08-22 | New backend capability "Places Around Me": `GET /places?userId=&lat=&lon=` returns points of interest near a coordinate (Geoapify Places API), cached in a new `places` table and served nearest-first (cache-first geoboxing). Anonymous POIs receive a synthetic name; the client language is honored via `Accept-Language`. Frontend UI integration is planned but not yet present. |
 | 0.4.0 | 2026-08-20 | Backend schema management switched to Flyway (versioned SQL migrations); no user-visible functional change. Existing databases are baselined and data is preserved (see `docs/technical-landscape.md` → Schema Management). |
 | 0.3.0 | 2026-08-03 | Added UV-Index and elevation fields to the `Position` entity (fetched from Open-Meteo); display UV-Index and elevation in the Locate and History views; fixed HTTP 500 on saving a location caused by an H2 2.4.240 enum CHECK constraint regression (see `docs/production-upgrade-0.3.0.md`). |
 | 0.3.0 | 2026-08-10 | Documentation alignment: technical details (incl. the BCE component breakdown) moved to `docs/technical-landscape.md`. |

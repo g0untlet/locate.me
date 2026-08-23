@@ -6,6 +6,7 @@ package net.gauntlet.locate.me.locator.boundary;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.health.HealthCheck;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.eclipse.microprofile.health.HealthCheckResponseBuilder;
@@ -21,6 +22,7 @@ public class DatabaseHealthCheck implements HealthCheck {
     EntityManager em;
 
     @Override
+    @Transactional
     public HealthCheckResponse call() {
         HealthCheckResponseBuilder responseBuilder = HealthCheckResponse.named("Database Connection Readiness Check");
         try {
