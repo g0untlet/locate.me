@@ -17,7 +17,7 @@ const SHELL = ['/', '/index.html'];
 const ASSETS = [
     '/app.js?v=0.3.1_33',
     '/css/style.css?v=0.3.1_26',
-    '/js/config.js', '/js/utils.js', '/js/api.js', '/js/state.js',
+    '/js/config.js?v=0.3.1_34', '/js/utils.js', '/js/api.js', '/js/state.js',
     '/js/ui/toast.js', '/js/ui/badge.js', '/js/ui/status.js', '/js/ui/map.js',
     '/js/pages/settings.js', '/js/pages/locate.js', '/js/pages/history.js'
 ];

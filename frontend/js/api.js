@@ -1,4 +1,4 @@
-import { API_BASE_URL, API_PATH } from './config.js';
+import { API_BASE_URL, API_PATH } from './config.js?v=0.3.1_34';
 
 /* ==========================================================================
    GET /api/system/info
