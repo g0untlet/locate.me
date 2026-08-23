@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notas de la versi&oacute;n &ndash; locate.me</title>
+    <meta name="description" content="Notas de la versi&oacute;n de locate.me &ndash; qu&eacute; hay de nuevo en cada versi&oacute;n de la PWA de seguimiento de ubicaci&oacute;n autohospedada. La versi&oacute;n m&aacute;s reciente siempre est&aacute; arriba.">
+    <script>
+        try {
+            var t = localStorage.getItem('theme');
+            document.documentElement.dataset.theme = (t === 'dark' || t === 'light') ? t : 'light';
+        } catch (e) {
+            document.documentElement.dataset.theme = 'light';
+        }
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="alternate" hreflang="en" href="release-notes.html">
+    <link rel="alternate" hreflang="de" href="release-notes.de.html">
+    <link rel="alternate" hreflang="es" href="release-notes.es.html">
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="container header-inner">
+            <a class="logo" href=".">
+                <svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true">
+                    <rect width="64" height="64" rx="14" fill="#1a5f8c"/>
+                    <path d="M32 12c-9.4 0-17 7.6-17 17 0 12.7 17 25.5 17 25.5S49 41.7 49 29c0-9.4-7.6-17-17-17z" fill="#ffffff"/>
+                    <circle cx="32" cy="29" r="6.5" fill="#72b2dc"/>
+                </svg>
+                <span>locate<span class="title-accent">.me</span></span>
+            </a>
+            <div class="header-actions">
+                <nav class="site-nav" aria-label="Principal">
+                    <a class="nav-link" href="index.es.html">Inicio</a>
+                    <a class="nav-link is-active" href="release-notes.es.html" aria-current="page">Notas de la versi&oacute;n</a>
+                </nav>
+                <div class="lang-menu">
+                    <button id="lang-toggle" class="lang-toggle" aria-haspopup="true" aria-expanded="false" aria-label="Elegir idioma">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                        <span class="lang-toggle-label">ES</span>
+                    </button>
+                    <div id="lang-dropdown" class="lang-dropdown" hidden>
+                        <a class="lang-option" href="release-notes.html" hreflang="en" lang="en">English</a>
+                        <a class="lang-option" href="release-notes.de.html" hreflang="de" lang="de">Deutsch</a>
+                        <a class="lang-option is-active" href="release-notes.es.html" hreflang="es" lang="es" aria-current="true">Espa&ntilde;ol</a>
+                    </div>
+                </div>
+                <button id="theme-toggle" class="toggle-switch" role="switch" aria-checked="false" aria-label="Cambiar modo oscuro">
+                    <span class="toggle-knob"></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero hero--page">
+            <div class="container">
+                <h1 class="hero-title">Notas de la versi&oacute;n</h1>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="container">
+                <div class="release-list">
+
+                    <article class="release-card">
+                        <div class="release-head">
+                            <span class="release-version">v0.3.0</span>
+                            <span class="release-date">17 de agosto de 2026</span>
+                        </div>
+                        <p class="release-tagline">Lugares m&aacute;s completos, mejor planificaci&oacute;n de viajes y una nueva p&aacute;gina de inicio.</p>
+                        <ul class="release-items">
+                            <li><strong>&Iacute;ndice UV y altitud</strong> &mdash; Cada ubicaci&oacute;n consultada muestra ahora el &iacute;ndice UV y la altitud &mdash; justo cuando la consultas y de nuevo m&aacute;s tarde en tu historial, para que puedas planificar el d&iacute;a antes de salir.</li>
+                            <li><strong>Etiquetas y comentarios</strong> &mdash; Al guardar, a&ntilde;ade una etiqueta de una lista preparada (p. ej. Home, Work, Parking) y un comentario breve (hasta 25 caracteres). Ambos opcionales; aparecen en tu historial y en la tarjeta del lugar guardado.</li>
+                            <li><strong>Tiempos en bici y en coche</strong> &mdash; El historial muestra ahora no solo el tiempo a pie, sino tambi&eacute;n cu&aacute;nto tardar&iacute;as en bici o en coche &mdash; junto con la distancia.</li>
+                            <li><strong>Banner de modo de demostraci&oacute;n</strong> &mdash; Aparece un banner claro siempre que el ID de usuario de demostraci&oacute;n compartido est&aacute; activo, para que siempre sepas que est&aacute;s en modo de demostraci&oacute;n.</li>
+                            <li><strong>Solicita tu propio ID de usuario</strong> &mdash; Desde los ajustes puedes solicitar ahora tu propio ID de usuario privado por correo electr&oacute;nico &mdash; no m&aacute;s compartir la cuenta de demostraci&oacute;n.</li>
+                            <li><strong>Nuevo sitio web</strong> &mdash; locate.me tiene una nueva p&aacute;gina de inicio biling&uuml;e en locate-me.net, con notas de la versi&oacute;n y un enlace de c&oacute;digo abierto.</li>
+                            <li><strong>Correcciones y mejoras</strong> &mdash; Guardar una ubicaci&oacute;n ya no falla en algunos casos, las tarjetas del historial son m&aacute;s limpias y la app se siente m&aacute;s fluida.</li>
+                        </ul>
+                    </article>
+
+                    <article class="release-card">
+                        <div class="release-head">
+                            <span class="release-version">v0.2.3</span>
+                            <span class="release-date">26 de julio de 2026</span>
+                        </div>
+                        <p class="release-tagline">Un dise&ntilde;o moderno, una interacci&oacute;n m&aacute;s r&aacute;pida y nuevas funciones pr&aacute;cticas para tu historial de ubicaciones.</p>
+                        <ul class="release-items">
+                            <li><strong>Modo oscuro</strong> &mdash; Agradable a la vista por la noche. C&aacute;mbialo en los ajustes; tu elecci&oacute;n se recuerda y la app arranca con el aspecto correspondiente.</li>
+                            <li><strong>Comparte lugares directamente desde el mapa</strong> &mdash; Toca un pin en la vista de mapa de tu historial y la ventana de informaci&oacute;n incluye ahora su propio bot&oacute;n de compartir.</li>
+                            <li><strong>B&uacute;squeda r&aacute;pida en tu historial</strong> &mdash; Un nuevo campo de b&uacute;squeda sobre la lista filtra tus entradas en tiempo real mientras escribes una direcci&oacute;n o una ciudad.</li>
+                            <li><strong>Deslizar para actualizar</strong> &mdash; Desliza el historial hacia abajo brevemente para recargar las entradas; una flecha visual te indica cu&aacute;ndo soltar.</li>
+                            <li><strong>Sensaci&oacute;n de carga m&aacute;s fluida</strong> &mdash; Mientras se carga tu historial aparecen elegantes tarjetas de marcador de posici&oacute;n, para una app notablemente m&aacute;s fluida.</li>
+                        </ul>
+                    </article>
+
+                    <article class="release-card">
+                        <div class="release-head">
+                            <span class="release-version">v0.2.1</span>
+                            <span class="release-date">16 de julio de 2026</span>
+                        </div>
+                        <p class="release-tagline">Capturar y compartir tus lugares es ahora a&uacute;n m&aacute;s f&aacute;cil e intuitivo.</p>
+                        <ul class="release-items">
+                            <li><strong>Contador en vivo en el men&uacute;</strong> &mdash; Una insignia en el icono de Historial muestra de un vistazo cu&aacute;ntos lugares has guardado.</li>
+                            <li><strong>Comparte lugares directamente</strong> &mdash; El nuevo bot&oacute;n &ldquo;Compartir&rdquo; env&iacute;a tus ubicaciones al instante a trav&eacute;s del conocido men&uacute; de compartir de tu m&oacute;vil (p. ej. WhatsApp).</li>
+                            <li><strong>Integraci&oacute;n con OpenStreetMap</strong> &mdash; Tus lugares se visualizan ahora en mapas reales &mdash; tanto en la b&uacute;squeda como en el historial.</li>
+                            <li><strong>Numeraci&oacute;n limpia</strong> &mdash; Se acabaron las ID criptic&aacute;nicas de la base de datos. Tu historial est&aacute; numerado de forma simple y clara.</li>
+                            <li><strong>Punto de estado t&aacute;ctil</strong> &mdash; Toca el punto pulsante en la parte superior derecha para ver de inmediato si tu app est&aacute; en l&iacute;nea.</li>
+                            <li><strong>Informaci&oacute;n del sistema</strong> &mdash; Los ajustes muestran ahora todos los datos de fondo importantes sobre la versi&oacute;n de tu app. Tu ID de usuario ya no se muestra en texto plano.</li>
+                        </ul>
+                    </article>
+
+                    <article class="release-card">
+                        <div class="release-head">
+                            <span class="release-version">v0.2.0</span>
+                            <span class="release-date">2 de julio de 2026</span>
+                        </div>
+                        <p class="release-tagline">El primer hito de locate.me ya est&aacute; aqu&iacute;.</p>
+                        <ul class="release-items">
+                            <li><strong>Vista previa antes de guardar</strong> &mdash; Ve tu posici&oacute;n antes de guardarla.</li>
+                            <li><strong>Iconos por categor&iacute;a</strong> &mdash; Los lugares guardados se marcan con un icono espec&iacute;fico de su categor&iacute;a.</li>
+                            <li><strong>Distancia y tiempo a pie</strong> &mdash; Se muestran la distancia y el tiempo a pie desde tu ubicaci&oacute;n actual hasta un lugar guardado.</li>
+                        </ul>
+                    </article>
+
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p class="footer-brand">locate<span class="title-accent">.me</span> <span class="footer-status">est&aacute; actualmente <span class="status-label"></span><span class="status-dot" role="status"></span></span></p>
+            <nav class="attribution" aria-label="Impulsado por">
+                Creado con <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>
+                <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>
+                <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>
+            </nav>
+            <p class="footer-open-source">C&oacute;digo abierto &mdash; <a href="https://github.com/g0untlet/locate.me" target="_blank" rel="noopener">ver el c&oacute;digo en GitHub</a>.</p>
+            <p class="footer-note">Tus lugares privados &mdash; para ti y las personas en las que conf&iacute;as.</p>
+            <p class="footer-updated">&Uacute;ltima actualizaci&oacute;n del sitio web: 23 de agosto de 2026</p>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

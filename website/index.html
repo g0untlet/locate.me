@@ -17,6 +17,7 @@
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <link rel="alternate" hreflang="de" href="index.de.html">
     <link rel="alternate" hreflang="en" href="index.html">
+    <link rel="alternate" hreflang="es" href="index.es.html">
 </head>
 <body>
 
@@ -35,10 +36,17 @@
                     <a class="nav-link is-active" href="index.html" aria-current="page">Home</a>
                     <a class="nav-link" href="release-notes.html">Release Notes</a>
                 </nav>
-                <nav class="lang-switch" aria-label="Language">
-                    <a class="lang-link is-active" href="index.html" hreflang="en" aria-current="true">EN</a>
-                    <a class="lang-link" href="index.de.html" hreflang="de">DE</a>
-                </nav>
+                <div class="lang-menu">
+                    <button id="lang-toggle" class="lang-toggle" aria-haspopup="true" aria-expanded="false" aria-label="Choose language">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                        <span class="lang-toggle-label">EN</span>
+                    </button>
+                    <div id="lang-dropdown" class="lang-dropdown" hidden>
+                        <a class="lang-option is-active" href="index.html" hreflang="en" lang="en" aria-current="true">English</a>
+                        <a class="lang-option" href="index.de.html" hreflang="de" lang="de">Deutsch</a>
+                        <a class="lang-option" href="index.es.html" hreflang="es" lang="es">Español</a>
+                    </div>
+                </div>
                 <button id="theme-toggle" class="toggle-switch" role="switch" aria-checked="false" aria-label="Toggle dark mode">
                     <span class="toggle-knob"></span>
                 </button>
@@ -58,7 +66,7 @@
                             and keep a history of the places that matter.
                         </p>
                         <div class="cta-row">
-                            <a class="btn btn-primary" href="https://locateme.srv64.de/" target="_blank" rel="noopener">Open App</a>
+                            <a class="btn btn-primary" href="https://app.locate-me.net/" target="_blank" rel="noopener">Open App</a>
                             <a class="btn btn-secondary" href="#install">How to install</a>
                         </div>
                     </div>
@@ -114,7 +122,7 @@
                 <div class="section-header">
                     <h2 class="section-title">What is locate.me?</h2>
                     <p class="section-intro">
-                        A tiny web app that turns your phone into a smart location notebook.
+                        A web app that turns your phone into a smart location notebook.
                         One tap tells you where you are and what the world looks like right there &mdash;
                         another tap saves the spot, so you always find your way back.
                     </p>
@@ -223,6 +231,9 @@
                             <li>Every place gets a tag from a ready-made list &mdash; Home, Work, Parking and more.</li>
                             <li>Add a short comment so you remember why that spot mattered.</li>
                             <li>See at a glance how long it takes to get there &mdash; by foot, bike or car.</li>
+                            <li>View all your places on a real map &mdash; every saved place becomes a pin.</li>
+                            <li>Share any place through your phone's familiar share menu.</li>
+                            <li>Delete a place anytime &mdash; right from the list.</li>
                         </ul>
                     </div>
                 </div>
@@ -250,7 +261,7 @@
                         <ol class="steps">
                             <li class="step">
                                 <span class="step-num"></span>
-                                <span class="step-text">Open <a class="app-url" href="https://locateme.srv64.de/" target="_blank" rel="noopener">https://locateme.srv64.de/</a> in Chrome or Brave.</span>
+                                <span class="step-text">Open <a class="app-url" href="https://app.locate-me.net/" target="_blank" rel="noopener">https://app.locate-me.net/</a> in Chrome or Brave.</span>
                             </li>
                             <li class="step">
                                 <span class="step-num"></span>
@@ -277,7 +288,7 @@
                         <ol class="steps">
                             <li class="step">
                                 <span class="step-num"></span>
-                                <span class="step-text">Open <a class="app-url" href="https://locateme.srv64.de/" target="_blank" rel="noopener">https://locateme.srv64.de/</a> in Safari.</span>
+                                <span class="step-text">Open <a class="app-url" href="https://app.locate-me.net/" target="_blank" rel="noopener">https://app.locate-me.net/</a> in Safari.</span>
                             </li>
                             <li class="step">
                                 <span class="step-num"></span>
@@ -315,7 +326,7 @@
             </nav>
             <p class="footer-open-source">Open source &mdash; <a href="https://github.com/g0untlet/locate.me" target="_blank" rel="noopener">view the code on GitHub</a>.</p>
             <p class="footer-note">Your private places &mdash; for you and the people you trust.</p>
-            <p class="footer-updated">Website last update: August 20, 2026</p>
+            <p class="footer-updated">Website last update: August 23, 2026</p>
         </div>
     </footer>
 

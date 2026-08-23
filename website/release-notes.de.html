@@ -17,6 +17,7 @@
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <link rel="alternate" hreflang="en" href="release-notes.html">
     <link rel="alternate" hreflang="de" href="release-notes.de.html">
+    <link rel="alternate" hreflang="es" href="release-notes.es.html">
 </head>
 <body>
 
@@ -33,12 +34,19 @@
             <div class="header-actions">
                 <nav class="site-nav" aria-label="Hauptnavigation">
                     <a class="nav-link" href="index.de.html">Start</a>
-                    <a class="nav-link is-active" href="release-notes.de.html" aria-current="page">Release Notes</a>
+                    <a class="nav-link is-active" href="release-notes.de.html" aria-current="page">Versionshinweis</a>
                 </nav>
-                <nav class="lang-switch" aria-label="Sprache">
-                    <a class="lang-link" href="release-notes.html" hreflang="en">EN</a>
-                    <a class="lang-link is-active" href="release-notes.de.html" hreflang="de" aria-current="true">DE</a>
-                </nav>
+                <div class="lang-menu">
+                    <button id="lang-toggle" class="lang-toggle" aria-haspopup="true" aria-expanded="false" aria-label="Sprache w&auml;hlen">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                        <span class="lang-toggle-label">DE</span>
+                    </button>
+                    <div id="lang-dropdown" class="lang-dropdown" hidden>
+                        <a class="lang-option" href="release-notes.html" hreflang="en" lang="en">English</a>
+                        <a class="lang-option is-active" href="release-notes.de.html" hreflang="de" lang="de" aria-current="true">Deutsch</a>
+                        <a class="lang-option" href="release-notes.es.html" hreflang="es" lang="es">Español</a>
+                    </div>
+                </div>
                 <button id="theme-toggle" class="toggle-switch" role="switch" aria-checked="false" aria-label="Dark Mode umschalten">
                     <span class="toggle-knob"></span>
                 </button>
@@ -60,7 +68,7 @@
                     <article class="release-card">
                         <div class="release-head">
                             <span class="release-version">v0.3.0</span>
-                            <span class="release-date">17.8.2026</span>
+                            <span class="release-date">17. August 2026</span>
                         </div>
                         <p class="release-tagline">Mehr zu deinen Orten, bessere Anfahrtszeiten und eine brandneue Homepage.</p>
                         <ul class="release-items">
@@ -77,7 +85,7 @@
                     <article class="release-card">
                         <div class="release-head">
                             <span class="release-version">v0.2.3</span>
-                            <span class="release-date">26.7.2026</span>
+                            <span class="release-date">26. Juli 2026</span>
                         </div>
                         <p class="release-tagline">Ein modernes Design, eine schnellere Bedienung und praktische neue Funktionen f&uuml;r deine Standort-Historie.</p>
                         <ul class="release-items">
@@ -92,7 +100,7 @@
                     <article class="release-card">
                         <div class="release-head">
                             <span class="release-version">v0.2.1</span>
-                            <span class="release-date">16.7.2026</span>
+                            <span class="release-date">16. Juli 2026</span>
                         </div>
                         <p class="release-tagline">Das Festhalten und Teilen deiner Orte ist jetzt noch einfacher und intuitiver.</p>
                         <ul class="release-items">
@@ -108,7 +116,7 @@
                     <article class="release-card">
                         <div class="release-head">
                             <span class="release-version">v0.2.0</span>
-                            <span class="release-date">2.7.2026</span>
+                            <span class="release-date">2. Juli 2026</span>
                         </div>
                         <p class="release-tagline">Der erste Meilenstein von locate.me ist da.</p>
                         <ul class="release-items">
@@ -133,7 +141,7 @@
             </nav>
             <p class="footer-open-source">Open Source &ndash; <a href="https://github.com/g0untlet/locate.me" target="_blank" rel="noopener">Code auf GitHub ansehen</a>.</p>
             <p class="footer-note">Deine privaten Orte &ndash; f&uuml;r dich und die Menschen, denen du vertraust.</p>
-            <p class="footer-updated">Website zuletzt aktualisiert: 20.8.2026</p>
+            <p class="footer-updated">Website zuletzt aktualisiert: 23. August 2026</p>
         </div>
     </footer>
 

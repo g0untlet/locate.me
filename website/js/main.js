@@ -1,6 +1,6 @@
 /* ==========================================================================
    locate.me website – main.js
-   Handles the light/dark theme toggle.
+   Handles the light/dark theme toggle and the language dropdown.
    (Language switching uses plain links between the language pages – no JS.)
    ========================================================================== */
 (function () {
@@ -38,6 +38,27 @@
         });
     }
 
+    var langToggle = document.getElementById('lang-toggle');
+    var langDropdown = document.getElementById('lang-dropdown');
+    if (langToggle && langDropdown) {
+        langToggle.addEventListener('click', function (event) {
+            event.stopPropagation();
+            var open = langToggle.getAttribute('aria-expanded') === 'true';
+            langToggle.setAttribute('aria-expanded', String(!open));
+            langDropdown.hidden = open;
+        });
+        document.addEventListener('click', function () {
+            langToggle.setAttribute('aria-expanded', 'false');
+            langDropdown.hidden = true;
+        });
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                langToggle.setAttribute('aria-expanded', 'false');
+                langDropdown.hidden = true;
+            }
+        });
+    }
+
     var emailUser = 'in' + 'fo';
     var emailDomain = 'locate' + '-me.net';
     var emailLinks = document.querySelectorAll('.email-link');
@@ -48,7 +69,12 @@
     var statusDot = document.querySelector('.status-dot');
     var statusLabel = document.querySelector('.footer-status .status-label');
     if (statusDot) {
-        var isDe = document.documentElement.lang === 'de';
+        var lang = document.documentElement.lang;
+        var titles = {
+            de: { online: 'Backend erreichbar', offline: 'Backend nicht erreichbar' },
+            es: { online: 'Backend accesible', offline: 'Backend no accesible' },
+            en: { online: 'Backend reachable', offline: 'Backend unreachable' }
+        }[lang] || { online: 'Backend reachable', offline: 'Backend unreachable' };
         var controller = new AbortController();
         var timeoutId = setTimeout(function () { controller.abort(); }, 6000);
         fetch('/api/system/info', { signal: controller.signal }).then(function (res) {
@@ -60,13 +86,13 @@
             statusDot.classList.add('online');
             statusDot.setAttribute('aria-label', 'Online');
             statusLabel.textContent = 'Online';
-            statusDot.parentElement.title = isDe ? 'Backend erreichbar' : 'Backend reachable';
+            statusDot.parentElement.title = titles.online;
         }).catch(function () {
             statusDot.classList.remove('online');
             statusDot.classList.add('offline');
             statusDot.setAttribute('aria-label', 'Offline');
             statusLabel.textContent = 'Offline';
-            statusDot.parentElement.title = isDe ? 'Backend nicht erreichbar' : 'Backend unreachable';
+            statusDot.parentElement.title = titles.offline;
         });
     }
 })();
