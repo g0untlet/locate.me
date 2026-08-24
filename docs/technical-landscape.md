@@ -19,7 +19,7 @@ nearest-first. The functional scope is documented in
 | Frontend | Progressive Web App (PWA, installable) |
 | Mapping | Leaflet 1.9.4 + OpenStreetMap tile server |
 | Places | Geoapify Places API (POI discovery) |
-| Backend | Quarkus 3.33.2, Java 21 |
+| Backend | Quarkus 3.33.3.1, Java 21 |
 | API | REST (Jakarta REST), JSON-B / JSON-P |
 | ORM | Hibernate ORM (schema generation = `none`) |
 | Migrations | Flyway (versioned SQL migrations, `quarkus-flyway`) |
@@ -120,7 +120,7 @@ Browser (PWA) --HTTPS--> Caddy2 --/api--> Quarkus REST (Boundary /api)
 
 ## Quarkus Version
 
-Quarkus 3.33.2, Java 21, packaged as uber-jar (`locator-service-<version>-runner.jar`).
+Quarkus 3.33.3.1, Java 21, packaged as uber-jar (`locator-service-<version>-runner.jar`).
 
 ## Package Structure
 
@@ -408,7 +408,7 @@ self-hosted and private.
 
 ## Build Technology
 
-Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
+Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 
 ## Environment Overview
 
@@ -479,7 +479,7 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 
 ## Technology
 
-- Quarkus 3.33.2, Java 21, H2 2.4.240.
+- Quarkus 3.33.3.1, Java 21, H2 2.4.240.
 - Caddy2 reverse proxy with HTTPS. All responses (static + `/api`) are sent with
   `Cache-Control: no-store` in every site block (DEV, PROD, `:8070` tunnel) — the
   browser HTTP cache is never used; `?v=` cache-busting query tokens remain as a
