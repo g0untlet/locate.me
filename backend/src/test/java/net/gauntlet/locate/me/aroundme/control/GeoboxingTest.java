@@ -99,4 +99,58 @@ class GeoboxingTest {
         assertThat(Geoboxing.deltaLat(-50.0)).isNegative();
         assertThat(Geoboxing.deltaLon(-50.0, 48.1356)).isNegative();
     }
+
+    @Test
+    void bearingDueNorthIsZero() {
+        assertThat(Geoboxing.bearingDegrees(48.1356, 11.6058, 48.1456, 11.6058)).isCloseTo(0.0, within(0.5));
+    }
+
+    @Test
+    void bearingDueEastIsNinety() {
+        assertThat(Geoboxing.bearingDegrees(48.1356, 11.6058, 48.1356, 11.6158)).isCloseTo(90.0, within(1.0));
+    }
+
+    @Test
+    void bearingDueSouthIsOneHundredEighty() {
+        assertThat(Geoboxing.bearingDegrees(48.1356, 11.6058, 48.1256, 11.6058)).isCloseTo(180.0, within(0.5));
+    }
+
+    @Test
+    void bearingDueWestIsTwoHundredSeventy() {
+        assertThat(Geoboxing.bearingDegrees(48.1356, 11.6058, 48.1356, 11.5958)).isCloseTo(270.0, within(1.0));
+    }
+
+    @Test
+    void bearingToNortheastIsFortyFive() {
+        double lat = 48.1356;
+        double lon = 11.6058;
+        double bearing = Geoboxing.bearingDegrees(lat, lon,
+                lat + Geoboxing.deltaLat(100.0), lon + Geoboxing.deltaLon(100.0, lat));
+        assertThat(bearing).isCloseTo(45.0, within(1.0));
+    }
+
+    @Test
+    void compassPointMapsAllEightCardinals() {
+        assertThat(Geoboxing.compassPoint(0.0)).isEqualTo("N");
+        assertThat(Geoboxing.compassPoint(45.0)).isEqualTo("NE");
+        assertThat(Geoboxing.compassPoint(90.0)).isEqualTo("E");
+        assertThat(Geoboxing.compassPoint(135.0)).isEqualTo("SE");
+        assertThat(Geoboxing.compassPoint(180.0)).isEqualTo("S");
+        assertThat(Geoboxing.compassPoint(225.0)).isEqualTo("SW");
+        assertThat(Geoboxing.compassPoint(270.0)).isEqualTo("W");
+        assertThat(Geoboxing.compassPoint(315.0)).isEqualTo("NW");
+    }
+
+    @Test
+    void compassPointMapsSectorBoundaries() {
+        assertThat(Geoboxing.compassPoint(337.6)).isEqualTo("N");
+        assertThat(Geoboxing.compassPoint(22.6)).isEqualTo("NE");
+        assertThat(Geoboxing.compassPoint(337.4)).isEqualTo("NW");
+        assertThat(Geoboxing.compassPoint(22.4)).isEqualTo("N");
+    }
+
+    @Test
+    void compassPointForUndefinedBearingIsEmpty() {
+        assertThat(Geoboxing.compassPoint(Double.NaN)).isEmpty();
+    }
 }

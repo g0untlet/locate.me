@@ -44,4 +44,31 @@ public interface Geoboxing {
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return 6_371_000.0 * c;
     }
+
+    /**
+     * Initial great-circle bearing from the first to the second coordinate,
+     * in degrees measured clockwise from north, normalized to [0, 360).
+     */
+    static double bearingDegrees(double lat1, double lon1, double lat2, double lon2) {
+        double phi1 = Math.toRadians(lat1);
+        double phi2 = Math.toRadians(lat2);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double y = Math.sin(dLon) * Math.cos(phi2);
+        double x = Math.cos(phi1) * Math.sin(phi2)
+                - Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLon);
+        double theta = Math.toDegrees(Math.atan2(y, x));
+        return (theta + 360.0) % 360.0;
+    }
+
+    /**
+     * 8-point compass direction (N, NE, E, SE, S, SW, W, NW) for a bearing in
+     * degrees, or an empty string when the bearing is undefined (same point).
+     */
+    static String compassPoint(double bearingDegrees) {
+        if (Double.isNaN(bearingDegrees)) {
+            return "";
+        }
+        int index = (int) Math.round(bearingDegrees / 45.0) % 8;
+        return new String[]{"N", "NE", "E", "SE", "S", "SW", "W", "NW"}[index];
+    }
 }

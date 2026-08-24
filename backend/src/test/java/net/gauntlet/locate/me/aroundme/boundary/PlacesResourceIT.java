@@ -271,6 +271,36 @@ public class PlacesResourceIT {
     }
 
     @Test
+    void placesIncludeCompassDirection() {
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
+                .thenReturn(featureCollection(
+                        feature("North Place", "north-id", 48.1456, 11.6058,
+                                Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
+                                Json.createObjectBuilder().build()),
+                        feature("East Place", "east-id", 48.1356, 11.6158,
+                                Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
+                                Json.createObjectBuilder().build()),
+                        feature("Coincident", "same-id", 48.1356, 11.6058,
+                                Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
+                                Json.createObjectBuilder().build())));
+
+        // Sorted by distance: the coincident place (0 m) first, then the east
+        // (~745 m) and the north (~1.1 km) one. Direction is computed from the
+        // request lat/lon (the user's position); a coincident place has none.
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("[0].name", is("Coincident"))
+                .body("[0].direction", is(""))
+                .body("[1].name", is("East Place"))
+                .body("[1].direction", is("E"))
+                .body("[2].name", is("North Place"))
+                .body("[2].direction", is("N"));
+    }
+
+    @Test
     void placeWithOnlyDisallowedCategoriesHasNoCategory() {
         when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection(

@@ -258,10 +258,11 @@ function renderPlacesList(places) {
         row.type = 'button';
         row.className = 'place-row';
         row.setAttribute('aria-pressed', 'false');
+        const direction = place.direction || '';
         row.innerHTML = `
             ${getPlaceIconSvg(place.primaryCategory)}
             <span class="place-row-name">${escapeHtml(place.name || place.formattedAddress || 'Unknown place')}</span>
-            <span class="place-row-distance">${formatDistanceMeters(place.distance)}</span>
+            <span class="place-row-distance">${formatDistanceMeters(place.distance)}${direction ? ` ${direction}` : ''}</span>
         `;
         row.addEventListener('click', () => selectPlace(place, row));
         list.appendChild(row);

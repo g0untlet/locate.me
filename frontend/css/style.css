@@ -763,7 +763,14 @@ body {
     transition: var(--transition);
 }
 
-.nav-item.active { color: var(--primary-dark); }
+.nav-item.active {
+    color: var(--primary-dark);
+    background-color: var(--primary-tint);
+    border-radius: 14px;
+    height: auto;
+    margin: 6px 0;
+    padding: 10px 8px 5px;
+}
 .nav-item.active .nav-icon { transform: translateY(-2px); stroke: var(--primary-dark); }
 .nav-label { font-size: 0.75rem; font-weight: 500; }
 
