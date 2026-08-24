@@ -441,7 +441,7 @@ function ensureSearchBar() {
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
             <input id="history-search-input" class="history-search-input"
-                   type="search" placeholder="Filter by address…" autocomplete="off">
+                   type="search" placeholder="Filter by address, tag or comment…" autocomplete="off">
             <button id="history-search-clear" class="history-search-clear hidden" aria-label="Clear filter">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                      stroke-linecap="round" stroke-linejoin="round">
