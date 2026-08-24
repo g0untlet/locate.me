@@ -465,12 +465,16 @@ function sendPositionToBackend(payload, { getActiveUserId, checkBackendStatus, s
 }
 
 /* ==========================================================================
-   Internal: When a place is selected, use it as the saved label only.
-   The GPS coordinates (and with them weather/elevation/accuracy) stay untouched.
+   Internal: When a place is selected, save the place's coordinates and use it
+   as the saved label. Without a selection (resolved address) the GPS fix
+   coordinates are kept. Weather/elevation/accuracy always come from the GPS
+   preview.
    ========================================================================== */
 function applySelectedPlace(payload) {
     if (!selectedPlace) return;
     const place = selectedPlace;
+    payload.latitude = place.latitude;
+    payload.longitude = place.longitude;
     payload.osmName = formatPlaceLabel(place);
     if (place.formattedAddress) payload.displayName = place.formattedAddress;
     if (place.street) payload.road = place.street;
@@ -505,7 +509,11 @@ function handleContinue() {
 
     showSaveOptions();
     showView('saver');
-    showLocateMap(cached.latitude, cached.longitude);
+    // Preview the point that will be saved: the chosen place when one is
+    // adopted, otherwise the GPS fix.
+    const mapLat = selectedPlace ? selectedPlace.latitude : cached.latitude;
+    const mapLon = selectedPlace ? selectedPlace.longitude : cached.longitude;
+    showLocateMap(mapLat, mapLon);
 }
 
 /* ==========================================================================

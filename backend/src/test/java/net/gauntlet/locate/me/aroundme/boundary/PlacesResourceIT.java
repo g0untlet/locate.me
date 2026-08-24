@@ -260,14 +260,14 @@ public class PlacesResourceIT {
         when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection(features));
 
-        // The backend returns at most aroundme.max-places (7) places, even though
-        // Geoapify delivered 10.
+        // The backend returns at most aroundme.max-places (10) places; here
+        // Geoapify delivered exactly 10, so all of them are returned.
         given()
                 .when()
                 .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
                 .then()
                 .statusCode(200)
-                .body("size()", is(7));
+                .body("size()", is(10));
     }
 
     @Test

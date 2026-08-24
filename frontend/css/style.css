@@ -184,17 +184,17 @@ body {
 .track-btn {
     width: 100%;
     max-width: 280px;
-    padding: 14px 0;
-    font-size: 0.95rem;
+    padding: 10px 0;
+    font-size: 0.9rem;
     font-weight: 600;
     letter-spacing: 0.5px;
     color: white;
     background-color: var(--primary-color);
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
     transition: var(--transition);
-    box-shadow: 0 4px 6px rgba(114, 178, 220, 0.15);
+    box-shadow: 0 2px 4px rgba(114, 178, 220, 0.12);
     margin-bottom: 12px;
     flex-shrink: 0;
 }
@@ -908,11 +908,11 @@ body {
     display: flex;
     flex-direction: column;
     width: 100%;
-    /* Fits ~7 place rows; flex + overflow-y lets the list shrink and scroll
+    /* Fits ~10 place rows; flex + overflow-y lets the list shrink and scroll
        internally on smaller screens instead of scrolling the whole page. */
     flex: 1;
     min-height: 0;
-    max-height: 236px;
+    max-height: 336px;
     overflow-y: auto;
     padding-bottom: 4px;
 }
