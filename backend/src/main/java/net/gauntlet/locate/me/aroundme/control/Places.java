@@ -5,14 +5,18 @@ package net.gauntlet.locate.me.aroundme.control;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import ch.hsr.geohash.GeoHash;
 import jakarta.inject.Inject;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
+import jakarta.json.JsonString;
 import jakarta.json.JsonValue;
 import jakarta.persistence.EntityManager;
 import jakarta.ws.rs.WebApplicationException;
@@ -52,6 +56,18 @@ public class Places {
     int cacheRadius;
 
     @Inject
+    @ConfigProperty(name = "aroundme.exclude-categories")
+    String excludeCategories;
+
+    @Inject
+    @ConfigProperty(name = "aroundme.max-places")
+    int maxPlaces;
+
+    // Secondary categories from aroundme.exclude-categories that must not be
+    // returned or stored. Lazily parsed once per Places instance.
+    Set<String> excludedSecondaryCategories;
+
+    @Inject
     @ConfigProperty(name = "geoapify.format")
     String format;
 
@@ -59,14 +75,20 @@ public class Places {
     @ConfigProperty(name = "geoapify.api-key")
     Optional<String> apiKey;
 
+    // Top-level categories from geoapify.categories that may be used as a place's
+    // primary/secondary category. Lazily parsed once per Places instance.
+    Set<String> allowedTopLevelCategories;
+
     public List<Place> findNear(double lat, double lon, String acceptLanguage) {
         LOG.log(System.Logger.Level.DEBUG, "Looking up cached places near ({0}, {1})", lat, lon);
         List<Place> cached = findCached(lat, lon);
+        List<Place> result = cached.isEmpty() ? fetchAndStore(lat, lon, acceptLanguage) : cached;
         if (!cached.isEmpty()) {
             LOG.log(System.Logger.Level.DEBUG, "Cache hit: returning {0} place(s) from the H2 cache", cached.size());
-            return cached;
         }
-        return fetchAndStore(lat, lon, acceptLanguage);
+        // The client only displays aroundme.max-places entries; cache storage is
+        // not affected (geoapify.limit still governs how many are persisted).
+        return result.stream().limit(this.maxPlaces).toList();
     }
 
     private List<Place> findCached(double lat, double lon) {
@@ -88,6 +110,7 @@ public class Places {
         return candidates.stream()
                 .map(p -> new NearPlace(p, Geoboxing.distanceMeters(lat, lon, p.latitude(), p.longitude())))
                 .filter(np -> np.distance() <= this.cacheRadius)
+                .filter(np -> !isExcluded(np.place()))
                 .sorted(Comparator.comparingDouble(NearPlace::distance).thenComparing(np -> np.place().placeId()))
                 .limit(this.limit)
                 .map(NearPlace::place)
@@ -111,11 +134,24 @@ public class Places {
                     .build());
         }
 
-        List<Place> places = new ArrayList<>();
+        JsonArray features = null;
         if (response != null && response.containsKey("features") && !response.isNull("features")) {
-            JsonArray features = response.getJsonArray("features");
+            features = response.getJsonArray("features");
+        }
+
+        // Surface an empty/unexpected Geoapify response instead of silently
+        // storing nothing – helps to spot e.g. a rejected request (bad API key).
+        if (features == null || features.isEmpty()) {
+            LOG.log(System.Logger.Level.WARNING, "Geoapify returned no places near ({0}, {1}): {2}", lat, lon, response);
+        }
+
+        List<Place> places = new ArrayList<>();
+        if (features != null) {
             for (int i = 0; i < features.size(); i++) {
-                places.add(this.em.merge(toPlace(features.getJsonObject(i))));
+                Place place = toPlace(features.getJsonObject(i));
+                if (!isExcluded(place)) {
+                    places.add(this.em.merge(place));
+                }
             }
         }
 
@@ -138,7 +174,10 @@ public class Places {
         JsonArray coordinates = feature.getJsonObject("geometry").getJsonArray("coordinates");
         double lon = coordinates.getJsonNumber(0).doubleValue();
         double lat = coordinates.getJsonNumber(1).doubleValue();
-        JsonArray categories = props.getJsonArray("categories");
+        JsonArray rawCategories = props.getJsonArray("categories");
+        // Only categories whose top level is part of geoapify.categories are used;
+        // everything else (e.g. "access" / "access.yes") is ignored.
+        List<String> categories = configuredOnly(rawCategories);
 
         Place place = new Place();
         place.placeId(string(props, "place_id"));
@@ -160,7 +199,9 @@ public class Places {
         place.phone(phone(props));
         place.website(string(props, "website"));
         place.openingHours(string(props, "opening_hours"));
-        place.wheelchair(wheelchair(categories));
+        // wheelchair is not a configured top-level category, so it must be read
+        // from the raw category list, not the filtered one.
+        place.wheelchair(wheelchair(rawCategories));
         place.rawJson(feature.toString());
         return place;
     }
@@ -175,22 +216,64 @@ public class Places {
         return null;
     }
 
-    private String primaryCategory(JsonArray categories) {
+    private Set<String> allowedCategories() {
+        if (this.allowedTopLevelCategories == null) {
+            this.allowedTopLevelCategories = Arrays.stream(this.categories.split(","))
+                    .map(String::trim)
+                    .filter(entry -> !entry.isEmpty())
+                    .map(this::topLevel)
+                    .collect(Collectors.toSet());
+        }
+        return this.allowedTopLevelCategories;
+    }
+
+    private String topLevel(String category) {
+        int dot = category.indexOf('.');
+        return dot > 0 ? category.substring(0, dot) : category;
+    }
+
+    private Set<String> excludedCategories() {
+        if (this.excludedSecondaryCategories == null) {
+            this.excludedSecondaryCategories = Arrays.stream(this.excludeCategories.split(","))
+                    .map(String::trim)
+                    .filter(entry -> !entry.isEmpty())
+                    .collect(Collectors.toSet());
+        }
+        return this.excludedSecondaryCategories;
+    }
+
+    private boolean isExcluded(Place place) {
+        String secondary = place.secondaryCategory();
+        return secondary != null && excludedCategories().contains(secondary);
+    }
+
+    private List<String> configuredOnly(JsonArray categories) {
+        if (categories == null) {
+            return List.of();
+        }
+        Set<String> allowed = allowedCategories();
+        return categories.stream()
+                .map(JsonString.class::cast)
+                .map(JsonString::getString)
+                .filter(category -> allowed.contains(topLevel(category)))
+                .toList();
+    }
+
+    private String primaryCategory(List<String> categories) {
         if (categories == null || categories.isEmpty()) {
             return null;
         }
-        String first = categories.getString(0);
+        String first = categories.get(0);
         int dot = first.indexOf('.');
         return dot > 0 ? first.substring(0, dot) : first;
     }
 
-    private String secondaryCategory(String primary, JsonArray categories) {
+    private String secondaryCategory(String primary, List<String> categories) {
         if (primary == null || categories == null) {
             return null;
         }
         String prefix = primary + ".";
-        for (int i = 0; i < categories.size(); i++) {
-            String category = categories.getString(i);
+        for (String category : categories) {
             if (category.startsWith(prefix)) {
                 return category.substring(prefix.length());
             }

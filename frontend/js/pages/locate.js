@@ -1,6 +1,6 @@
 import { apiGetCurrentPosition, apiGetPlaces, apiPostPosition } from '../api.js';
 import { getCachedLocatePosition, setCachedLocatePosition } from '../state.js';
-import { showLocateMap } from '../ui/map.js';
+import { showLocateMap, showLocateSavedMap } from '../ui/map.js';
 import { showError } from '../ui/status.js';
 import {
     getWeatherIconSvg,
@@ -9,6 +9,7 @@ import {
     formatDistanceMeters,
     getLocationIconSvg,
     getPlaceIconSvg,
+    formatPlaceLabel,
     formatShortAddress
 } from '../utils.js';
 
@@ -25,9 +26,6 @@ const GPS_MAX_WAIT_MS = 8000;
 // Success gate: a fix as accurate as this (or better) is used immediately.
 // 30m matches the app's own "good" accuracy band (history flags >30m as low).
 const GPS_TARGET_ACCURACY_M = 30;
-
-// Maximum number of "Places around me" rows shown on the chooser view.
-const MAX_PLACES = 5;
 
 /* ==========================================================================
    Shared GPS Options
@@ -162,21 +160,20 @@ function initSaveOptions() {
 }
 
 /* ==========================================================================
-   Internal: View Switching (chooser <-> saver)
+   Internal: View Switching (chooser <-> saver <-> saved)
    ========================================================================== */
 function showView(view) {
-    const chooser = document.getElementById('locate-chooser');
-    const saver   = document.getElementById('locate-saver');
-    const saverActive = view === 'saver';
-    if (chooser) chooser.classList.toggle('hidden', saverActive);
-    if (saver)   saver.classList.toggle('hidden', !saverActive);
+    ['locate-chooser', 'locate-saver', 'locate-saved'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('hidden', id !== `locate-${view}`);
+    });
 }
 
 function hideViews() {
-    const chooser = document.getElementById('locate-chooser');
-    const saver   = document.getElementById('locate-saver');
-    if (chooser) chooser.classList.add('hidden');
-    if (saver)   saver.classList.add('hidden');
+    ['locate-chooser', 'locate-saver', 'locate-saved'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    });
 }
 
 /* ==========================================================================
@@ -244,7 +241,7 @@ function renderPlacesList(places) {
     if (!card || !list) return;
 
     list.innerHTML = '';
-    const top = Array.isArray(places) ? places.slice(0, MAX_PLACES) : [];
+    const top = Array.isArray(places) ? places : [];
 
     if (top.length === 0) {
         card.classList.add('hidden');
@@ -253,9 +250,7 @@ function renderPlacesList(places) {
 
     card.classList.remove('hidden');
     if (count) {
-        count.textContent = top.length >= MAX_PLACES
-            ? `${MAX_PLACES} nearest`
-            : `${top.length} place${top.length === 1 ? '' : 's'}`;
+        count.textContent = `${top.length} place${top.length === 1 ? '' : 's'}`;
     }
 
     top.forEach(place => {
@@ -285,7 +280,7 @@ function selectPlace(place, row) {
 
     const container = document.getElementById('chooser-address-container');
     if (container) {
-        const label = place.name || place.formattedAddress || 'Selected place';
+        const label = formatPlaceLabel(place);
         container.innerHTML = `${getPlaceIconSvg(place.primaryCategory)}<span>${escapeHtml(label)}</span>`;
         container.title = place.formattedAddress || '';
     }
@@ -319,6 +314,37 @@ function renderChooser(data, places) {
     if (addressSelect) addressSelect.classList.add('locate-select-row--selected');
 
     renderPlacesList(places);
+}
+
+/* ==========================================================================
+   Internal: Saved view renderer – fills the read-only confirmation card with
+   the persisted position (tag/comment shown read-only, plus weather,
+   location and elevation).
+   ========================================================================== */
+function showSavedCard(data) {
+    const strip   = document.getElementById('saved-tag-comment');
+    const pill    = document.getElementById('saved-tag-pill');
+    const comment = document.getElementById('saved-comment-text');
+
+    if (strip) {
+        const hasTag     = Boolean(data.tag);
+        const hasComment = data.comment && data.comment.trim() !== '';
+        if (pill) {
+            pill.textContent = data.tag || '';
+            pill.classList.toggle('hidden', !hasTag);
+        }
+        if (comment) comment.textContent = hasComment ? data.comment : '';
+        strip.classList.toggle('hidden', !hasTag && !hasComment);
+    }
+
+    fillWeather({
+        icon:    document.getElementById('saved-weather-icon-container'),
+        temp:    document.getElementById('saved-temp'),
+        weather: document.getElementById('saved-weather'),
+        uv:      document.getElementById('saved-uv')
+    }, data);
+    fillAddress(document.getElementById('saved-location-container'), data);
+    setElevation(document.getElementById('saved-elevation'), data);
 }
 
 /* ==========================================================================
@@ -415,12 +441,16 @@ function sendPositionToBackend(payload, { getActiveUserId, checkBackendStatus, s
     statusText.innerText = "Sending to backend...";
 
     apiPostPosition(getActiveUserId(), payload)
-        .then(() => {
+        .then(data => {
+            showSavedCard(data);
             hideViews();
+            showView('saved');
+            showLocateSavedMap(data.latitude, data.longitude);
+
             resetSaveOptions();
             setCachedLocatePosition(null);
             selectedPlace = null;
-            document.getElementById('btn-fetch-location').textContent = 'FETCH LOCATION';
+            document.getElementById('btn-fetch-location').textContent = 'Fetch Location';
 
             statusText.innerText = "Location successfully saved.";
             statusText.className = "status-success";
@@ -441,8 +471,10 @@ function sendPositionToBackend(payload, { getActiveUserId, checkBackendStatus, s
 function applySelectedPlace(payload) {
     if (!selectedPlace) return;
     const place = selectedPlace;
-    if (place.name) payload.osmName = place.name;
+    payload.osmName = formatPlaceLabel(place);
     if (place.formattedAddress) payload.displayName = place.formattedAddress;
+    if (place.street) payload.road = place.street;
+    if (place.houseNumber) payload.houseNumber = place.houseNumber;
     if (place.city) payload.city = place.city;
     if (place.country) payload.country = place.country;
 }
@@ -464,7 +496,7 @@ function handleContinue() {
     const locationContainer = document.getElementById('saver-location-container');
     if (selectedPlace) {
         const place = selectedPlace;
-        const label = place.name || place.formattedAddress || 'Selected place';
+        const label = formatPlaceLabel(place);
         locationContainer.innerHTML = `${getPlaceIconSvg(place.primaryCategory)}<span>${escapeHtml(label)}</span>`;
         locationContainer.title = place.formattedAddress || '';
     } else {
@@ -558,12 +590,6 @@ export function initLocatePage(deps) {
 
     // --- Chooser: CONTINUE to saver view ---
     document.getElementById('btn-locate-continue').addEventListener('click', handleContinue);
-
-    // --- Saver: BACK to chooser (selection preserved) ---
-    document.getElementById('btn-locate-back').addEventListener('click', () => {
-        setSaveOptionsExpanded(false);
-        showView('chooser');
-    });
 
     // --- SAVE LOCATION Button ---
     document.getElementById('track-btn').addEventListener('click', () => {

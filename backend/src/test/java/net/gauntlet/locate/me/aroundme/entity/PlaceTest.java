@@ -4,7 +4,6 @@
 package net.gauntlet.locate.me.aroundme.entity;
 
 import java.time.Instant;
-import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
