@@ -76,6 +76,13 @@
             <artifactId>quarkus-hibernate-validator</artifactId>
         </dependency>
 
+        <!-- Bucket4j rate limiting (Quarkiverse, annotation-based, per-identity buckets) -->
+        <dependency>
+            <groupId>io.quarkiverse.bucket4j</groupId>
+            <artifactId>quarkus-bucket4j</artifactId>
+            <version>1.0.7</version>
+        </dependency>
+
         <!-- MicroProfile and health/metrics/OpenAPI/fault-tolerance -->
         <dependency>
             <groupId>io.quarkus</groupId>
@@ -94,6 +101,13 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit-mockito</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- ArchUnit: enforces the BCE architecture during unit tests -->
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <version>1.4.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>

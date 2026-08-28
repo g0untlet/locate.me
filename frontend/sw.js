@@ -15,7 +15,7 @@ importScripts('https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox
    always fresh while online. */
 const SHELL = ['/', '/index.html'];
 const ASSETS = [
-    '/app.js?v=0.4.0_19',
+    '/app.js?v=0.4.0_20',
     '/css/style.css?v=0.4.0_19',
     '/js/config.js?v=0.3.1_34', '/js/utils.js', '/js/api.js', '/js/state.js',
     '/js/ui/toast.js', '/js/ui/badge.js', '/js/ui/status.js', '/js/ui/map.js',

@@ -49,6 +49,14 @@ export async function checkBackendStatus(showToast = false) {
         if (showToast) showStatusToast('online');
         renderBackendInfo(info);
     } catch (error) {
+        // A 429 (rate limit) means the backend is up, just throttled – keep the
+        // status dot online instead of falsely reporting it as offline.
+        if (error && error.status === 429) {
+            statusDot.classList.remove('offline');
+            statusDot.classList.add('online');
+            statusDot.parentElement.title = "Application Online";
+            return;
+        }
         statusDot.classList.remove('online');
         statusDot.classList.add('offline');
         statusDot.parentElement.title = "Backend unreachable";

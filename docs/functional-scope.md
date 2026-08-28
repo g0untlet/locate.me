@@ -93,6 +93,17 @@ Position responses include the weather-related fields `temperature`, `weatherCod
 
 Geocoding/weather enrichment happens only when fetching (`GET /positions/current`). Saving (`POST /positions`) persists the client-provided data verbatim – the Locate view sends back exactly the enriched preview data it already fetched, so the backend never re-resolves an already-fetched location.
 
+**Rate limiting:** to protect the backend from request flooding, the read operations
+(`GET /positions`, `GET /positions/current`, `GET /places`) and the write/delete
+operations (`POST /positions`, `DELETE /positions/{id}`) are rate-limited per user
+(token-bucket). When a limit is exceeded the backend answers
+`429 Too Many Requests` with a `Retry-After` header and a JSON body
+(`{"error":"TOO_MANY_REQUESTS","status":429}`); the frontend shows a friendly
+message and keeps the backend status online. `GET /api/system/info` is exempt so
+the online/offline status indicator stays reliable. Limits:
+`pwa-standard` = 10 reads / 30 s, `pwa-critical` = 5 writes+deletes / 30 s, both as
+shared pools keyed by `userId`.
+
 ## 4. Business Objects
 
 The main business object is the `Position` entity, which has the following attributes:
@@ -155,6 +166,7 @@ component.
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.4.0 | 2026-08-28 | Rate limiting: the backend throttles requests per user with Bucket4j (`pwa-standard` = 10 reads / 30 s, `pwa-critical` = 5 writes+deletes / 30 s, both shared pools keyed by `userId`). On exceeding a limit it answers `429 Too Many Requests` (JSON `{"error":"TOO_MANY_REQUESTS","status":429}` + `Retry-After`) and logs an INFO line with the userId; the frontend shows a friendly message ("Too many requests…") and keeps the backend status online. `GET /api/system/info` is exempt. |
 | 0.4.0 | 2026-08-28 | Frontend: the tag chips in the collapsible "Tag & Comment" section now wrap over multiple lines instead of scrolling horizontally (`.tag-chips` `flex-wrap: wrap`; horizontal-scroll styles removed). |
 | 0.4.0 | 2026-08-28 | AroundMe: new `aroundme.read-from-cache` flag (default `false`) — when disabled every request fetches fresh from Geoapify and forwards it to the client while the H2 cache is still written but never read; `true` restores the cache-first lookup (`Places.findNear`). Frontend: the places list renders up to 20 rows (`MAX_PLACES`, matching `aroundme.max-places`); the `catering` place icon is now a fork-and-knife glyph. |
 | 0.4.0 | 2026-08-28 | Frontend: new place icons — bed for accommodation and bus/train/tram for public transport were added with the categories, then removed again together with the categories (config stays `geoapify.categories` = catering, commercial, healthcare, leisure, entertainment, service); `aroundme.max-places` raised 10 → 20; the healthcare icon is now a pharmacy-style outlined cross; the save step has a "Back" button (same width, left of Save Location) that returns to the chooser without reloading from the backend. Bugfix: adopting a place now preserves its category icon — `osmCategory`/`osmType` are set from the place's categories on save, so the saved confirmation and history show the same icon as when the place was selected (instead of the GPS point's OSM icon). |

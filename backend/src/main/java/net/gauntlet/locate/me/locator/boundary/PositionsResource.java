@@ -27,6 +27,7 @@ import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import io.quarkiverse.bucket4j.runtime.RateLimited;
 import net.gauntlet.locate.me.Boundary;
 import net.gauntlet.locate.me.locator.control.DistanceCalculator;
 import net.gauntlet.locate.me.locator.control.Positions;
@@ -74,6 +75,7 @@ public class PositionsResource {
     @POST
     @Transactional
     @PermitAll
+    @RateLimited(bucket = "pwa-critical")
     public Response create(@QueryParam("userId") String userId, JsonObject json) {
         LOG.log(System.Logger.Level.DEBUG, "Received POST request to create position");
         validateAndAuthorize(userId);
@@ -107,6 +109,7 @@ public class PositionsResource {
     @Path("/{id}")
     @Transactional
     @PermitAll
+    @RateLimited(bucket = "pwa-critical")
     public Response delete(@PathParam("id") Long id, @QueryParam("userId") String userId) {
         LOG.log(System.Logger.Level.DEBUG, "Received DELETE request for id {0} by user {1}", id, userId);
         validateAndAuthorize(userId);
@@ -119,6 +122,7 @@ public class PositionsResource {
 
     @GET
     @PermitAll
+    @RateLimited(bucket = "pwa-standard")
     public Response getPositions(
             @QueryParam("userId") String userId,
             @QueryParam("lat") Double lat,
@@ -153,6 +157,7 @@ public class PositionsResource {
     @GET
     @Path("/current")
     @PermitAll
+    @RateLimited(bucket = "pwa-standard")
     public Response fetchCurrentPosition(
             @QueryParam("userId") String userId,
             @QueryParam("lat") Double lat,

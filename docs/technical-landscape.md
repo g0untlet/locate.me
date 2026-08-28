@@ -135,9 +135,11 @@ net.gauntlet.locate.me
 │   ├── boundary/   PlacesResource
 │   ├── control/    Places, GeoapifyPlacesClient, Geoboxing, ClientLanguage, PlaceNames
 │   └── entity/     Place
-└── system/                     system info feature (BCE)
-    ├── boundary/   SystemBoundary
-    └── control/    SystemInfo
+├── system/                     system info feature (BCE)
+│   ├── boundary/   SystemBoundary
+│   └── control/    SystemInfo
+└── security/                   cross-cutting rate limiting (not a BCE component)
+    UserIdIdentityResolver, TooManyRequestsMapper
 ```
 
 ## Main Modules
@@ -147,6 +149,7 @@ net.gauntlet.locate.me
 | `locator` | Position lifecycle (create/read/delete), geocoding + weather enrichment, distance/travel-time (walking, biking, driving) |
 | `aroundme` | Places around a coordinate: Geoapify fetch + H2 cache (cache-first geoboxing lookup, deduplicated by place_id), distance-sorted responses |
 | `system` | Application info endpoint and startup timestamp |
+| `security` | Cross-cutting Bucket4j rate limiting: `UserIdIdentityResolver` (segments buckets per `userId` query param) and `TooManyRequestsMapper` (custom 429 JSON body + `Retry-After` + INFO log) |
 
 ---
 
@@ -210,11 +213,11 @@ query parameter. Functional purpose of the endpoints is documented in
 | GET | `/api/positions/current?userId=&lat=&lon=` | 200 preview; geocoding + weather enrichment; not persisted |
 | DELETE | `/api/positions/{id}?userId=` | 204 |
 
-Common errors: 400 invalid/missing `userId` or body; 401 userId not in allow-list.
+Common errors: 400 invalid/missing `userId` or body; 401 userId not in allow-list; 429 per-user rate limit exceeded (`pwa-critical`: writes/deletes) — `Retry-After` header + JSON body `{"error":"TOO_MANY_REQUESTS","status":429}`.
 
 ## SystemBoundary (`/system`)
 
-| GET | `/api/system/info` | 200 `{artifactId, version, startupTime}` |
+| GET | `/api/system/info` | 200 `{artifactId, version, startupTime}` — deliberately **not** rate-limited so the frontend health/status probe never trips a 429 |
 
 ## PlacesResource (`/places`)
 
@@ -222,7 +225,7 @@ Common errors: 400 invalid/missing `userId` or body; 401 userId not in allow-lis
 |----------|----------|----------|
 | GET | `/api/places?userId=&lat=&lon=` | 200 places cached around the coordinate, served nearest-first; the `Accept-Language` header (optional) selects the Geoapify `lang`; cache-first lookup via a geoboxing box (`aroundme.cache-radius`), Geoapify fetch + upsert on cache miss; each place includes a response-only `distance` (meters) and `direction` (8-point compass `N/NE/E/SE/S/SW/W/NW`, empty when distance < 1 m) |
 
-Common errors: 400 invalid/missing `userId` or `lat`/`lon`; 401 userId not in allow-list; 503 Geoapify unavailable.
+Common errors: 400 invalid/missing `userId` or `lat`/`lon`; 401 userId not in allow-list; 429 per-user rate limit exceeded (`pwa-standard`: reads) — `Retry-After` header + JSON body `{"error":"TOO_MANY_REQUESTS","status":429}`; 503 Geoapify unavailable.
 
 ## Health & Tooling
 
@@ -392,6 +395,36 @@ overridable via env `ALLOWED_USER_IDS`): 400 on missing/non-alphanumeric/>16 cha
 401 on unknown user. The same `validateAndAuthorize` pattern is used by
 `PositionsResource` and `PlacesResource`.
 
+## Rate Limiting
+
+Bucket4j (`io.quarkiverse.bucket4j:quarkus-bucket4j`, annotation `@RateLimited`,
+config namespace `quarkus.rate-limiter.*`) throttles requests **per user** to protect
+the backend from request flooding (e.g. a misbehaving client or a scripted attack).
+
+- **Buckets** — `pwa-standard` (reads: `GET /positions`, `GET /positions/current`,
+  `GET /places`) and `pwa-critical` (writes/deletes: `POST /positions`,
+  `DELETE /positions/{id}`). Both are `shared=true` pools keyed by the `userId` query
+  parameter (`UserIdIdentityResolver`, fallback key `unknown` for missing/blank IDs so
+  floods of invalid IDs share one bounded bucket instead of creating one per identity).
+  Limits: 10 reads / 30 s and 5 writes+deletes / 30 s per user (token-bucket).
+- **Enforcement** — the interceptor consumes a token before the endpoint method runs;
+  on exhaustion a `RateLimitException` is thrown and mapped by `TooManyRequestsMapper`
+  (a `@Provider` registered at `@Priority(Priorities.USER - 1)` so it wins over the
+  extension's default mapper) to HTTP 429 with a `Retry-After` header, the JSON body
+  `{"error":"TOO_MANY_REQUESTS","status":429}`, and an INFO log line
+  (`Rate limit exceeded for user <id>: <METHOD> <path> – retry after <n>s`).
+- **State** — in-memory token buckets per identity (single backend instance; reset on
+  restart; bounded by `quarkus.rate-limiter.max-size`, default 1000).
+- **Exempt** — `GET /api/system/info` is not annotated, so the frontend status probe is
+  never throttled and the online/offline indicator stays reliable.
+- **Tests** — the IT suite keeps `quarkus.rate-limiter.enabled=false`
+  (`src/test/resources/application.properties`); `RateLimitIT` re-enables it with tiny
+  limits via a `@TestProfile` and asserts the 429 status, JSON body and `Retry-After`
+  for both levels.
+- **Limitation / follow-up** — per-user quotas do not stop distributed floods or
+  connection-level DoS; per-IP rate limiting at the Caddy edge is the intended next
+  step (see Planned Technical Improvements).
+
 ## Session Management
 
 Stateless REST; no sessions.
@@ -442,6 +475,8 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 | `aroundme.exclude-categories` | Comma-separated secondary POI categories to exclude (e.g. `playground`); applied on cache hits and fresh fetches |
 | `aroundme.max-places` | Maximum number of places returned for "Places around me" (default 20); `geoapify.limit` still controls the Geoapify fetch / cache size |
 | `aroundme.read-from-cache` | `false` (default) — every request fetches fresh from Geoapify, the H2 cache is still written but never read; `true` restores the cache-first geoboxing lookup (`Places.findNear`) |
+| `quarkus.rate-limiter.buckets.pwa-standard.*` | Read bucket: `limits[0].permitted-uses=10`, `limits[0].period=30s`, `identity-resolver` (`security.UserIdIdentityResolver`), `shared=true` |
+| `quarkus.rate-limiter.buckets.pwa-critical.*` | Write/delete bucket: `limits[0].permitted-uses=5`, `limits[0].period=30s`, `identity-resolver` (same), `shared=true` |
 | `%dev.quarkus.http.port=8090` | DEV port |
 | `quarkus.log.*` | Console DEBUG for project package |
 
@@ -453,6 +488,7 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 
 | Test Type | Scope |
 |------------|------------|
+| Architecture (ArchUnit) | `BceArchitectureTest` — enforces the BCE rules during unit tests (Surefire): component/layer package structure, boundary/control/entity membership, dependency direction (no control→boundary, no entity→boundary/control), `EntityManager` only in controls, `@Transactional` only in boundary, JAX-RS boundary methods return `Response`, no constructor injection, REST clients end with `Client`, no prohibited class suffixes. Documented exceptions: `DatabaseHealthCheck` (health check in boundary), `SystemInfo` (`@ApplicationScoped` control), `security` infra package, static-util/REST-client interfaces in control |
 | Integration tests (IT) | REST + persistence + enrichment on in-memory H2 (`PositionsResourceIT`, incl. `createWithTagAndComment` and `createWithInvalidTag`; `PlacesResourceIT` — cache hit/miss, distance sorting, dedup, anonymous names, language) |
 | Unit tests | `DistanceCalculatorTest`, `GeoboxingTest`, `ClientLanguageTest`, `PlaceNamesTest` |
 | System tests (`backend-st`) | Run against a live backend on 8090 (`PositionsSystemIT` + `PositionsResourceClient`) |
@@ -463,6 +499,7 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 | Framework | Usage |
 |------------|------------|
 | JUnit 5 (Quarkus Test) | Integration tests |
+| ArchUnit (`archunit-junit5`) | BCE architecture unit test (`BceArchitectureTest`) |
 | RestAssured | REST assertions |
 | AssertJ | Assertions |
 
@@ -505,6 +542,7 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 | ID | Description | Status |
 |------|------|------|
 | TI-001 | Adopt Flyway for versioned, explicit schema migrations (Hibernate `update` → `none`; existing DBs baselined at v1) | Done (0.4.0) |
+| TI-002 | Add per-IP rate limiting at the Caddy edge (`mholt/caddy-ratelimit` plugin, custom `xcaddy` build) as the first line of defense against floods/DoS; the in-app per-user quotas (`quarkus.rate-limiter.*`) remain the per-user fair-use layer | Planned |
 
 ---
 
@@ -512,6 +550,8 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 
 | Version | Date | Description |
 |---------|---------|---------|
+| 0.4.0 | 2026-08-28 | Architecture guard: new `BceArchitectureTest` (ArchUnit `archunit-junit5` 1.4.1, runs as a unit test) enforces the BCE rules on every main class — component/layer package structure, boundary/control/entity membership, dependency direction (no control→boundary, no entity→boundary/control), `EntityManager` only in controls, `@Transactional` only in boundary, JAX-RS boundary methods return `Response`, no constructor injection, REST clients end with `Client`, no prohibited class suffixes. Documented exceptions: `DatabaseHealthCheck` (health check in boundary), `SystemInfo` (`@ApplicationScoped` control), `security` infra package, static-util/REST-client interfaces in control. |
+| 0.4.0 | 2026-08-28 | Rate limiting with Bucket4j (`io.quarkiverse.bucket4j:quarkus-bucket4j` 1.0.7): per-user token buckets `pwa-standard` (10 reads / 30 s: `GET /positions`, `GET /positions/current`, `GET /places`) and `pwa-critical` (5 writes+deletes / 30 s: `POST /positions`, `DELETE /positions/{id}`), both `shared=true` pools keyed by the `userId` query param. New `security` package: `UserIdIdentityResolver` (falls back to `unknown` for missing IDs) and `TooManyRequestsMapper` (429 + `Retry-After` + JSON `{"error":"TOO_MANY_REQUESTS","status":429}` + INFO log per exceeded user). `/system/info` stays unthrottled. Frontend: 429-aware errors in `api.js` (`status`/`retryAfter`), friendly message in Locate/History, status dot stays online on 429; cache-busters `_20`. Tests: `RateLimitIT` (enables the limiter via `@TestProfile`, asserts 429 body + `Retry-After`); suite keeps the limiter disabled. |
 | 0.4.0 | 2026-08-28 | Frontend: tag chips wrap over multiple lines (`.tag-chips` `flex-wrap: wrap`, horizontal-scroll styles removed) — no horizontal scrolling needed in the collapsible Tag & Comment section. Cache-buster style.css `_19`. |
 | 0.4.0 | 2026-08-28 | AroundMe: new `aroundme.read-from-cache` flag (default `false`) — `Places.findNear` skips the cache-first geoboxing lookup when disabled, always fetching fresh from Geoapify; `fetchAndStore` still upserts into the H2 cache and the result is forwarded to the client (`true` restores the cache-first path). Test suite: `src/test/resources/application.properties` keeps the cache-first path enabled for `PlacesResourceIT`; new `PlacesReadCacheDisabledIT` (`@TestProfile`) covers the disabled path (always refetch, still persists, excludes apply). Frontend: `renderPlacesList` caps at `MAX_PLACES` 20 (matching `aroundme.max-places`); the `catering` place icon is now a fork-and-knife glyph (`getPlaceIconSvg`). Cache-buster app.js `_19`. |
 | 0.4.0 | 2026-08-28 | Frontend + aroundme: `aroundme.max-places` raised 10 → 20. Frontend: the `healthcare` icon is now a pharmacy-style outlined cross; `accommodation`/`public_transport` categories and their icons (bed / bus / train / tram) were added and then removed again — `geoapify.categories` stays `catering,commercial,healthcare,leisure,entertainment,service`. The Locate saver view re-gains a "Back" button left of "Save Location" (equal widths via `.track-btn-row`) that returns to the chooser without reloading from the backend (`showView('chooser')`). Bugfix: adopting a place now persists its category (`applySelectedPlace` sets `osmCategory`/`osmType` from the place when `primaryCategory` is set) and `getLocationIconSvg` delegates to `getPlaceIconSvg` for aroundme categories — the saved confirmation and history keep the place's icon instead of the GPS point's OSM icon. APP_BUILD 20260828; cache-busters app.js `_18`, style.css `_18`. |

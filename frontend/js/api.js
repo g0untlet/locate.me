@@ -1,6 +1,25 @@
 import { API_BASE_URL, API_PATH } from './config.js?v=0.3.1_34';
 
 /* ==========================================================================
+   User-facing message shown whenever the backend answers HTTP 429 (rate limit).
+   ========================================================================== */
+export const TOO_MANY_REQUESTS_MESSAGE = "Too many requests. Please wait a moment and try again.";
+
+/* ==========================================================================
+   Internal: build a typed Error for HTTP 429 (rate limited). Carries
+   status=429 and the Retry-After header value (seconds) so callers can show
+   a friendly message and/or schedule a retry.
+   ========================================================================== */
+function tooManyRequestsError(response) {
+    const header = response.headers.get('Retry-After');
+    const retryAfter = header ? parseInt(header, 10) : null;
+    const error = new Error(TOO_MANY_REQUESTS_MESSAGE);
+    error.status = 429;
+    error.retryAfter = Number.isNaN(retryAfter) ? null : retryAfter;
+    return error;
+}
+
+/* ==========================================================================
    GET /api/system/info
    Returns: { artifactId, version, startupTime }
    Throws on network error or non-ok response.
@@ -14,6 +33,7 @@ export async function apiGetSystemInfo() {
     });
     clearTimeout(timeoutId);
 
+    if (response.status === 429) throw tooManyRequestsError(response);
     if (!response.ok) throw new Error("Backend answered with error status code");
     return response.json();
 }
@@ -42,6 +62,7 @@ export async function apiGetPositionsWithMeta(userId, lat = null, lon = null) {
     }
 
     const response = await fetch(url);
+    if (response.status === 429) throw tooManyRequestsError(response);
     if (!response.ok) throw new Error("Could not fetch history");
     const data = await response.json();
     return { data, fromCache: response.headers.get('X-LocateMe-Cache') === '1' };
@@ -58,6 +79,7 @@ export async function apiGetCurrentPosition(userId, lat, lon) {
         `?userId=${encodeURIComponent(userId)}&lat=${lat}&lon=${lon}`;
 
     const response = await fetch(url);
+    if (response.status === 429) throw tooManyRequestsError(response);
     if (!response.ok) throw new Error(`Server returned status ${response.status}`);
     return response.json();
 }
@@ -73,6 +95,7 @@ export async function apiGetPlaces(userId, lat, lon) {
         `?userId=${encodeURIComponent(userId)}&lat=${lat}&lon=${lon}`;
 
     const response = await fetch(url);
+    if (response.status === 429) throw tooManyRequestsError(response);
     if (!response.ok) throw new Error(`Server returned status ${response.status}`);
     return response.json();
 }
@@ -92,6 +115,7 @@ export async function apiPostPosition(userId, payload) {
             body: JSON.stringify(payload)
         }
     );
+    if (response.status === 429) throw tooManyRequestsError(response);
     if (!response.ok) throw new Error(`Server returned status ${response.status}`);
     return response.json();
 }
@@ -105,5 +129,6 @@ export async function apiDeletePosition(userId, id) {
         `${API_BASE_URL}${API_PATH}/positions/${id}?userId=${encodeURIComponent(userId)}`,
         { method: 'DELETE' }
     );
+    if (response.status === 429) throw tooManyRequestsError(response);
     if (!response.ok) throw new Error("Could not process record removal");
 }
