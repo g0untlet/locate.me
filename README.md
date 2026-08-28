@@ -88,6 +88,20 @@ curl -X GET "http://localhost:8090/api/positions?userId=user123"
 curl -X GET "http://localhost:8090/api/places?userId=user123&lat=48.135617&lon=11.605802"
 ```
 
+## Places Cache (Geoapify)
+
+`GET /api/places?userId=&lat=&lon=` discovers points of interest (POIs) near a coordinate via the Geoapify Places API and returns them nearest-first. Results are cached in the H2 `places` table (deduplicated by Geoapify `place_id`).
+
+| Property | Default | Purpose |
+|----------|---------|---------|
+| `geoapify.categories` | `catering,commercial,healthcare,leisure,entertainment,service` | POI categories fetched and used for a place's primary/secondary category |
+| `geoapify.radius` / `geoapify.limit` | `500` m / `20` | Search radius; number of places fetched & cached per request |
+| `aroundme.max-places` | `20` | Places returned to the client (response truncation) |
+| `aroundme.cache-radius` | `500` m | Geobox size of the cache-first lookup |
+| `aroundme.read-from-cache` | `false` | `false`: always fetch fresh from Geoapify, still write the cache; `true`: serve from the H2 cache first |
+| `aroundme.exclude-categories` | `playground` | Secondary categories excluded on cache hits and fresh fetches |
+| `GEOAPIFY_API_KEY` | – | API key (env var, not stored in config) |
+
 ## Documentation
 
 - [./docs/functional-scope.md](./docs/functional-scope.md) — features, UI views, backend services, business objects

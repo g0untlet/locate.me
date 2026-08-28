@@ -233,7 +233,10 @@ function saverWeatherIds() {
 
 /* ==========================================================================
    Internal: Places around me (chooser list)
+   Renders up to MAX_PLACES rows, matching the backend's aroundme.max-places.
    ========================================================================== */
+const MAX_PLACES = 20;
+
 function renderPlacesList(places) {
     const card  = document.getElementById('places-card');
     const list  = document.getElementById('places-list');
@@ -241,7 +244,7 @@ function renderPlacesList(places) {
     if (!card || !list) return;
 
     list.innerHTML = '';
-    const top = Array.isArray(places) ? places : [];
+    const top = Array.isArray(places) ? places.slice(0, MAX_PLACES) : [];
 
     if (top.length === 0) {
         card.classList.add('hidden');
