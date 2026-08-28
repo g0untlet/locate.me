@@ -32,6 +32,7 @@ import net.gauntlet.locate.me.Boundary;
 import net.gauntlet.locate.me.locator.control.DistanceCalculator;
 import net.gauntlet.locate.me.locator.control.Positions;
 import net.gauntlet.locate.me.locator.entity.Position;
+import net.gauntlet.locate.me.security.AdminKeyVerifier;
 
 @Boundary
 @Path("/positions")
@@ -50,6 +51,9 @@ public class PositionsResource {
     @Inject
     @ConfigProperty(name = "allowed.user.ids")
     List<String> allowedUserIds;
+
+    @Inject
+    AdminKeyVerifier adminKeyVerifier;
 
     private void validateAndAuthorize(String userId) {
         if (userId == null || userId.isBlank()) {
@@ -141,6 +145,23 @@ public class PositionsResource {
                     : pos.toJSON())
             .forEach(arrayBuilder::add);
 
+        return Response.ok(arrayBuilder.build()).build();
+    }
+
+    @GET
+    @Path("/stats")
+    @PermitAll
+    public Response countPositionsPerUser(@QueryParam("adminKey") String adminKey) {
+        LOG.log(System.Logger.Level.DEBUG, "Received GET positions-per-user stats request");
+        this.adminKeyVerifier.verify(adminKey);
+
+        JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
+        this.positions.countByUser().stream()
+                .map(count -> Json.createObjectBuilder()
+                        .add("userId", count.userId())
+                        .add("locations", count.locations())
+                        .build())
+                .forEach(arrayBuilder::add);
         return Response.ok(arrayBuilder.build()).build();
     }
 

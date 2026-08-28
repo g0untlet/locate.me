@@ -452,6 +452,45 @@ public class PlacesResourceIT {
     }
 
     @Test
+    void statsWithValidAdminKeyReturnsPlaceCount() {
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
+                .thenReturn(featureCollection(feature("Isar Kebaphaus", PLACE_ID, 48.1355319, 11.605952,
+                        Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
+                        Json.createObjectBuilder().build())));
+
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200);
+
+        given()
+                .when()
+                .get("/api/places/stats?adminKey=test-admin-key")
+                .then()
+                .statusCode(200)
+                .body("count", is(1));
+    }
+
+    @Test
+    void statsWithoutAdminKeyReturns401() {
+        given()
+                .when()
+                .get("/api/places/stats")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
+    void statsWithWrongAdminKeyReturns401() {
+        given()
+                .when()
+                .get("/api/places/stats?adminKey=wrong-key")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
     void passesClientLanguageToGeoapify() {
         when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection());

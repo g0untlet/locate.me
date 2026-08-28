@@ -83,6 +83,11 @@ public class Places {
     // primary/secondary category. Lazily parsed once per Places instance.
     Set<String> allowedTopLevelCategories;
 
+    public long count() {
+        LOG.log(System.Logger.Level.DEBUG, "Counting cached places");
+        return this.em.createQuery("SELECT COUNT(p) FROM Place p", Long.class).getSingleResult();
+    }
+
     public List<Place> findNear(double lat, double lon, String acceptLanguage) {
         // Cache-first path: serve places within the geobox from the H2 cache. With
         // aroundme.read-from-cache disabled the cache is still written by

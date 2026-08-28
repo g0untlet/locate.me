@@ -473,6 +473,58 @@ public class PositionsResourceIT {
     }
 
     @Test
+    void statsWithValidAdminKeyReturnsPerUserCounts() {
+        createPosition("validUser", 48.1351, 11.5820);
+        createPosition("validUser", 52.5200, 13.4050);
+        createPosition("noAccuracyUser", 48.1351, 11.5820);
+
+        given()
+                .when()
+                .get("/api/positions/stats?adminKey=test-admin-key")
+                .then()
+                .statusCode(200)
+                .body("size()", is(2))
+                .body("[0].userId", is("noAccuracyUser"))
+                .body("[0].locations", is(1))
+                .body("[1].userId", is("validUser"))
+                .body("[1].locations", is(2));
+    }
+
+    @Test
+    void statsWithoutAdminKeyReturns401() {
+        given()
+                .when()
+                .get("/api/positions/stats")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
+    void statsWithWrongAdminKeyReturns401() {
+        given()
+                .when()
+                .get("/api/positions/stats?adminKey=wrong-key")
+                .then()
+                .statusCode(401);
+    }
+
+    private void createPosition(String userId, double lat, double lon) {
+        JsonObject json = Json.createObjectBuilder()
+                .add("userId", userId)
+                .add("latitude", lat)
+                .add("longitude", lon)
+                .add("timestamp", Instant.now().toString())
+                .build();
+        given()
+                .contentType(ContentType.JSON)
+                .body(json.toString())
+                .when()
+                .post("/api/positions?userId=" + userId)
+                .then()
+                .statusCode(201);
+    }
+
+    @Test
     void checkHealthEndpoint() {
         given()
                 .when()

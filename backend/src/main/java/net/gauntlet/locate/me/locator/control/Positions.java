@@ -15,6 +15,9 @@ public class Positions {
 
     static final System.Logger LOG = System.getLogger(Positions.class.getName());
 
+    public record PositionCount(String userId, long locations) {
+    }
+
     @Inject
     EntityManager em;
 
@@ -106,5 +109,13 @@ public class Positions {
         LOG.log(System.Logger.Level.DEBUG, "Finding all positions");
         return this.em.createQuery("SELECT p FROM Position p ORDER BY p.timestamp DESC", Position.class)
                 .getResultList();
+    }
+
+    public List<PositionCount> countByUser() {
+        LOG.log(System.Logger.Level.DEBUG, "Counting positions per user");
+        return this.em.createQuery("SELECT p.userId, COUNT(p) FROM Position p GROUP BY p.userId ORDER BY p.userId", Object[].class)
+                .getResultList().stream()
+                .map(row -> new PositionCount((String) row[0], (Long) row[1]))
+                .toList();
     }
 }

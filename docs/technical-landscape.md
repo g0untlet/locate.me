@@ -149,7 +149,7 @@ net.gauntlet.locate.me
 | `locator` | Position lifecycle (create/read/delete), geocoding + weather enrichment, distance/travel-time (walking, biking, driving) |
 | `aroundme` | Places around a coordinate: Geoapify fetch + H2 cache (cache-first geoboxing lookup, deduplicated by place_id), distance-sorted responses |
 | `system` | Application info endpoint and startup timestamp |
-| `security` | Cross-cutting Bucket4j rate limiting: `UserIdIdentityResolver` (segments buckets per `userId` query param) and `TooManyRequestsMapper` (custom 429 JSON body + `Retry-After` + INFO log) |
+| `security` | Cross-cutting infrastructure: Bucket4j rate limiting (`UserIdIdentityResolver` segments buckets per `userId` query param, `TooManyRequestsMapper` custom 429 JSON body + `Retry-After` + INFO log) and `AdminKeyVerifier` (constant-time check of the `adminKey` query param against `admin.key` for the admin stats endpoints) |
 
 ---
 
@@ -169,12 +169,12 @@ net.gauntlet.locate.me
 
 | Control | Responsibility |
 |----------|----------|
-| `Positions` | Orchestrates enrich (preview: geocoding + weather) and persist-only create, delete and queries; sole `EntityManager` access |
+| `Positions` | Orchestrates enrich (preview: geocoding + weather) and persist-only create, delete, queries and per-user counts; sole `EntityManager` access |
 | `DistanceCalculator` | Haversine distance + walking/biking/driving time estimation (static util) |
 | `SystemInfo` | Application metadata (artifactId, version, startupTime) |
 | `GeocodingClient` | MicroProfile REST client → Nominatim reverse geocoding |
 | `WeatherClient` | MicroProfile REST client → Open-Meteo forecast |
-| `Places` | Cache-first lookup: geoboxing query (cache hit) or Geoapify fetch + upsert (miss); sole `EntityManager` access for places |
+| `Places` | Cache-first lookup: geoboxing query (cache hit) or Geoapify fetch + upsert (miss); cache-entry count; sole `EntityManager` access for places |
 | `GeoapifyPlacesClient` | MicroProfile REST client → Geoapify Places API (`/v2/places`) |
 | `Geoboxing` | Bounding-box spans (`deltaLat`/`deltaLon`) + haversine distance (static util) |
 | `ClientLanguage` | `Accept-Language` → lowercased 2-letter ISO-639-1 code (static util) |
@@ -184,10 +184,10 @@ net.gauntlet.locate.me
 
 | Boundary | Responsibility |
 |----------|----------|
-| `PositionsResource` | REST `/positions`: create, delete, list, current; validation + userId authorization |
+| `PositionsResource` | REST `/positions`: create, delete, list, current, stats (admin); validation + userId authorization; adminKey check via `AdminKeyVerifier` |
 | `SystemBoundary` | REST `/system` → `/info` |
 | `DatabaseHealthCheck` | SmallRye readiness check (`SELECT 1`) |
-| `PlacesResource` | REST `/places`: GET list (cache-first); validation + userId authorization; adds response-only `distance` |
+| `PlacesResource` | REST `/places`: GET list (cache-first) and stats (admin); validation + userId authorization; adminKey check via `AdminKeyVerifier`; adds response-only `distance` |
 
 ### Rules
 
@@ -212,8 +212,9 @@ query parameter. Functional purpose of the endpoints is documented in
 | POST | `/api/positions?userId=` | 201 + `Location`; persists client-provided data verbatim (no server-side geocoding/weather resolution) |
 | GET | `/api/positions/current?userId=&lat=&lon=` | 200 preview; geocoding + weather enrichment; not persisted |
 | DELETE | `/api/positions/{id}?userId=` | 204 |
+| GET | `/api/positions/stats?adminKey=` | 200 `[{"userId", "locations"}, ...]` stored positions per user (ordered by `userId`); requires `adminKey` == `admin.key` (env `ADMIN_KEY`), otherwise 401; **not** rate-limited |
 
-Common errors: 400 invalid/missing `userId` or body; 401 userId not in allow-list; 429 per-user rate limit exceeded (`pwa-critical`: writes/deletes) — `Retry-After` header + JSON body `{"error":"TOO_MANY_REQUESTS","status":429}`.
+Common errors: 400 invalid/missing `userId` or body; 401 userId not in allow-list (or invalid/missing `adminKey` on `/stats`); 429 per-user rate limit exceeded (`pwa-critical`: writes/deletes) — `Retry-After` header + JSON body `{"error":"TOO_MANY_REQUESTS","status":429}`.
 
 ## SystemBoundary (`/system`)
 
@@ -224,8 +225,9 @@ Common errors: 400 invalid/missing `userId` or body; 401 userId not in allow-lis
 | Method | Endpoint | Notes |
 |----------|----------|----------|
 | GET | `/api/places?userId=&lat=&lon=` | 200 places cached around the coordinate, served nearest-first; the `Accept-Language` header (optional) selects the Geoapify `lang`; cache-first lookup via a geoboxing box (`aroundme.cache-radius`), Geoapify fetch + upsert on cache miss; each place includes a response-only `distance` (meters) and `direction` (8-point compass `N/NE/E/SE/S/SW/W/NW`, empty when distance < 1 m) |
+| GET | `/api/places/stats?adminKey=` | 200 `{"count": N}` entries in the places cache; requires `adminKey` == `admin.key` (env `ADMIN_KEY`), otherwise 401; **not** rate-limited |
 
-Common errors: 400 invalid/missing `userId` or `lat`/`lon`; 401 userId not in allow-list; 429 per-user rate limit exceeded (`pwa-standard`: reads) — `Retry-After` header + JSON body `{"error":"TOO_MANY_REQUESTS","status":429}`; 503 Geoapify unavailable.
+Common errors: 400 invalid/missing `userId` or `lat`/`lon`; 401 userId not in allow-list (or invalid/missing `adminKey` on `/stats`); 429 per-user rate limit exceeded (`pwa-standard`: reads) — `Retry-After` header + JSON body `{"error":"TOO_MANY_REQUESTS","status":429}`; 503 Geoapify unavailable.
 
 ## Health & Tooling
 
@@ -416,7 +418,9 @@ the backend from request flooding (e.g. a misbehaving client or a scripted attac
 - **State** — in-memory token buckets per identity (single backend instance; reset on
   restart; bounded by `quarkus.rate-limiter.max-size`, default 1000).
 - **Exempt** — `GET /api/system/info` is not annotated, so the frontend status probe is
-  never throttled and the online/offline indicator stays reliable.
+  never throttled and the online/offline indicator stays reliable; the admin-only stats
+  endpoints (`GET /api/positions/stats`, `GET /api/places/stats`) are exempt as they
+  require the secret `adminKey`.
 - **Tests** — the IT suite keeps `quarkus.rate-limiter.enabled=false`
   (`src/test/resources/application.properties`); `RateLimitIT` re-enables it with tiny
   limits via a `@TestProfile` and asserts the 429 status, JSON body and `Retry-After`
@@ -469,6 +473,7 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 | `quarkus.flyway.migrate-at-start` | `true` — apply pending migrations on startup |
 | `quarkus.flyway.baseline-on-migrate`, `quarkus.flyway.baseline-version` | `true` / `1` — baseline existing non-empty DBs at v1, skipping `V1__baseline.sql` |
 | `allowed.user.ids` (+ `%dev`, `%test`) | Authorized users per profile |
+| `admin.key` (+ `%dev`, `%test`) | Single admin key for the stats endpoints: `${ADMIN_KEY:change-me}` (env-var overridable in prod), dev `dev-admin-key`, test `test-admin-key` |
 | `nominatim_uri/mp-rest/url`, `weather_uri/mp-rest/url` | REST client base URLs |
 | `geoapify_uri/mp-rest/url`, `geoapify.categories`, `geoapify.limit`, `geoapify.radius`, `geoapify.format`, `geoapify.api-key` | Geoapify Places client: base URL, category filter (`catering,commercial,healthcare,leisure,entertainment,service`), result limit, fetch radius (m), format, API key (`${GEOAPIFY_API_KEY:}`) |
 | `aroundme.cache-radius` | Cache bounding-box radius (m) for the cache-first lookup |
@@ -550,6 +555,7 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 
 | Version | Date | Description |
 |---------|---------|---------|
+| 0.4.0 | 2026-08-28 | Admin DB monitoring: new `GET /api/positions/stats?adminKey=` (stored positions per user as `[{"userId","locations"}]`, ordered by userId) and `GET /api/places/stats?adminKey=` (places-cache entry count `{"count"}`). The `adminKey` query param is checked constant-time against the new `admin.key` config (`${ADMIN_KEY:change-me}`, `%dev`/`%test` overrides `dev-admin-key`/`test-admin-key`) by the new `security.AdminKeyVerifier`; missing or wrong key → 401. Both endpoints are deliberately **not** rate-limited. Tests: valid/missing/wrong-key cases added to `PositionsResourceIT` and `PlacesResourceIT`. |
 | 0.4.0 | 2026-08-28 | Architecture guard: new `BceArchitectureTest` (ArchUnit `archunit-junit5` 1.4.1, runs as a unit test) enforces the BCE rules on every main class — component/layer package structure, boundary/control/entity membership, dependency direction (no control→boundary, no entity→boundary/control), `EntityManager` only in controls, `@Transactional` only in boundary, JAX-RS boundary methods return `Response`, no constructor injection, REST clients end with `Client`, no prohibited class suffixes. Documented exceptions: `DatabaseHealthCheck` (health check in boundary), `SystemInfo` (`@ApplicationScoped` control), `security` infra package, static-util/REST-client interfaces in control. |
 | 0.4.0 | 2026-08-28 | Rate limiting with Bucket4j (`io.quarkiverse.bucket4j:quarkus-bucket4j` 1.0.7): per-user token buckets `pwa-standard` (10 reads / 30 s: `GET /positions`, `GET /positions/current`, `GET /places`) and `pwa-critical` (5 writes+deletes / 30 s: `POST /positions`, `DELETE /positions/{id}`), both `shared=true` pools keyed by the `userId` query param. New `security` package: `UserIdIdentityResolver` (falls back to `unknown` for missing IDs) and `TooManyRequestsMapper` (429 + `Retry-After` + JSON `{"error":"TOO_MANY_REQUESTS","status":429}` + INFO log per exceeded user). `/system/info` stays unthrottled. Frontend: 429-aware errors in `api.js` (`status`/`retryAfter`), friendly message in Locate/History, status dot stays online on 429; cache-busters `_20`. Tests: `RateLimitIT` (enables the limiter via `@TestProfile`, asserts 429 body + `Retry-After`); suite keeps the limiter disabled. |
 | 0.4.0 | 2026-08-28 | Frontend: tag chips wrap over multiple lines (`.tag-chips` `flex-wrap: wrap`, horizontal-scroll styles removed) — no horizontal scrolling needed in the collapsible Tag & Comment section. Cache-buster style.css `_19`. |
