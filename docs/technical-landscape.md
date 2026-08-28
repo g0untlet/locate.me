@@ -488,6 +488,7 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 
 | Test Type | Scope |
 |------------|------------|
+| Architecture (ArchUnit) | `BceArchitectureTest` — enforces the BCE rules during unit tests (Surefire): component/layer package structure, boundary/control/entity membership, dependency direction (no control→boundary, no entity→boundary/control), `EntityManager` only in controls, `@Transactional` only in boundary, JAX-RS boundary methods return `Response`, no constructor injection, REST clients end with `Client`, no prohibited class suffixes. Documented exceptions: `DatabaseHealthCheck` (health check in boundary), `SystemInfo` (`@ApplicationScoped` control), `security` infra package, static-util/REST-client interfaces in control |
 | Integration tests (IT) | REST + persistence + enrichment on in-memory H2 (`PositionsResourceIT`, incl. `createWithTagAndComment` and `createWithInvalidTag`; `PlacesResourceIT` — cache hit/miss, distance sorting, dedup, anonymous names, language) |
 | Unit tests | `DistanceCalculatorTest`, `GeoboxingTest`, `ClientLanguageTest`, `PlaceNamesTest` |
 | System tests (`backend-st`) | Run against a live backend on 8090 (`PositionsSystemIT` + `PositionsResourceClient`) |
@@ -498,6 +499,7 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 | Framework | Usage |
 |------------|------------|
 | JUnit 5 (Quarkus Test) | Integration tests |
+| ArchUnit (`archunit-junit5`) | BCE architecture unit test (`BceArchitectureTest`) |
 | RestAssured | REST assertions |
 | AssertJ | Assertions |
 
@@ -548,6 +550,7 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 
 | Version | Date | Description |
 |---------|---------|---------|
+| 0.4.0 | 2026-08-28 | Architecture guard: new `BceArchitectureTest` (ArchUnit `archunit-junit5` 1.4.1, runs as a unit test) enforces the BCE rules on every main class — component/layer package structure, boundary/control/entity membership, dependency direction (no control→boundary, no entity→boundary/control), `EntityManager` only in controls, `@Transactional` only in boundary, JAX-RS boundary methods return `Response`, no constructor injection, REST clients end with `Client`, no prohibited class suffixes. Documented exceptions: `DatabaseHealthCheck` (health check in boundary), `SystemInfo` (`@ApplicationScoped` control), `security` infra package, static-util/REST-client interfaces in control. |
 | 0.4.0 | 2026-08-28 | Rate limiting with Bucket4j (`io.quarkiverse.bucket4j:quarkus-bucket4j` 1.0.7): per-user token buckets `pwa-standard` (10 reads / 30 s: `GET /positions`, `GET /positions/current`, `GET /places`) and `pwa-critical` (5 writes+deletes / 30 s: `POST /positions`, `DELETE /positions/{id}`), both `shared=true` pools keyed by the `userId` query param. New `security` package: `UserIdIdentityResolver` (falls back to `unknown` for missing IDs) and `TooManyRequestsMapper` (429 + `Retry-After` + JSON `{"error":"TOO_MANY_REQUESTS","status":429}` + INFO log per exceeded user). `/system/info` stays unthrottled. Frontend: 429-aware errors in `api.js` (`status`/`retryAfter`), friendly message in Locate/History, status dot stays online on 429; cache-busters `_20`. Tests: `RateLimitIT` (enables the limiter via `@TestProfile`, asserts 429 body + `Retry-After`); suite keeps the limiter disabled. |
 | 0.4.0 | 2026-08-28 | Frontend: tag chips wrap over multiple lines (`.tag-chips` `flex-wrap: wrap`, horizontal-scroll styles removed) — no horizontal scrolling needed in the collapsible Tag & Comment section. Cache-buster style.css `_19`. |
 | 0.4.0 | 2026-08-28 | AroundMe: new `aroundme.read-from-cache` flag (default `false`) — `Places.findNear` skips the cache-first geoboxing lookup when disabled, always fetching fresh from Geoapify; `fetchAndStore` still upserts into the H2 cache and the result is forwarded to the client (`true` restores the cache-first path). Test suite: `src/test/resources/application.properties` keeps the cache-first path enabled for `PlacesResourceIT`; new `PlacesReadCacheDisabledIT` (`@TestProfile`) covers the disabled path (always refetch, still persists, excludes apply). Frontend: `renderPlacesList` caps at `MAX_PLACES` 20 (matching `aroundme.max-places`); the `catering` place icon is now a fork-and-knife glyph (`getPlaceIconSvg`). Cache-buster app.js `_19`. |
