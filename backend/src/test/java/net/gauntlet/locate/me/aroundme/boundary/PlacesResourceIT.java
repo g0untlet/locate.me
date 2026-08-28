@@ -251,8 +251,8 @@ public class PlacesResourceIT {
 
     @Test
     void returnsAtMostConfiguredMaxPlaces() {
-        JsonObject[] features = new JsonObject[10];
-        for (int i = 0; i < 10; i++) {
+        JsonObject[] features = new JsonObject[25];
+        for (int i = 0; i < 25; i++) {
             features[i] = feature("Place " + i, "place-" + i, 48.1356 + Geoboxing.deltaLat(i * 5.0), 11.6058,
                     Json.createArrayBuilder().add("catering").add("catering.restaurant").build(),
                     Json.createObjectBuilder().build());
@@ -260,14 +260,14 @@ public class PlacesResourceIT {
         when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection(features));
 
-        // The backend returns at most aroundme.max-places (10) places; here
-        // Geoapify delivered exactly 10, so all of them are returned.
+        // The backend returns at most aroundme.max-places (20) places; here
+        // Geoapify delivered 25, so the response is truncated to 20.
         given()
                 .when()
                 .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
                 .then()
                 .statusCode(200)
-                .body("size()", is(10));
+                .body("size()", is(20));
     }
 
     @Test

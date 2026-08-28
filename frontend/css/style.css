@@ -211,6 +211,23 @@ body {
     box-shadow: none;
 }
 
+/* Equal-width paired action buttons (e.g. Back + Save Location on the Locate
+   saver view). The row owns the bottom margin; buttons inside it flex equally
+   and lose the standalone width cap. */
+.track-btn-row {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 280px;
+    margin-bottom: 12px;
+}
+
+.track-btn-row .track-btn {
+    flex: 1;
+    max-width: none;
+    margin-bottom: 0;
+}
+
 .settings-input {
     width: 100%;
     padding: 12px;

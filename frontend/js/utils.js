@@ -184,6 +184,13 @@ export function getLocationIconSvg(category, type) {
 
     if (!category) return defaultIcon;
 
+    // AroundMe place categories (adopted as osmCategory on save) use the same
+    // icons as the places list, so history and the saved view keep showing the
+    // icon the user saw when selecting the place.
+    if (['catering', 'commercial', 'healthcare', 'leisure', 'entertainment', 'service'].includes(category)) {
+        return getPlaceIconSvg(category);
+    }
+
     switch (category) {
         case 'building':
             return `<svg ${svgAttrs}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`;
@@ -230,7 +237,7 @@ export function getPlaceIconSvg(primaryCategory) {
         case 'commercial':
             return `<svg ${svgAttrs}><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`;
         case 'healthcare':
-            return `<svg ${svgAttrs}><path d="M12 21s-7-5.46-7-11a7 7 0 0 1 14 0c0 5.54-7 11-7 11z"></path><path d="M9 11h6M12 8v6"></path></svg>`;
+            return `<svg ${svgAttrs}><path d="M10 3h4v6h6v4h-6v6h-4v-6H4v-4h6z"></path></svg>`;
         case 'leisure':
             return `<svg ${svgAttrs}><path d="M12 19V5M12 5a4 4 0 0 0-4 4c0 2.5 2.5 5 4 7m0-11a4 4 0 0 1 4 4c0 2.5-2.5 5-4 7m-3 3h6"></path></svg>`;
         case 'entertainment':

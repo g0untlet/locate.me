@@ -482,6 +482,13 @@ function applySelectedPlace(payload) {
     if (place.houseNumber) payload.houseNumber = place.houseNumber;
     if (place.city) payload.city = place.city;
     if (place.country) payload.country = place.country;
+    // Persist the place's category so the saved view and history render the
+    // same icon the user saw when selecting the place (getLocationIconSvg
+    // delegates to getPlaceIconSvg for aroundme categories).
+    if (place.primaryCategory) {
+        payload.osmCategory = place.primaryCategory;
+        payload.osmType = place.secondaryCategory;
+    }
 }
 
 /* ==========================================================================
@@ -599,6 +606,10 @@ export function initLocatePage(deps) {
 
     // --- Chooser: CONTINUE to saver view ---
     document.getElementById('btn-locate-continue').addEventListener('click', handleContinue);
+
+    // --- Saver: BACK to chooser view (no backend reload – the chooser state
+    //     and the cached preview are still in the DOM) ---
+    document.getElementById('btn-back').addEventListener('click', () => showView('chooser'));
 
     // --- SAVE LOCATION Button ---
     document.getElementById('track-btn').addEventListener('click', () => {
