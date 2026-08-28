@@ -1,4 +1,4 @@
-import { apiGetPositionsWithMeta, apiDeletePosition } from '../api.js';
+import { apiGetPositionsWithMeta, apiDeletePosition, TOO_MANY_REQUESTS_MESSAGE } from '../api.js';
 import { setHistoryMapData, getCurrentHistoryView } from '../state.js';
 import { renderMapMarkers } from '../ui/map.js';
 import { updateHistoryBadge } from '../ui/badge.js';
@@ -278,7 +278,11 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
                 checkBackendStatus();
             })
             .catch(err => {
-                alert(`Error removing entry: ${err.message}`);
+                if (err && err.status === 429) {
+                    alert(TOO_MANY_REQUESTS_MESSAGE);
+                } else {
+                    alert(`Error removing entry: ${err.message}`);
+                }
                 checkBackendStatus();
             });
     });
@@ -580,7 +584,9 @@ export function fetchAndRenderHistory(deps) {
             })
             .catch(err => {
                 setOfflineBanner(false);
-                if (!navigator.onLine) {
+                if (err && err.status === 429) {
+                    listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">${TOO_MANY_REQUESTS_MESSAGE}</div>`;
+                } else if (!navigator.onLine) {
                     listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">Offline — no cached history yet. Open History once while online to enable offline access.</div>`;
                 } else {
                     listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--error-color, #dc2626); font-size:0.9rem; padding:20px 0;">Error: ${err.message}</div>`;

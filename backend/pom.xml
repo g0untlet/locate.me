@@ -76,6 +76,13 @@
             <artifactId>quarkus-hibernate-validator</artifactId>
         </dependency>
 
+        <!-- Bucket4j rate limiting (Quarkiverse, annotation-based, per-identity buckets) -->
+        <dependency>
+            <groupId>io.quarkiverse.bucket4j</groupId>
+            <artifactId>quarkus-bucket4j</artifactId>
+            <version>1.0.7</version>
+        </dependency>
+
         <!-- MicroProfile and health/metrics/OpenAPI/fault-tolerance -->
         <dependency>
             <groupId>io.quarkus</groupId>

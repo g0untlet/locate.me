@@ -21,6 +21,7 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import io.quarkiverse.bucket4j.runtime.RateLimited;
 import net.gauntlet.locate.me.Boundary;
 import net.gauntlet.locate.me.aroundme.control.Geoboxing;
 import net.gauntlet.locate.me.aroundme.control.Places;
@@ -77,6 +78,7 @@ public class PlacesResource {
     @GET
     @Transactional
     @PermitAll
+    @RateLimited(bucket = "pwa-standard")
     public Response getPlaces(
             @QueryParam("userId") String userId,
             @QueryParam("lat") Double lat,

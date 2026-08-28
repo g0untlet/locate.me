@@ -1,4 +1,4 @@
-import { apiGetCurrentPosition, apiGetPlaces, apiPostPosition } from '../api.js';
+import { apiGetCurrentPosition, apiGetPlaces, apiPostPosition, TOO_MANY_REQUESTS_MESSAGE } from '../api.js';
 import { getCachedLocatePosition, setCachedLocatePosition } from '../state.js';
 import { showLocateMap, showLocateSavedMap } from '../ui/map.js';
 import { showError } from '../ui/status.js';
@@ -426,6 +426,12 @@ function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus })
         setFetchBusy(false);
     })
     .catch(err => {
+        if (err && err.status === 429) {
+            showError(TOO_MANY_REQUESTS_MESSAGE);
+            checkBackendStatus();
+            setFetchBusy(false);
+            return;
+        }
         if (!navigator.onLine) {
             ensureOfflineBanner();
             setOfflineBanner(true);
@@ -463,6 +469,11 @@ function sendPositionToBackend(payload, { getActiveUserId, checkBackendStatus, s
             checkBackendStatus();
         })
         .catch(err => {
+            if (err && err.status === 429) {
+                showError(TOO_MANY_REQUESTS_MESSAGE);
+                checkBackendStatus();
+                return;
+            }
             showError(`Backend Error: ${err.message}`);
             checkBackendStatus();
         });
