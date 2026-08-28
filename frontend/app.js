@@ -34,8 +34,12 @@ function updateDemoModeNote() {
 function initNavigation() {
     document.querySelectorAll('.nav-item').forEach(button => {
         button.addEventListener('click', () => {
-            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(btn => {
+                btn.classList.remove('active');
+                btn.removeAttribute('aria-current');
+            });
             button.classList.add('active');
+            button.setAttribute('aria-current', 'page');
 
             const targetPageId = button.getAttribute('data-target');
             document.querySelectorAll('.app-page').forEach(page => page.classList.add('hidden'));

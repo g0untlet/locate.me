@@ -8,7 +8,6 @@ import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
 import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
-import jakarta.json.JsonObject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.Consumes;
@@ -91,9 +90,16 @@ public class PlacesResource {
 
         JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
         list.stream()
-            .map(place -> Json.createObjectBuilder(place.toJSON())
-                    .add("distance", Geoboxing.distanceMeters(lat, lon, place.latitude(), place.longitude()))
-                    .build())
+            .map(place -> {
+                double distance = Geoboxing.distanceMeters(lat, lon, place.latitude(), place.longitude());
+                String direction = distance < 1.0
+                        ? ""
+                        : Geoboxing.compassPoint(Geoboxing.bearingDegrees(lat, lon, place.latitude(), place.longitude()));
+                return Json.createObjectBuilder(place.toJSON())
+                        .add("distance", distance)
+                        .add("direction", direction)
+                        .build();
+            })
             .forEach(arrayBuilder::add);
 
         return Response.ok(arrayBuilder.build()).build();

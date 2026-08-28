@@ -35,11 +35,14 @@
 - This is done by an external API (OpenStreetMap/Nominatim).
 
 ### 1.7. Places Around Me (POI Discovery)
-- For a given location, the backend can fetch points of interest (POIs) around it from the Geoapify Places API (categories: catering, commercial, healthcare, leisure).
+- For a given location, the backend can fetch points of interest (POIs) around it from the Geoapify Places API (categories: catering, commercial, healthcare, leisure, entertainment, service).
+- Only categories listed in `geoapify.categories` are used for a place's primary/secondary category; any other category in the Geoapify response (e.g. `access` / `access.yes`) is ignored. Wheelchair information is still read from the raw category list.
+- Secondary categories listed in `aroundme.exclude-categories` (currently `playground`) are excluded: such places are neither returned nor cached.
 - Fetched places are cached in the database (deduplicated by the Geoapify place ID) and served nearest-first; a cache hit avoids a repeated external request.
 - Each place provides a name (with a fallback for anonymous POIs), primary/secondary category, address, contact and wheelchair information.
 - The client language (from the HTTP `Accept-Language` header) is passed to Geoapify so POI names can be returned in the user's language.
-- **Status:** currently a backend capability (`GET /places`); frontend UI integration is planned but not yet present in the app.
+- Each place response includes the straight-line `distance` (meters) and an 8-point compass `direction` (`N, NE, E, SE, S, SW, W, NW`) from the requested coordinate — computed in the backend from the request lat/lon (the user's position); a place essentially at the user's location has an empty direction.
+- **Status:** fully integrated into the Locate view (0.4.0): the up-to-20 nearest places (configurable via `aroundme.max-places`) are shown with their distance and direction (e.g. `301 m NW`); the user can adopt a place as the location — its coordinates and label ("Name, street houseNumber") are then saved.
 
 ## 2. User Interface
 
@@ -48,12 +51,12 @@ The application is a single-page application (SPA) with three main views:
 ### 2.1. Locate View
 - This is the main view of the application.
 - It displays a button to fetch the current location.
-- When the location is fetched, it is displayed on a map.
-- The view also shows the current weather and address information.
-- The current UV-Index and the elevation are displayed alongside the address.
-- A "Save Location" button allows the user to save the current location to their history.
+- Fetching runs a GPS accuracy loop; once a fix is found, the view splits into two steps:
+  - **Chooser step:** shows the current weather (temperature, condition, UV-Index), a selectable **Resolved Address** row (with elevation; always reserves two lines so the row height is stable) and a **"Places around me"** list of up to the 20 nearest POIs (configurable via `aroundme.max-places`; category icon + name + distance in m/km). The resolved address is selected by default. The user either keeps it or taps one of the place rows to adopt it as the location label — a chosen place is shown as `Name, <street> <houseNumber>`. A "Continue" button proceeds to the save step. The fetch button now reads "Refresh" and re-runs the GPS + preview fetch from the current coordinates. On small screens the places list scrolls internally; the page itself does not scroll.
+  - **Save step:** shows the collapsible "Tag & Comment" section, the weather again, a **LOCATION** row with the chosen location (resolved address or adopted place) and the elevation (from the fetched weather data), and an OpenStreetMap snippet of the position that will be saved. "Save Location" persists the position; a "Back" button (same width, left of Save) returns to the chooser step without reloading data from the backend.
+  - **Saved step:** after saving, a dedicated read-only confirmation card shows the persisted data in the same style — the tag (pill) and comment (read-only), weather, the **LOCATION** label, elevation and the map — with the fetch button reset to "Fetch Location". A fresh fetch (Refresh) restarts the flow.
+- The saved coordinates are the GPS fix by default; when the user adopts a place, the saved coordinates are that place's coordinates (its latitude/longitude) and the label is set to `Name, street houseNumber` (`osmName`), plus `displayName` and the place's road, house number, city and country. Weather, elevation and accuracy always come from the GPS preview.
 - Before saving, a collapsible "TAG & COMMENT" section allows the user to select a single predefined tag and optionally enter a comment (max. 25 characters).
-- After saving, the chosen tag and comment are shown at the top of the location card, above the temperature section.
 
 ### 2.2. History View
 - This view displays the user's saved locations.
@@ -151,7 +154,10 @@ component.
 
 | Version | Date | Description |
 |---------|------|-------------|
-| 0.4.0 | 2026-08-22 | New backend capability "Places Around Me": `GET /places?userId=&lat=&lon=` returns points of interest near a coordinate (Geoapify Places API), cached in a new `places` table and served nearest-first (cache-first geoboxing). Anonymous POIs receive a synthetic name; the client language is honored via `Accept-Language`. Frontend UI integration is planned but not yet present. |
+| 0.4.0 | 2026-08-28 | Frontend: new place icons — bed for accommodation and bus/train/tram for public transport were added with the categories, then removed again together with the categories (config stays `geoapify.categories` = catering, commercial, healthcare, leisure, entertainment, service); `aroundme.max-places` raised 10 → 20; the healthcare icon is now a pharmacy-style outlined cross; the save step has a "Back" button (same width, left of Save Location) that returns to the chooser without reloading from the backend. Bugfix: adopting a place now preserves its category icon — `osmCategory`/`osmType` are set from the place's categories on save, so the saved confirmation and history show the same icon as when the place was selected (instead of the GPS point's OSM icon). |
+| 0.4.0 | 2026-08-24 | Places around me: added the categories entertainment and service; only configured top-level categories are now used for a place's primary/secondary category (other categories like `access`/`access.yes` are ignored). New `aroundme.exclude-categories` blocklist (first entry `playground`) drops places with excluded secondary categories; the number of returned places is configurable via `aroundme.max-places` (10). Each place shows an 8-point compass `direction` next to its distance (e.g. `301 m NW`), computed in the backend. Adopting a place saves its coordinates and the label `Name, <street> <houseNumber>` (otherwise the GPS fix coordinates are saved); the green selection check-mark was removed (selection is shown by the highlight only); the "Back" button was removed (Refresh restarts); button labels use Title Case. Locate view refinements: on small screens only the places list scrolls (the page stays fixed), the resolved-address row always reserves two lines, after saving a dedicated read-only confirmation card shows the persisted data (tag pill + comment, weather, location, elevation, map), and the action buttons are slimmer and softer. The active page in the bottom navigation is highlighted with a subtle tinted pill and `aria-current`. |
+| 0.4.0 | 2026-08-23 | Locate view integrated with the "Places around me" backend: after fetching a position the view now offers two steps — a chooser (weather, selectable resolved address with elevation, and the up-to-5 nearest places with distance) and a save step (TAG & COMMENT, weather, chosen location + elevation, map snippet, SAVE). The user can adopt a place as the location label while the saved coordinates stay the GPS fix. The Geoapify search radius was raised from 50 m to 500 m so the list is usually populated. |
+| 0.4.0 | 2026-08-22 | New backend capability "Places Around Me": `GET /places?userId=&lat=&lon=` returns points of interest near a coordinate (Geoapify Places API), cached in a new `places` table and served nearest-first (cache-first geoboxing). Anonymous POIs receive a synthetic name; the client language is honored via `Accept-Language`. |
 | 0.4.0 | 2026-08-20 | Backend schema management switched to Flyway (versioned SQL migrations); no user-visible functional change. Existing databases are baselined and data is preserved (see `docs/technical-landscape.md` → Schema Management). |
 | 0.3.0 | 2026-08-03 | Added UV-Index and elevation fields to the `Position` entity (fetched from Open-Meteo); display UV-Index and elevation in the Locate and History views; fixed HTTP 500 on saving a location caused by an H2 2.4.240 enum CHECK constraint regression (see `docs/production-upgrade-0.3.0.md`). |
 | 0.3.0 | 2026-08-10 | Documentation alignment: technical details (incl. the BCE component breakdown) moved to `docs/technical-landscape.md`. |

@@ -3,7 +3,9 @@ import {
     getHistoryMapData,
     getCurrentHistoryView, setCurrentHistoryView,
     getLocateMap, setLocateMap,
-    getLocateMarker, setLocateMarker
+    getLocateMarker, setLocateMarker,
+    getLocateSavedMap, setLocateSavedMap,
+    getLocateSavedMarker, setLocateSavedMarker
 } from '../state.js';
 import { formatShortAddress, formatRelativeDate } from '../utils.js';
 
@@ -119,8 +121,8 @@ export function renderMapMarkers() {
 /* ==========================================================================
    Locate Map: Einzelner Marker nach GPS-Fix
    ========================================================================== */
-export function showLocateMap(lat, lon) {
-    const mapEl = document.getElementById('locate-map');
+function renderLocateMap(containerId, getMap, setMap, getMarker, setMarker, lat, lon) {
+    const mapEl = document.getElementById(containerId);
     if (!mapEl) return;
 
     // Leaflet may be missing on pages loaded while offline before the first
@@ -130,24 +132,32 @@ export function showLocateMap(lat, lon) {
         return;
     }
 
-    if (!getLocateMap()) {
-        const map = L.map('locate-map', { zoomControl: false });
+    if (!getMap()) {
+        const map = L.map(containerId, { zoomControl: false });
         L.tileLayer(OSM_TILE_URL, { attribution: OSM_ATTRIBUTION, maxZoom: 19 }).addTo(map);
-        setLocateMap(map);
+        setMap(map);
     }
 
     // Update or create marker
-    if (getLocateMarker()) {
-        getLocateMarker().setLatLng([lat, lon]);
+    if (getMarker()) {
+        getMarker().setLatLng([lat, lon]);
     } else {
-        setLocateMarker(L.marker([lat, lon]).addTo(getLocateMap()));
+        setMarker(L.marker([lat, lon]).addTo(getMap()));
     }
 
     // Delay to let the container finish its CSS transition before sizing
     setTimeout(() => {
-        getLocateMap().invalidateSize();
-        getLocateMap().setView([lat, lon], 15);
+        getMap().invalidateSize();
+        getMap().setView([lat, lon], 15);
     }, 50);
+}
+
+export function showLocateMap(lat, lon) {
+    renderLocateMap('locate-map', getLocateMap, setLocateMap, getLocateMarker, setLocateMarker, lat, lon);
+}
+
+export function showLocateSavedMap(lat, lon) {
+    renderLocateMap('locate-saved-map', getLocateSavedMap, setLocateSavedMap, getLocateSavedMarker, setLocateSavedMarker, lat, lon);
 }
 
 /* ==========================================================================

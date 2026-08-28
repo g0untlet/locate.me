@@ -184,17 +184,17 @@ body {
 .track-btn {
     width: 100%;
     max-width: 280px;
-    padding: 14px 0;
-    font-size: 0.95rem;
+    padding: 10px 0;
+    font-size: 0.9rem;
     font-weight: 600;
     letter-spacing: 0.5px;
     color: white;
     background-color: var(--primary-color);
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
     transition: var(--transition);
-    box-shadow: 0 4px 6px rgba(114, 178, 220, 0.15);
+    box-shadow: 0 2px 4px rgba(114, 178, 220, 0.12);
     margin-bottom: 12px;
     flex-shrink: 0;
 }
@@ -209,6 +209,23 @@ body {
     color: var(--text-muted);
     cursor: not-allowed;
     box-shadow: none;
+}
+
+/* Equal-width paired action buttons (e.g. Back + Save Location on the Locate
+   saver view). The row owns the bottom margin; buttons inside it flex equally
+   and lose the standalone width cap. */
+.track-btn-row {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 280px;
+    margin-bottom: 12px;
+}
+
+.track-btn-row .track-btn {
+    flex: 1;
+    max-width: none;
+    margin-bottom: 0;
 }
 
 .settings-input {
@@ -267,7 +284,6 @@ body {
 .cell { padding: 14px 16px; display: flex; flex-direction: column; }
 .address-cell { flex: 1; min-width: 0; }
 .elevation-cell { flex-shrink: 0; }
-#res-elevation { font-size: 0.95rem; font-weight: 500; color: var(--text-color); }
 .border-bottom { border-bottom: 1px solid var(--border-color); }
 .text-right { align-items: flex-end; text-align: right; }
 
@@ -290,43 +306,6 @@ body {
     font-weight: 400;
     line-height: 1.4;
     color: var(--text-color);
-}
-
-#res-address-container {
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: var(--text-color);
-}
-
-.res-tag-comment {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    padding: 10px 16px;
-}
-
-.res-tag-pill {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 8px;
-    border-radius: 6px;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    color: var(--primary-dark);
-    background-color: var(--primary-tint);
-    border: 1px solid var(--border-color);
-}
-
-.res-comment-text {
-    flex: 1;
-    min-width: 0;
-    font-size: 0.82rem;
-    color: var(--text-color);
-    line-height: 1.4;
-    word-break: break-word;
 }
 
 .address-container span {
@@ -801,7 +780,14 @@ body {
     transition: var(--transition);
 }
 
-.nav-item.active { color: var(--primary-dark); }
+.nav-item.active {
+    color: var(--primary-dark);
+    background-color: var(--primary-tint);
+    border-radius: 14px;
+    height: auto;
+    margin: 6px 0;
+    padding: 10px 8px 5px;
+}
 .nav-item.active .nav-icon { transform: translateY(-2px); stroke: var(--primary-dark); }
 .nav-label { font-size: 0.75rem; font-weight: 500; }
 
@@ -832,15 +818,230 @@ body {
     animation: pulse 1.5s infinite;
 }
 
-.track-btn--save {
-    background-color: var(--card-bg);
-    color: var(--primary-dark);
-    border: 1.5px solid var(--primary-color);
-    box-shadow: none;
+/* ==========================================================================
+   Locate Page: Chooser & Saver Views
+   ========================================================================== */
+.locate-view {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
 }
 
-.track-btn--save:hover {
+/* Chooser fills the Locate page; only the places list shrinks and scrolls so a
+   small viewport never scrolls the whole page. */
+#locate-chooser {
+    flex: 1;
+    min-height: 0;
+}
+
+#locate-chooser > * {
+    flex-shrink: 0;
+}
+
+#locate-chooser > #places-card {
+    flex-shrink: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+/* Kompaktere Zellen auf den Locate-Views, damit alles in den 640px-Rahmen
+   bzw. auf dem Smartphone ohne Scrollen Platz hat. */
+.locate-view .cell {
+    padding: 10px 14px;
+}
+
+#chooser-address-container,
+#saver-location-container {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+/* Always reserve two address lines so the resolved-address row height stays
+   stable when the label switches between one and two lines. */
+#chooser-address-container {
+    min-height: 2.8em;
+}
+
+#chooser-elevation,
+#saver-elevation {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+/* --- Chooser: selectable resolved address row --- */
+.locate-select-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 14px;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.locate-select-row:hover {
+    background-color: var(--surface-subtle);
+}
+
+.locate-select-row--selected {
     background-color: var(--primary-tint);
+    box-shadow: inset 3px 0 0 0 var(--primary-color);
+}
+
+.locate-select-row--selected:hover,
+.locate-select-row--selected:active {
+    background-color: var(--primary-tint);
+}
+
+.locate-select-row--selected .address-container svg {
+    stroke: var(--primary-color);
+}
+
+.locate-select-row-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.locate-select-row-side {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- Chooser: Places around me --- */
+.places-card {
+    margin-bottom: 0;
+}
+
+.places-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px 4px;
+    flex-shrink: 0;
+}
+
+.places-count {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.places-list {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    /* Fits ~10 place rows; flex + overflow-y lets the list shrink and scroll
+       internally on smaller screens instead of scrolling the whole page. */
+    flex: 1;
+    min-height: 0;
+    max-height: 336px;
+    overflow-y: auto;
+    padding-bottom: 4px;
+}
+
+.place-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 6px 16px;
+    background: none;
+    border: none;
+    border-top: 1px solid var(--border-color);
+    text-align: left;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.place-row:hover {
+    background-color: var(--surface-subtle);
+}
+
+.place-row--selected {
+    background-color: var(--primary-tint);
+    box-shadow: inset 3px 0 0 0 var(--primary-color);
+}
+
+.place-row--selected:hover,
+.place-row--selected:active {
+    background-color: var(--primary-tint);
+}
+
+.place-row svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    stroke: var(--text-muted);
+}
+
+.place-row--selected svg {
+    stroke: var(--primary-color);
+}
+
+.place-row-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.place-row-distance {
+    flex-shrink: 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   Locate Page: Saved View – read-only tag + comment strip
+   (shown on the confirmation card after a location is saved)
+   ========================================================================== */
+.saved-tag-comment {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 10px 16px;
+}
+
+.saved-tag-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--primary-dark);
+    background-color: var(--primary-tint);
+    border: 1px solid var(--border-color);
+}
+
+.saved-comment-text {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.82rem;
+    color: var(--text-color);
+    line-height: 1.4;
+    word-break: break-word;
 }
 
 /* ==========================================================================
@@ -1261,7 +1462,7 @@ body {
    ========================================================================== */
 .locate-map {
     width: 100%;
-    height: 180px;
+    height: 190px;
     border-top: 1px solid var(--border-color);
     flex-shrink: 0;
 }

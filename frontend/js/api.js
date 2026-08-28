@@ -1,4 +1,4 @@
-import { API_BASE_URL, API_PATH } from './config.js';
+import { API_BASE_URL, API_PATH } from './config.js?v=0.3.1_34';
 
 /* ==========================================================================
    GET /api/system/info
@@ -55,6 +55,21 @@ export async function apiGetPositionsWithMeta(userId, lat = null, lon = null) {
    ========================================================================== */
 export async function apiGetCurrentPosition(userId, lat, lon) {
     const url = `${API_BASE_URL}${API_PATH}/positions/current` +
+        `?userId=${encodeURIComponent(userId)}&lat=${lat}&lon=${lon}`;
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Server returned status ${response.status}`);
+    return response.json();
+}
+
+/* ==========================================================================
+   GET /api/places (AroundMe)
+   Liefert die nächsten POIs um die GPS-Position (distanzsortiert, aufsteigend).
+   Returns: Array of place objects, jeweils mit distance (Meter).
+   Throws on network error or non-ok response.
+   ========================================================================== */
+export async function apiGetPlaces(userId, lat, lon) {
+    const url = `${API_BASE_URL}${API_PATH}/places` +
         `?userId=${encodeURIComponent(userId)}&lat=${lat}&lon=${lon}`;
 
     const response = await fetch(url);

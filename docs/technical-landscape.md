@@ -19,7 +19,7 @@ nearest-first. The functional scope is documented in
 | Frontend | Progressive Web App (PWA, installable) |
 | Mapping | Leaflet 1.9.4 + OpenStreetMap tile server |
 | Places | Geoapify Places API (POI discovery) |
-| Backend | Quarkus 3.33.2, Java 21 |
+| Backend | Quarkus 3.33.3.1, Java 21 |
 | API | REST (Jakarta REST), JSON-B / JSON-P |
 | ORM | Hibernate ORM (schema generation = `none`) |
 | Migrations | Flyway (versioned SQL migrations, `quarkus-flyway`) |
@@ -120,7 +120,7 @@ Browser (PWA) --HTTPS--> Caddy2 --/api--> Quarkus REST (Boundary /api)
 
 ## Quarkus Version
 
-Quarkus 3.33.2, Java 21, packaged as uber-jar (`locator-service-<version>-runner.jar`).
+Quarkus 3.33.3.1, Java 21, packaged as uber-jar (`locator-service-<version>-runner.jar`).
 
 ## Package Structure
 
@@ -220,7 +220,7 @@ Common errors: 400 invalid/missing `userId` or body; 401 userId not in allow-lis
 
 | Method | Endpoint | Notes |
 |----------|----------|----------|
-| GET | `/api/places?userId=&lat=&lon=` | 200 places cached around the coordinate, served nearest-first; the `Accept-Language` header (optional) selects the Geoapify `lang`; cache-first lookup via a geoboxing box (`aroundme.cache-radius`), Geoapify fetch + upsert on cache miss; each place includes a response-only `distance` (meters) |
+| GET | `/api/places?userId=&lat=&lon=` | 200 places cached around the coordinate, served nearest-first; the `Accept-Language` header (optional) selects the Geoapify `lang`; cache-first lookup via a geoboxing box (`aroundme.cache-radius`), Geoapify fetch + upsert on cache miss; each place includes a response-only `distance` (meters) and `direction` (8-point compass `N/NE/E/SE/S/SW/W/NW`, empty when distance < 1 m) |
 
 Common errors: 400 invalid/missing `userId` or `lat`/`lon`; 401 userId not in allow-list; 503 Geoapify unavailable.
 
@@ -408,7 +408,7 @@ self-hosted and private.
 
 ## Build Technology
 
-Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
+Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 
 ## Environment Overview
 
@@ -437,8 +437,10 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 | `quarkus.flyway.baseline-on-migrate`, `quarkus.flyway.baseline-version` | `true` / `1` — baseline existing non-empty DBs at v1, skipping `V1__baseline.sql` |
 | `allowed.user.ids` (+ `%dev`, `%test`) | Authorized users per profile |
 | `nominatim_uri/mp-rest/url`, `weather_uri/mp-rest/url` | REST client base URLs |
-| `geoapify_uri/mp-rest/url`, `geoapify.categories`, `geoapify.limit`, `geoapify.radius`, `geoapify.format`, `geoapify.api-key` | Geoapify Places client: base URL, category filter, result limit, fetch radius (m), format, API key (`${GEOAPIFY_API_KEY:}`) |
+| `geoapify_uri/mp-rest/url`, `geoapify.categories`, `geoapify.limit`, `geoapify.radius`, `geoapify.format`, `geoapify.api-key` | Geoapify Places client: base URL, category filter (`catering,commercial,healthcare,leisure,entertainment,service`), result limit, fetch radius (m), format, API key (`${GEOAPIFY_API_KEY:}`) |
 | `aroundme.cache-radius` | Cache bounding-box radius (m) for the cache-first lookup |
+| `aroundme.exclude-categories` | Comma-separated secondary POI categories to exclude (e.g. `playground`); applied on cache hits and fresh fetches |
+| `aroundme.max-places` | Maximum number of places returned for "Places around me" (default 20); `geoapify.limit` still controls the Geoapify fetch / cache size |
 | `%dev.quarkus.http.port=8090` | DEV port |
 | `quarkus.log.*` | Console DEBUG for project package |
 
@@ -477,7 +479,7 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 
 ## Technology
 
-- Quarkus 3.33.2, Java 21, H2 2.4.240.
+- Quarkus 3.33.3.1, Java 21, H2 2.4.240.
 - Caddy2 reverse proxy with HTTPS. All responses (static + `/api`) are sent with
   `Cache-Control: no-store` in every site block (DEV, PROD, `:8070` tunnel) — the
   browser HTTP cache is never used; `?v=` cache-busting query tokens remain as a
@@ -509,7 +511,11 @@ Maven; Quarkus platform BOM 3.33.2; uber-jar artifact.
 
 | Version | Date | Description |
 |---------|---------|---------|
-| 0.4.0 | 2026-08-22 | New `aroundme` BC: `GET /places` fetches POIs from the Geoapify Places API and caches them in the new `places` table (Flyway `V3__create_places_table.sql`, deduplicated by `place_id`). Cache-first lookup via a configurable geobox (`aroundme.cache-radius`, default 50 m): on a hit results are served from H2, on a miss Geoapify is queried and the result is upserted; responses are sorted ascending by distance with a response-only `distance` (meters). The client's `Accept-Language` header is passed to Geoapify as `lang`. |
+| 0.4.0 | 2026-08-28 | Frontend + aroundme: `aroundme.max-places` raised 10 → 20. Frontend: the `healthcare` icon is now a pharmacy-style outlined cross; `accommodation`/`public_transport` categories and their icons (bed / bus / train / tram) were added and then removed again — `geoapify.categories` stays `catering,commercial,healthcare,leisure,entertainment,service`. The Locate saver view re-gains a "Back" button left of "Save Location" (equal widths via `.track-btn-row`) that returns to the chooser without reloading from the backend (`showView('chooser')`). Bugfix: adopting a place now persists its category (`applySelectedPlace` sets `osmCategory`/`osmType` from the place when `primaryCategory` is set) and `getLocationIconSvg` delegates to `getPlaceIconSvg` for aroundme categories — the saved confirmation and history keep the place's icon instead of the GPS point's OSM icon. APP_BUILD 20260828; cache-busters app.js `_18`, style.css `_18`. |
+| 0.4.0 | 2026-08-24 | Places around me: `geoapify.categories` extended with `entertainment,service`. `Places.toPlace` now filters the Geoapify `categories` array to the configured top-level categories before deriving `primary`/`secondary` (e.g. `access`/`access.yes` is ignored); `wheelchair` is still read from the raw list (`Places.configuredOnly`, `allowedCategories`). New `aroundme.exclude-categories` blocklist (`isExcluded`, `excludedCategories`) drops places by secondary category on both cache hits and fresh fetches. `Places.findNear` truncates to `aroundme.max-places` (10) while `geoapify.limit` still governs the Geoapify fetch / cache size. `Places.fetchAndStore` logs a WARNING when Geoapify returns no places (e.g. a rejected request). Each place response now also carries an 8-point compass `direction` (empty for distance < 1 m), computed by the new `Geoboxing.bearingDegrees`/`Geoboxing.compassPoint` and added in `PlacesResource`. Frontend: adopting a place now saves its `latitude`/`longitude` (plus `osmName` `Name, street houseNumber`, `displayName`, `road`, `houseNumber`, `city`, `country`) — without a selection the GPS fix coordinates are kept (`applySelectedPlace`); the saver map previews the to-be-saved point (`handleContinue`); the places list renders `distance direction` (e.g. `301 m NW`). The green selection check-mark was removed (selection shown by highlight only); place icons for entertainment/service; the "Back" button was removed (Refresh restarts) and the Save button uses the standard primary style; button labels use Title Case. Locate view refinements: the chooser fills the page and only the places list shrinks/scrolls on small screens (`#places-card` flex + `.places-list` `flex:1; min-height:0; overflow-y:auto`, max-height now 336 px for 10 rows); the resolved-address row reserves two lines (`#chooser-address-container` `min-height:2.8em`); a dedicated read-only "saved" view (`#locate-saved`) with its own Leaflet map (`showLocateSavedMap`, state `_locateSavedMap`/`_locateSavedMarker`, shared `renderLocateMap` helper in map.js) shows the persisted tag/comment/weather/location/elevation after saving; `.track-btn` is slimmer (padding 10 px, font 0.9 rem) with a softer shadow; the active bottom-nav item gets a `--primary-tint` pill (`border-radius: 14px`, inset) and `aria-current="page"` is toggled in `app.js`. |
+| 0.4.0 | 2026-08-23 | Frontend: Locate view integrated with the `aroundme` BC — after a GPS fix the view fetches `GET /positions/current` and `GET /api/places` in parallel and shows a two-step flow: a chooser (weather, selectable resolved address + elevation, the nearest places with distance) and a save step (Tag & Comment, weather, chosen location + elevation, Leaflet snippet, SAVE). Selecting a place only overrides the saved label (`osmName`/`displayName`/`city`/`country`); the GPS coordinates stay untouched. Places failures degrade to the address-only chooser. New frontend helpers: `formatDistanceMeters`, `getPlaceIconSvg` (utils.js) and `apiGetPlaces` (api.js). |
+| 0.4.0 | 2026-08-23 | Config: `geoapify.radius` raised 50 m → 500 m so the "Places around me" list is usually populated in typical street settings; `aroundme.cache-radius` raised to 500 m to match the fetch radius so a repeat/nearby request is served from the H2 cache instead of re-fetching from Geoapify. |
+| 0.4.0 | 2026-08-22 | New `aroundme` BC: `GET /places` fetches POIs from the Geoapify Places API and caches them in the new `places` table (Flyway `V3__create_places_table.sql`, deduplicated by `place_id`). Cache-first lookup via a configurable geobox (`aroundme.cache-radius`, default 500 m): on a hit results are served from H2, on a miss Geoapify is queried and the result is upserted; responses are sorted ascending by distance with a response-only `distance` (meters). The client's `Accept-Language` header is passed to Geoapify as `lang`. |
 | 0.4.0 | 2026-08-22 | Anonymous POI handling: `places.name` is `NOT NULL` and guaranteed non-blank via a fallback cascade (`PlaceNames`) — `properties.name`, a synthetic `<Category> (<street|city>)` (secondary category preferred), `address_line1`, `formatted`, `Unknown Place`. |
 | 0.4.0 | 2026-08-22 | `DatabaseHealthCheck` runs `SELECT 1` inside a transaction (`@Transactional`), fixing a `ContextNotActiveException` on vert.x worker threads. |
 | 0.3.1 | 2026-08-21 | Frontend: offline map robustness — Leaflet CDN JS/CSS are now precached and routed Network-First (`locateme-thirdparty`) so `L` stays defined on pages loaded offline (fixes "Fetch Error: L is not defined" after offline load → online). `map.js` guards all map init with `typeof L === 'undefined'` to degrade gracefully. Cache-buster app.js `_33`. |

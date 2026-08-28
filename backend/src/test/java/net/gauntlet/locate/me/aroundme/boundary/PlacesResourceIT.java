@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -208,6 +209,118 @@ public class PlacesResourceIT {
     }
 
     @Test
+    void categoriesOutsideConfiguredSetAreIgnored() {
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
+                .thenReturn(featureCollection(
+                        feature("Park", "park-id", 48.1356, 11.6058,
+                                Json.createArrayBuilder().add("access").add("access.yes")
+                                        .add("leisure").add("leisure.park").add("wheelchair.yes").build(),
+                                Json.createObjectBuilder().build())));
+
+        // "access"/"access.yes" are not part of geoapify.categories and must be
+        // ignored; the configured "leisure" wins. wheelchair is read from the raw list.
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("[0].primaryCategory", is("leisure"))
+                .body("[0].secondaryCategory", is("park"))
+                .body("[0].wheelchair", is("yes"));
+    }
+
+    @Test
+    void placesWithExcludedSecondaryCategoryAreNotStored() {
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
+                .thenReturn(featureCollection(
+                        feature("Playground", "playground-id", 48.1356, 11.6058,
+                                Json.createArrayBuilder().add("leisure").add("leisure.playground").build(),
+                                Json.createObjectBuilder().build())));
+
+        // "playground" is in aroundme.exclude-categories, so the place is neither
+        // returned nor persisted.
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("size()", is(0));
+
+        assertThat(countPlaces()).isZero();
+    }
+
+    @Test
+    void returnsAtMostConfiguredMaxPlaces() {
+        JsonObject[] features = new JsonObject[25];
+        for (int i = 0; i < 25; i++) {
+            features[i] = feature("Place " + i, "place-" + i, 48.1356 + Geoboxing.deltaLat(i * 5.0), 11.6058,
+                    Json.createArrayBuilder().add("catering").add("catering.restaurant").build(),
+                    Json.createObjectBuilder().build());
+        }
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
+                .thenReturn(featureCollection(features));
+
+        // The backend returns at most aroundme.max-places (20) places; here
+        // Geoapify delivered 25, so the response is truncated to 20.
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("size()", is(20));
+    }
+
+    @Test
+    void placesIncludeCompassDirection() {
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
+                .thenReturn(featureCollection(
+                        feature("North Place", "north-id", 48.1456, 11.6058,
+                                Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
+                                Json.createObjectBuilder().build()),
+                        feature("East Place", "east-id", 48.1356, 11.6158,
+                                Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
+                                Json.createObjectBuilder().build()),
+                        feature("Coincident", "same-id", 48.1356, 11.6058,
+                                Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
+                                Json.createObjectBuilder().build())));
+
+        // Sorted by distance: the coincident place (0 m) first, then the east
+        // (~745 m) and the north (~1.1 km) one. Direction is computed from the
+        // request lat/lon (the user's position); a coincident place has none.
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("[0].name", is("Coincident"))
+                .body("[0].direction", is(""))
+                .body("[1].name", is("East Place"))
+                .body("[1].direction", is("E"))
+                .body("[2].name", is("North Place"))
+                .body("[2].direction", is("N"));
+    }
+
+    @Test
+    void placeWithOnlyDisallowedCategoriesHasNoCategory() {
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
+                .thenReturn(featureCollection(
+                        feature("Anonymous", "anon-disallowed", 48.1356, 11.6058,
+                                Json.createArrayBuilder().add("access").add("access.yes").build(),
+                                Json.createObjectBuilder().build())));
+
+        // No configured top-level category -> the place is still stored but its
+        // category fields are absent from the response.
+        given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .body("[0].name", is("Anonymous"))
+                .body("[0].primaryCategory", is(nullValue()))
+                .body("[0].secondaryCategory", is(nullValue()));
+    }
+
+    @Test
     void cacheHitReturnsStoredPlacesWithoutCallingGeoapify() {
         when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection(
@@ -310,8 +423,8 @@ public class PlacesResourceIT {
     void cacheHitExcludesPlacesBeyondRadius() {
         double lat = 48.1356;
         double lon = 11.6058;
-        double dLat = Geoboxing.deltaLat(60.0);
-        double dLon = Geoboxing.deltaLon(60.0, lat);
+        double dLat = Geoboxing.deltaLat(600.0);
+        double dLon = Geoboxing.deltaLon(600.0, lat);
         when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection(feature("Corner Place", PLACE_ID, lat + 0.75 * dLat, lon + 0.75 * dLon,
                         Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
@@ -325,9 +438,9 @@ public class PlacesResourceIT {
                 .statusCode(200)
                 .body("size()", is(1));
 
-        // Second request: the place lies inside the 60 m box but outside the 60 m circle
-        // (0.75 * 60 m north-east -> ~63 m), so it is not served from the cache
-        // and Geoapify is queried again.
+        // Second request: the place lies inside the 600 m box but outside the
+        // 500 m cache radius (0.75 * 600 m north-east -> ~636 m), so it is not
+        // served from the cache and Geoapify is queried again.
         given()
                 .when()
                 .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
@@ -371,7 +484,7 @@ public class PlacesResourceIT {
     void anonymousPlaceGetsSyntheticNameFromCategoryAndStreet() {
         when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection(anonymousFeature("anon-1", 48.1356, 11.6058,
-                        Json.createArrayBuilder().add("leisure").add("leisure.playground").build(),
+                        Json.createArrayBuilder().add("leisure").add("leisure.park").build(),
                         "Lucile-Grahn-Straße", null, null, null)));
 
         given()
@@ -379,7 +492,7 @@ public class PlacesResourceIT {
                 .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
                 .then()
                 .statusCode(200)
-                .body("[0].name", is("Playground (Lucile-Grahn-Straße)"));
+                .body("[0].name", is("Park (Lucile-Grahn-Straße)"));
     }
 
     @Test

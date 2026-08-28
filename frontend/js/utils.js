@@ -52,8 +52,32 @@ export function formatShortAddress(pos) {
 }
 
 /* ==========================================================================
+   Global Helper: AroundMe Place Label Formatter
+   Formats a selected place as "Name, <street> <houseNumber>" for the chooser
+   address box, the saver LOCATION row and the saved position label.
+   ========================================================================== */
+export function formatPlaceLabel(place) {
+    if (!place) return 'Unknown Location';
+    const name = place.name || place.formattedAddress || 'Selected place';
+    const street = (place.street || '').trim();
+    const houseNumber = (place.houseNumber || '').trim();
+
+    if (street && houseNumber) return `${name}, ${street} ${houseNumber}`;
+    if (street) return `${name}, ${street}`;
+    if (houseNumber) return `${name}, ${houseNumber}`;
+    return name;
+}
+
+/* ==========================================================================
    Utilities
    ========================================================================== */
+export function formatDistanceMeters(meters) {
+    const m = parseFloat(meters);
+    if (isNaN(m)) return '';
+    if (m < 1000) return `${Math.round(m)} m`;
+    return `${(m / 1000).toFixed(1)} km`;
+}
+
 export function formatTravelTime(minutes, compact = false) {
     const total = Math.round(minutes);
     if (compact) {
@@ -160,6 +184,13 @@ export function getLocationIconSvg(category, type) {
 
     if (!category) return defaultIcon;
 
+    // AroundMe place categories (adopted as osmCategory on save) use the same
+    // icons as the places list, so history and the saved view keep showing the
+    // icon the user saw when selecting the place.
+    if (['catering', 'commercial', 'healthcare', 'leisure', 'entertainment', 'service'].includes(category)) {
+        return getPlaceIconSvg(category);
+    }
+
     switch (category) {
         case 'building':
             return `<svg ${svgAttrs}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`;
@@ -186,6 +217,33 @@ export function getLocationIconSvg(category, type) {
             return `<svg ${svgAttrs}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
         case 'waterway':
             return `<svg ${svgAttrs}><path d="M12 22a7 7 0 0 0 7-7c0-4-7-13-7-13s-7 9-7 13a7 7 0 0 0 7 7z"></path></svg>`;
+        default:
+            return defaultIcon;
+    }
+}
+
+/* ==========================================================================
+   Global Helper: Inline SVG Place Icon Renderer (AroundMe places)
+   Geoapify categories: catering / commercial / healthcare / leisure /
+   entertainment / service.
+   ========================================================================== */
+export function getPlaceIconSvg(primaryCategory) {
+    const svgAttrs = `viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"`;
+    const defaultIcon = `<svg ${svgAttrs}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`;
+
+    switch (primaryCategory) {
+        case 'catering':
+            return `<svg ${svgAttrs}><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>`;
+        case 'commercial':
+            return `<svg ${svgAttrs}><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`;
+        case 'healthcare':
+            return `<svg ${svgAttrs}><path d="M10 3h4v6h6v4h-6v6h-4v-6H4v-4h6z"></path></svg>`;
+        case 'leisure':
+            return `<svg ${svgAttrs}><path d="M12 19V5M12 5a4 4 0 0 0-4 4c0 2.5 2.5 5 4 7m0-11a4 4 0 0 1 4 4c0 2.5-2.5 5-4 7m-3 3h6"></path></svg>`;
+        case 'entertainment':
+            return `<svg ${svgAttrs}><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>`;
+        case 'service':
+            return `<svg ${svgAttrs}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>`;
         default:
             return defaultIcon;
     }
