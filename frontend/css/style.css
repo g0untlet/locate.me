@@ -1144,13 +1144,10 @@ body {
 
 .tag-chips {
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
-    overflow-x: auto;
     padding-bottom: 2px;
-    -webkit-overflow-scrolling: touch;
 }
-
-.tag-chips::-webkit-scrollbar { display: none; }
 
 .tag-chip {
     flex-shrink: 0;

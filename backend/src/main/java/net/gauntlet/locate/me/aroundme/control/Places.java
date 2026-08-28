@@ -63,6 +63,10 @@ public class Places {
     @ConfigProperty(name = "aroundme.max-places")
     int maxPlaces;
 
+    @Inject
+    @ConfigProperty(name = "aroundme.read-from-cache")
+    boolean readFromCache;
+
     // Secondary categories from aroundme.exclude-categories that must not be
     // returned or stored. Lazily parsed once per Places instance.
     Set<String> excludedSecondaryCategories;
@@ -80,15 +84,23 @@ public class Places {
     Set<String> allowedTopLevelCategories;
 
     public List<Place> findNear(double lat, double lon, String acceptLanguage) {
-        LOG.log(System.Logger.Level.DEBUG, "Looking up cached places near ({0}, {1})", lat, lon);
-        List<Place> cached = findCached(lat, lon);
-        List<Place> result = cached.isEmpty() ? fetchAndStore(lat, lon, acceptLanguage) : cached;
-        if (!cached.isEmpty()) {
-            LOG.log(System.Logger.Level.DEBUG, "Cache hit: returning {0} place(s) from the H2 cache", cached.size());
+        // Cache-first path: serve places within the geobox from the H2 cache. With
+        // aroundme.read-from-cache disabled the cache is still written by
+        // fetchAndStore, but never read – every request hits Geoapify fresh.
+        if (this.readFromCache) {
+            LOG.log(System.Logger.Level.DEBUG, "Looking up cached places near ({0}, {1})", lat, lon);
+            List<Place> cached = findCached(lat, lon);
+            if (!cached.isEmpty()) {
+                LOG.log(System.Logger.Level.DEBUG, "Cache hit: returning {0} place(s) from the H2 cache", cached.size());
+                return cached.stream().limit(this.maxPlaces).toList();
+            }
+        } else {
+            LOG.log(System.Logger.Level.INFO, "Cache read disabled (aroundme.read-from-cache=false) – skipping the places cache");
         }
+
         // The client only displays aroundme.max-places entries; cache storage is
         // not affected (geoapify.limit still governs how many are persisted).
-        return result.stream().limit(this.maxPlaces).toList();
+        return fetchAndStore(lat, lon, acceptLanguage).stream().limit(this.maxPlaces).toList();
     }
 
     private List<Place> findCached(double lat, double lon) {
@@ -118,7 +130,7 @@ public class Places {
     }
 
     private List<Place> fetchAndStore(double lat, double lon, String acceptLanguage) {
-        LOG.log(System.Logger.Level.DEBUG, "Cache miss: fetching places from Geoapify near ({0}, {1})", lat, lon);
+        LOG.log(System.Logger.Level.DEBUG, "Fetching places from Geoapify near ({0}, {1})", lat, lon);
         String lang = ClientLanguage.fromAcceptLanguage(acceptLanguage);
         String filter = "circle:" + lon + "," + lat + "," + this.radius;
         String bias = "proximity:" + lon + "," + lat;
