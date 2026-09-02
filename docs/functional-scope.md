@@ -86,6 +86,8 @@ The backend provides a REST API with the following endpoints:
 - `GET /positions?userId={userId}&lat={lat}&lon={lon}`: Retrieves all positions for a user. If `lat` and `lon` are provided, it also calculates the distance and travel times (walking, biking, driving) to each position.
 - `GET /positions/current?userId={userId}&lat={lat}&lon={lon}`: Resolves the address (Nominatim) and weather/UV/elevation (Open-Meteo) for the given coordinates and returns a preview without persisting it. This is used by the Locate view to fetch the current location before saving.
 - `GET /places?userId={userId}&lat={lat}&lon={lon}`: Returns cached places around the given coordinate, nearest-first. On a cache miss the backend fetches from the Geoapify Places API and stores the results (deduplicated by place ID). An optional `Accept-Language` header selects the language of POI names. Each place includes a response-only `distance` (meters) to the given coordinate.
+- `GET /positions/stats?adminKey={adminKey}`: Admin-only. Returns the total number of stored positions together with the number per user as `{"total": ..., "perUser": [{"userId": ..., "locations": ...}]}` (`perUser` ordered by `userId`). Requires the `adminKey` query parameter to match the configured `admin.key` (overridable via the `ADMIN_KEY` environment variable); a missing or mismatched key returns `401 Unauthorized`. Not rate-limited.
+- `GET /places/stats?adminKey={adminKey}`: Admin-only. Returns the number of entries in the places cache together with a per-city breakdown as `{"count": ..., "perCity": [{"city": ..., "places": ...}]}` (`perCity` ordered by `city`). Places without a city are included in `count` but omitted from `perCity`. Requires the `adminKey` query parameter (same check as above); a missing or mismatched key returns `401 Unauthorized`. Not rate-limited.
 
 Position responses include the weather-related fields `temperature`, `weatherCode`, `uvIndex`, and `elevation`. No new endpoints were introduced for UV-Index and elevation; they are persisted and returned by the existing endpoints above.
 
@@ -100,7 +102,9 @@ operations (`POST /positions`, `DELETE /positions/{id}`) are rate-limited per us
 `429 Too Many Requests` with a `Retry-After` header and a JSON body
 (`{"error":"TOO_MANY_REQUESTS","status":429}`); the frontend shows a friendly
 message and keeps the backend status online. `GET /api/system/info` is exempt so
-the online/offline status indicator stays reliable. Limits:
+the online/offline status indicator stays reliable, and the admin-only stats
+endpoints (`GET /positions/stats`, `GET /places/stats`) are exempt as they require
+the secret `adminKey`. Limits:
 `pwa-standard` = 10 reads / 30 s, `pwa-critical` = 5 writes+deletes / 30 s, both as
 shared pools keyed by `userId`.
 
@@ -166,6 +170,8 @@ component.
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.4.0 | 2026-08-28 | Admin DB monitoring extended: `GET /positions/stats?adminKey=` now returns the grand total plus the per-user breakdown (`{"total", "perUser":[{"userId","locations"}]}`) and `GET /places/stats?adminKey=` now returns the cache entry count plus a per-city breakdown (`{"count", "perCity":[{"city","places"}]}`); places without a city count toward `count` but are omitted from `perCity`. |
+| 0.4.0 | 2026-08-28 | Admin DB monitoring: new admin-only `GET /positions/stats?adminKey=` (stored positions per user, JSON array of `{"userId","locations"}`) and `GET /places/stats?adminKey=` (places-cache entry count, `{"count"}`). The `adminKey` query parameter is checked (constant-time) against the new `admin.key` configuration (env-var overridable via `ADMIN_KEY`; dev/test overrides `dev-admin-key`/`test-admin-key`); a missing or wrong key returns `401 Unauthorized`. Both endpoints are not rate-limited. |
 | 0.4.0 | 2026-08-28 | Rate limiting: the backend throttles requests per user with Bucket4j (`pwa-standard` = 10 reads / 30 s, `pwa-critical` = 5 writes+deletes / 30 s, both shared pools keyed by `userId`). On exceeding a limit it answers `429 Too Many Requests` (JSON `{"error":"TOO_MANY_REQUESTS","status":429}` + `Retry-After`) and logs an INFO line with the userId; the frontend shows a friendly message ("Too many requests…") and keeps the backend status online. `GET /api/system/info` is exempt. |
 | 0.4.0 | 2026-08-28 | Frontend: the tag chips in the collapsible "Tag & Comment" section now wrap over multiple lines instead of scrolling horizontally (`.tag-chips` `flex-wrap: wrap`; horizontal-scroll styles removed). |
 | 0.4.0 | 2026-08-28 | AroundMe: new `aroundme.read-from-cache` flag (default `false`) — when disabled every request fetches fresh from Geoapify and forwards it to the client while the H2 cache is still written but never read; `true` restores the cache-first lookup (`Places.findNear`). Frontend: the places list renders up to 20 rows (`MAX_PLACES`, matching `aroundme.max-places`); the `catering` place icon is now a fork-and-knife glyph. |

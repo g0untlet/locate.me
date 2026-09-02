@@ -26,6 +26,7 @@ import net.gauntlet.locate.me.Boundary;
 import net.gauntlet.locate.me.aroundme.control.Geoboxing;
 import net.gauntlet.locate.me.aroundme.control.Places;
 import net.gauntlet.locate.me.aroundme.entity.Place;
+import net.gauntlet.locate.me.security.AdminKeyVerifier;
 
 @Boundary
 @Path("/places")
@@ -41,6 +42,9 @@ public class PlacesResource {
     @Inject
     @ConfigProperty(name = "allowed.user.ids")
     List<String> allowedUserIds;
+
+    @Inject
+    AdminKeyVerifier adminKeyVerifier;
 
     private void validateAndAuthorize(String userId) {
         if (userId == null || userId.isBlank()) {
@@ -105,5 +109,25 @@ public class PlacesResource {
             .forEach(arrayBuilder::add);
 
         return Response.ok(arrayBuilder.build()).build();
+    }
+
+    @GET
+    @Path("/stats")
+    @PermitAll
+    public Response countPlaces(@QueryParam("adminKey") String adminKey) {
+        LOG.log(System.Logger.Level.DEBUG, "Received GET places-count stats request");
+        this.adminKeyVerifier.verify(adminKey);
+
+        JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
+        this.places.countByCity().stream()
+                .map(count -> Json.createObjectBuilder()
+                        .add("city", count.city())
+                        .add("places", count.places())
+                        .build())
+                .forEach(arrayBuilder::add);
+        return Response.ok(Json.createObjectBuilder()
+                .add("count", this.places.count())
+                .add("perCity", arrayBuilder)
+                .build()).build();
     }
 }
