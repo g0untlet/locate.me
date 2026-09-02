@@ -17,6 +17,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 
 import jakarta.inject.Inject;
 import jakarta.json.Json;
@@ -35,6 +37,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.response.Response;
 import net.gauntlet.locate.me.aroundme.control.GeoapifyPlacesClient;
 import net.gauntlet.locate.me.aroundme.control.Geoboxing;
+import net.gauntlet.locate.me.aroundme.entity.Place;
 
 @QuarkusTest
 public class PlacesResourceIT {
@@ -86,6 +89,35 @@ public class PlacesResourceIT {
         assertThat(geohash).hasSize(9);
         assertThat(countPlaces()).isEqualTo(1);
         assertThat(storedRawJson()).contains("\"place_id\"").contains("\"name\"");
+    }
+
+    @Test
+    void storesFetchOriginAndDoesNotExposeIt() {
+        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
+                .thenReturn(featureCollection(feature("Isar Kebaphaus", PLACE_ID, 48.1355, 11.6059,
+                        Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
+                        Json.createObjectBuilder().build())));
+
+        Response response = given()
+                .when()
+                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
+                .then()
+                .statusCode(200)
+                .extract()
+                .response();
+
+        // The fetch origin is internal cache metadata and must not leak into the
+        // client response (Place.toJSON excludes it).
+        List<?> places = response.jsonPath().getList("");
+        assertThat(places).hasSize(1);
+        assertThat((Map<String, Object>) places.get(0)).doesNotContainKeys("fetchLat", "fetchLon");
+
+        // The stored cache row records where this fetch was centered (the user's
+        // request lat/lon), distinct from the POI's own coordinates.
+        Place stored = placeById(PLACE_ID);
+        assertThat(stored).isNotNull();
+        assertThat(stored.fetchLat()).isEqualTo(48.1356);
+        assertThat(stored.fetchLon()).isEqualTo(11.6058);
     }
 
     @Test
@@ -647,6 +679,11 @@ public class PlacesResourceIT {
     @Transactional
     long countPlaces() {
         return em.createQuery("SELECT COUNT(p) FROM Place p", Long.class).getSingleResult();
+    }
+
+    @Transactional
+    Place placeById(String placeId) {
+        return em.find(Place.class, placeId);
     }
 
     @Transactional

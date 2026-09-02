@@ -178,7 +178,7 @@ public class Places {
         List<Place> places = new ArrayList<>();
         if (features != null) {
             for (int i = 0; i < features.size(); i++) {
-                Place place = toPlace(features.getJsonObject(i));
+                Place place = toPlace(features.getJsonObject(i), lat, lon);
                 if (!isExcluded(place)) {
                     places.add(this.em.merge(place));
                 }
@@ -199,7 +199,7 @@ public class Places {
     private record NearPlace(Place place, double distance) {
     }
 
-    private Place toPlace(JsonObject feature) {
+    private Place toPlace(JsonObject feature, double fetchLat, double fetchLon) {
         JsonObject props = feature.getJsonObject("properties");
         JsonArray coordinates = feature.getJsonObject("geometry").getJsonArray("coordinates");
         double lon = coordinates.getJsonNumber(0).doubleValue();
@@ -215,6 +215,10 @@ public class Places {
         place.geohash(GeoHash.withCharacterPrecision(lat, lon, 9).toBase32());
         place.latitude(lat);
         place.longitude(lon);
+        // Record the origin of this fetch (the user's request lat/lon) so the
+        // places cache can later be read coverage-aware.
+        place.fetchLat(fetchLat);
+        place.fetchLon(fetchLon);
         String primary = primaryCategory(categories);
         String secondary = secondaryCategory(primary, categories);
         place.name(PlaceNames.resolve(props, primary, secondary));

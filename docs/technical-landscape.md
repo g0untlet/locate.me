@@ -274,6 +274,7 @@ Geoapify `place_id`; re-fetching the same POI updates the row.
 | `cachedAt` Instant | `cached_at` | TIMESTAMP(6) WITH TIME ZONE | not null; refreshed on every upsert |
 | `geohash` String | `geohash` | VARCHAR(9) | not null; 9-char geohash via `ch.hsr:geohash` |
 | `latitude`, `longitude` double | `latitude`, `longitude` | DOUBLE | not null |
+| `fetchLat`, `fetchLon` double | `fetch_lat`, `fetch_lon` | DOUBLE | not null; origin (user's request lat/lon) of the fetch that produced this cache row — set in `Places.toPlace`, excluded from `toJSON()`; supports coverage-aware cache reads later |
 | `name` String | `name` | VARCHAR(255) | not null; `PlaceNames` fallback cascade — never blank |
 | `primaryCategory` String | `primary_category` | VARCHAR(255) | top-level segment of the first category |
 | `secondaryCategory` String | `secondary_category` | VARCHAR(255) | first sub-category of the primary |
@@ -324,7 +325,8 @@ Since 0.4.0 the schema is managed by **Flyway** (`quarkus-flyway`); Hibernate ru
     `WHERE user_id = ? ORDER BY timestamp DESC` (see Data Access).
   - `V3__create_places_table.sql` — `places` POI cache table with the geohash and
     coordinate indexes (`idx_places_geohash`, `idx_places_coords`) backing the
-    cache geoboxing lookup.
+    cache geoboxing lookup; `fetch_lat`/`fetch_lon` record the fetch origin for a
+    future coverage-aware cache read.
 - **Existing databases** (DEV/PROD, already populated): on the first 0.4.0 start Flyway
   baselines them at version 1 (`quarkus.flyway.baseline-on-migrate=true`,
   `quarkus.flyway.baseline-version=1`). `V1__baseline.sql` is skipped and existing data is
@@ -555,6 +557,7 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 
 | Version | Date | Description |
 |---------|---------|---------|
+| 0.4.0 | 2026-08-28 | Places cache schema: `V3__create_places_table.sql` (edited in place — 0.4.0 not yet in PROD) now stores the fetch origin on each cache row: `fetch_lat`/`fetch_lon` (DOUBLE, NOT NULL), set in `Places.toPlace` from the request coordinates and excluded from `Place.toJSON()` (no client leak). `Place` gains the `fetchLat`/`fetchLon` accessors. Tests: `PlaceTest` (accessors + JSON exclusion), `PlacesResourceIT.storesFetchOriginAndDoesNotExposeIt` (persisted origin matches the request, response has no fetch keys), `PlacesReadCacheDisabledIT` (origin stored with cache reads disabled). No index yet — deferred until a coverage-aware cache-read algorithm exists. Note: editing V3 changes its Flyway checksum — the DEV `places` table must be recreated (restore a 0.3.0 backup, then V2 + V3 re-apply). |
 | 0.4.0 | 2026-08-28 | Admin DB monitoring extended: `GET /api/positions/stats?adminKey=` now returns the grand total plus the per-user breakdown (`{"total", "perUser":[{"userId","locations"}]}`, total = sum of the per-user counts) and `GET /api/places/stats?adminKey=` now returns the cache entry count plus a per-city breakdown (`{"count", "perCity":[{"city","places"}]}` via `Places.countByCity`, excluding NULL-city rows which still count toward `count`). Tests extended in `PositionsResourceIT` (wrapped shape + empty-DB case) and `PlacesResourceIT` (multi-city + city-less seeding). |
 | 0.4.0 | 2026-08-28 | Admin DB monitoring: new `GET /api/positions/stats?adminKey=` (stored positions per user as `[{"userId","locations"}]`, ordered by userId) and `GET /api/places/stats?adminKey=` (places-cache entry count `{"count"}`). The `adminKey` query param is checked constant-time against the new `admin.key` config (`${ADMIN_KEY:change-me}`, `%dev`/`%test` overrides `dev-admin-key`/`test-admin-key`) by the new `security.AdminKeyVerifier`; missing or wrong key → 401. Both endpoints are deliberately **not** rate-limited. Tests: valid/missing/wrong-key cases added to `PositionsResourceIT` and `PlacesResourceIT`. |
 | 0.4.0 | 2026-08-28 | Architecture guard: new `BceArchitectureTest` (ArchUnit `archunit-junit5` 1.4.1, runs as a unit test) enforces the BCE rules on every main class — component/layer package structure, boundary/control/entity membership, dependency direction (no control→boundary, no entity→boundary/control), `EntityManager` only in controls, `@Transactional` only in boundary, JAX-RS boundary methods return `Response`, no constructor injection, REST clients end with `Client`, no prohibited class suffixes. Documented exceptions: `DatabaseHealthCheck` (health check in boundary), `SystemInfo` (`@ApplicationScoped` control), `security` infra package, static-util/REST-client interfaces in control. |

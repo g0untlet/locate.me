@@ -19,6 +19,8 @@ class PlaceTest {
                 .geohash("u281z0x7d")
                 .latitude(48.1355)
                 .longitude(11.6059)
+                .fetchLat(48.1356)
+                .fetchLon(11.6058)
                 .name("Isar Kebaphaus")
                 .primaryCategory("catering")
                 .secondaryCategory("fast_food")
@@ -41,6 +43,10 @@ class PlaceTest {
         assertThat(json.getString("geohash")).isEqualTo("u281z0x7d");
         assertThat(json.getJsonNumber("latitude").doubleValue()).isEqualTo(48.1355);
         assertThat(json.getJsonNumber("longitude").doubleValue()).isEqualTo(11.6059);
+        assertThat(json.containsKey("fetchLat")).isFalse();
+        assertThat(json.containsKey("fetchLon")).isFalse();
+        assertThat(place.fetchLat()).isEqualTo(48.1356);
+        assertThat(place.fetchLon()).isEqualTo(11.6058);
         assertThat(json.getString("name")).isEqualTo("Isar Kebaphaus");
         assertThat(json.getString("primaryCategory")).isEqualTo("catering");
         assertThat(json.getString("secondaryCategory")).isEqualTo("fast_food");

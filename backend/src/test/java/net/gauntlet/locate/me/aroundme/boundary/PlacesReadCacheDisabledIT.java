@@ -30,6 +30,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
 import net.gauntlet.locate.me.aroundme.control.GeoapifyPlacesClient;
+import net.gauntlet.locate.me.aroundme.entity.Place;
 
 /**
  * Verifies the aroundme feature when cache reads are disabled
@@ -105,8 +106,13 @@ public class PlacesReadCacheDisabledIT {
                 .statusCode(200)
                 .body("[0].name", is("Isar Kebaphaus"));
 
-        // The cache is still populated even though it is not read from.
+        // The cache is still populated even though it is not read from, and the
+        // stored row records the origin of this fetch (the request lat/lon).
         assertThat(countPlaces()).isEqualTo(1);
+        Place stored = placeById("kebab-id");
+        assertThat(stored).isNotNull();
+        assertThat(stored.fetchLat()).isEqualTo(48.1356);
+        assertThat(stored.fetchLon()).isEqualTo(11.6058);
     }
 
     @Test
@@ -152,5 +158,10 @@ public class PlacesReadCacheDisabledIT {
     @Transactional
     long countPlaces() {
         return em.createQuery("SELECT COUNT(p) FROM Place p", Long.class).getSingleResult();
+    }
+
+    @Transactional
+    Place placeById(String placeId) {
+        return em.find(Place.class, placeId);
     }
 }
