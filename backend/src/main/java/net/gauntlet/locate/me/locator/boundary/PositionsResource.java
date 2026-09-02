@@ -155,14 +155,20 @@ public class PositionsResource {
         LOG.log(System.Logger.Level.DEBUG, "Received GET positions-per-user stats request");
         this.adminKeyVerifier.verify(adminKey);
 
+        List<Positions.PositionCount> counts = this.positions.countByUser();
+        long total = counts.stream().mapToLong(Positions.PositionCount::locations).sum();
+
         JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
-        this.positions.countByUser().stream()
+        counts.stream()
                 .map(count -> Json.createObjectBuilder()
                         .add("userId", count.userId())
                         .add("locations", count.locations())
                         .build())
                 .forEach(arrayBuilder::add);
-        return Response.ok(arrayBuilder.build()).build();
+        return Response.ok(Json.createObjectBuilder()
+                .add("total", total)
+                .add("perUser", arrayBuilder)
+                .build()).build();
     }
 
     private JsonObject enrichWithTravelTimes(Position position, double lat, double lon) {

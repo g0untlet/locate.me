@@ -483,11 +483,23 @@ public class PositionsResourceIT {
                 .get("/api/positions/stats?adminKey=test-admin-key")
                 .then()
                 .statusCode(200)
-                .body("size()", is(2))
-                .body("[0].userId", is("noAccuracyUser"))
-                .body("[0].locations", is(1))
-                .body("[1].userId", is("validUser"))
-                .body("[1].locations", is(2));
+                .body("total", is(3))
+                .body("perUser.size()", is(2))
+                .body("perUser[0].userId", is("noAccuracyUser"))
+                .body("perUser[0].locations", is(1))
+                .body("perUser[1].userId", is("validUser"))
+                .body("perUser[1].locations", is(2));
+    }
+
+    @Test
+    void statsWithValidAdminKeyOnEmptyDatabaseReturnsZeroTotal() {
+        given()
+                .when()
+                .get("/api/positions/stats?adminKey=test-admin-key")
+                .then()
+                .statusCode(200)
+                .body("total", is(0))
+                .body("perUser.size()", is(0));
     }
 
     @Test

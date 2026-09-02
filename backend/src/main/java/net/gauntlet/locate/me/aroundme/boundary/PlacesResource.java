@@ -118,6 +118,16 @@ public class PlacesResource {
         LOG.log(System.Logger.Level.DEBUG, "Received GET places-count stats request");
         this.adminKeyVerifier.verify(adminKey);
 
-        return Response.ok(Json.createObjectBuilder().add("count", this.places.count()).build()).build();
+        JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
+        this.places.countByCity().stream()
+                .map(count -> Json.createObjectBuilder()
+                        .add("city", count.city())
+                        .add("places", count.places())
+                        .build())
+                .forEach(arrayBuilder::add);
+        return Response.ok(Json.createObjectBuilder()
+                .add("count", this.places.count())
+                .add("perCity", arrayBuilder)
+                .build()).build();
     }
 }

@@ -32,6 +32,9 @@ public class Places {
 
     static final System.Logger LOG = System.getLogger(Places.class.getName());
 
+    public record CityCount(String city, long places) {
+    }
+
     @Inject
     EntityManager em;
 
@@ -86,6 +89,16 @@ public class Places {
     public long count() {
         LOG.log(System.Logger.Level.DEBUG, "Counting cached places");
         return this.em.createQuery("SELECT COUNT(p) FROM Place p", Long.class).getSingleResult();
+    }
+
+    public List<CityCount> countByCity() {
+        LOG.log(System.Logger.Level.DEBUG, "Counting cached places per city");
+        return this.em.createQuery(
+                "SELECT p.city, COUNT(p) FROM Place p WHERE p.city IS NOT NULL GROUP BY p.city ORDER BY p.city",
+                Object[].class)
+                .getResultList().stream()
+                .map(row -> new CityCount((String) row[0], (Long) row[1]))
+                .toList();
     }
 
     public List<Place> findNear(double lat, double lon, String acceptLanguage) {

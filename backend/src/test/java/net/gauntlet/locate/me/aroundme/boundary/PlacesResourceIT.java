@@ -452,24 +452,35 @@ public class PlacesResourceIT {
     }
 
     @Test
-    void statsWithValidAdminKeyReturnsPlaceCount() {
+    void statsWithValidAdminKeyReturnsPlaceCountAndPerCity() {
+        JsonArray categories = Json.createArrayBuilder().add("catering").add("catering.fast_food").build();
         when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
-                .thenReturn(featureCollection(feature("Isar Kebaphaus", PLACE_ID, 48.1355319, 11.605952,
-                        Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
-                        Json.createObjectBuilder().build())));
+                .thenReturn(featureCollection(
+                        anonymousFeature("muc-1", 48.1356, 11.6058, categories, null, "Munich", null, null),
+                        anonymousFeature("muc-2", 48.1359, 11.6061, categories, null, "Munich", null, null),
+                        anonymousFeature("ber-1", 48.1400, 11.6100, categories, null, "Berlin", null, null),
+                        anonymousFeature("nocity-1", 48.1380, 11.6080, categories, null, null, null, null)));
 
         given()
                 .when()
                 .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
                 .then()
-                .statusCode(200);
+                .statusCode(200)
+                .body("size()", is(4));
 
+        // count covers every cached place (incl. the city-less one); perCity lists
+        // only places with a city, sorted by city name.
         given()
                 .when()
                 .get("/api/places/stats?adminKey=test-admin-key")
                 .then()
                 .statusCode(200)
-                .body("count", is(1));
+                .body("count", is(4))
+                .body("perCity.size()", is(2))
+                .body("perCity[0].city", is("Berlin"))
+                .body("perCity[0].places", is(1))
+                .body("perCity[1].city", is("Munich"))
+                .body("perCity[1].places", is(2));
     }
 
     @Test
