@@ -2,7 +2,9 @@
 -- V3__create_places_table.sql
 -- Caches places fetched from the Geoapify Places API. The table is a deduplicated
 -- cache keyed by the Geoapify place_id: re-fetching the same POI upserts the row.
--- cached_at and geohash support future cache reads and range queries.
+-- cached_at and geohash support future cache reads and range queries; fetch_lat /
+-- fetch_lon record where the request that produced a cache row was centered so a
+-- coverage-aware cache-read algorithm can be built later.
 --
 -- H2 2.4.240 regression (issue #4308): native enum CHECK(... IN(...)) constraints
 -- are compiled against one session and crash inserts from newer sessions
@@ -18,6 +20,11 @@ CREATE TABLE places (
     -- Spatial Coordinates (for 50m bounding box / SQL range queries)
     latitude          FLOAT(53) NOT NULL,
     longitude         FLOAT(53) NOT NULL,
+
+    -- Fetch Origin: the user's lat/lon where the Geoapify request that produced
+    -- this cache row was centered (identical for all rows of one fetch).
+    fetch_lat         FLOAT(53) NOT NULL,
+    fetch_lon         FLOAT(53) NOT NULL,
 
     -- Core POI & Address Attributes
     name              VARCHAR(255) NOT NULL,

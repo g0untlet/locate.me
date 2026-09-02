@@ -41,6 +41,14 @@ public class Place {
     @Column(nullable = false)
     double longitude;
 
+    // Fetch origin: the user's lat/lon where the Geoapify request that produced
+    // this cache row was centered. Internal cache metadata – never serialized.
+    @Column(name = "fetch_lat", nullable = false)
+    double fetchLat;
+
+    @Column(name = "fetch_lon", nullable = false)
+    double fetchLon;
+
     @NotBlank
     @Size(max = 255)
     @Column(nullable = false, length = 255)
@@ -143,6 +151,24 @@ public class Place {
 
     public Place longitude(double longitude) {
         this.longitude = longitude;
+        return this;
+    }
+
+    public double fetchLat() {
+        return this.fetchLat;
+    }
+
+    public Place fetchLat(double fetchLat) {
+        this.fetchLat = fetchLat;
+        return this;
+    }
+
+    public double fetchLon() {
+        return this.fetchLon;
+    }
+
+    public Place fetchLon(double fetchLon) {
+        this.fetchLon = fetchLon;
         return this;
     }
 
