@@ -938,6 +938,12 @@ body {
     color: var(--text-muted);
 }
 
+.places-error {
+    padding: 8px 16px 12px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
 .places-list {
     display: flex;
     flex-direction: column;
@@ -977,6 +983,36 @@ body {
 .place-row--selected:hover,
 .place-row--selected:active {
     background-color: var(--primary-tint);
+}
+
+/* Ladezustand: Shimmer-Platzhalter-Zeilen, solange die Places-Antwort aussteht */
+.place-row--loading {
+    cursor: default;
+    pointer-events: none;
+    background: none;
+}
+
+.place-row--loading:hover {
+    background: none;
+}
+
+.skel-place-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.place-row-skel-name {
+    flex: 1;
+    min-width: 0;
+    height: 12px;
+}
+
+.skel-place-dist {
+    width: 56px;
+    height: 12px;
+    flex-shrink: 0;
 }
 
 .place-row svg {
@@ -1476,6 +1512,33 @@ body {
 
 [data-theme="dark"] .leaflet-popup-close-button {
     color: var(--text-muted);
+}
+
+/* ==========================================================================
+   History Map – nummerierte Pins (L.divIcon)
+   Rundes Badge mit der List-View-Nummer des Log-Eintrags.
+   ========================================================================== */
+/* Leaflet legt auf divIcon standardmäßig weißen Hintergrund + Rahmen */
+.history-pin-wrapper {
+    background: transparent;
+    border: none;
+}
+
+.history-pin {
+    width: 26px;
+    height: 26px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: var(--primary-tint);
+    color: var(--primary-dark);
+    border: 2px solid var(--primary-dark);
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
 }
 
 [data-theme="dark"] .leaflet-popup-close-button:hover {

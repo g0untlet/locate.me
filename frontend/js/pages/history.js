@@ -1,5 +1,5 @@
 import { apiGetPositionsWithMeta, apiDeletePosition, TOO_MANY_REQUESTS_MESSAGE } from '../api.js';
-import { setHistoryMapData, getCurrentHistoryView } from '../state.js';
+import { setHistoryMapData, getCurrentHistoryView, setHistoryFilterTerm } from '../state.js';
 import { renderMapMarkers } from '../ui/map.js';
 import { updateHistoryBadge } from '../ui/badge.js';
 import {
@@ -10,7 +10,8 @@ import {
     formatShortAddress,
     formatRelativeDate,
     formatTravelTime,
-    formatElevation
+    formatElevation,
+    posMatchesFilter
 } from '../utils.js';
 
 /* ==========================================================================
@@ -405,19 +406,9 @@ export function showHistorySkeleton() {
 
 /* ==========================================================================
    Search / Filter
-   Zentrale Match-Funktion – bei Tags/Kommentaren nur hier erweitern.
+   Match-Prädikat liegt zentral in utils.js (posMatchesFilter), damit die
+   Map-View exakt dieselbe Filterung anwendet wie die List-View.
    ========================================================================== */
-function posMatchesFilter(pos, term) {
-    if (!term) return true;
-    if (!pos) return false;
-    const t = term.toLowerCase();
-    return (
-        (pos.displayName  || '').toLowerCase().includes(t) ||
-        (pos.comment      || '').toLowerCase().includes(t) ||
-        (pos.tag          || '').toLowerCase().includes(t)
-    );
-}
-
 function applyFilter(term) {
     const cards = document.querySelectorAll('#history-list .log-card');
     let visibleCount = 0;
@@ -466,12 +457,14 @@ function ensureSearchBar() {
 
     input.addEventListener('input', () => {
         const term = input.value.trim();
+        setHistoryFilterTerm(term);
         clearBtn.classList.toggle('hidden', term === '');
         applyFilter(term);
     });
 
     clearBtn.addEventListener('click', () => {
         input.value = '';
+        setHistoryFilterTerm('');
         clearBtn.classList.add('hidden');
         applyFilter('');
         input.focus();
@@ -486,6 +479,7 @@ function resetSearchBar() {
     if (clearBtn) { clearBtn.classList.add('hidden'); }
     const noResults = document.getElementById('history-no-results');
     if (noResults) { noResults.classList.add('hidden'); }
+    setHistoryFilterTerm('');
 }
 
 /* ==========================================================================

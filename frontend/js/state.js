@@ -8,6 +8,7 @@
 let _historyMap = null;           // Leaflet map instance (lazy init)
 let _historyMapData = [];         // Last fetched positions, shared with map renderer
 let _currentHistoryView = 'list'; // 'list' | 'map'
+let _historyFilterTerm = '';      // Active history filter term (shared List <-> Map)
 
 // --- Locate Page State ---
 let _cachedLocatePosition = null; // Enriched preview payload from GET /positions/current (+ GPS accuracy) for the Save-Button
@@ -25,6 +26,9 @@ export function setHistoryMapData(val)   { _historyMapData = val; }
 
 export function getCurrentHistoryView()      { return _currentHistoryView; }
 export function setCurrentHistoryView(val)   { _currentHistoryView = val; }
+
+export function getHistoryFilterTerm()       { return _historyFilterTerm; }
+export function setHistoryFilterTerm(val)    { _historyFilterTerm = val; }
 
 // --- Locate Page Getter/Setter ---
 export function getCachedLocatePosition()      { return _cachedLocatePosition; }

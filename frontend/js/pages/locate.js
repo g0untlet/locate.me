@@ -42,6 +42,11 @@ const GEO_OPTIONS = {
    ========================================================================== */
 let isFetching = false;
 
+/* Fetch-Epochen-Zähler: inkrementiert bei jedem neuen Fetch/Refresh. Verhindert,
+   dass eine langsame (Geoapify-)Places-Antwort einer älteren Runde in eine
+   neuere Runde hineinfunkt (Stale-Guard). */
+let fetchEpoch = 0;
+
 function setFetchBusy(busy) {
     isFetching = busy;
     const btn = document.getElementById('btn-fetch-location');
@@ -237,12 +242,29 @@ function saverWeatherIds() {
    ========================================================================== */
 const MAX_PLACES = 20;
 
+/* Sentinel für einen fehlgeschlagenen Places-Fetch (Timeout/503/Netz). Eine
+   echte Geoapify-Antwort ist immer ein Array – null heißt "nicht ladbar". */
+const PLACES_UNAVAILABLE = null;
+
+/* ==========================================================================
+   Internal: Places-Ergebnis verteilen – Fehlschlag (null) zeigt eine Meldung,
+   ein Array wird als Liste gerendert (leer = Card aus).
+   ========================================================================== */
+function renderPlacesResult(places) {
+    if (places === PLACES_UNAVAILABLE) {
+        renderPlacesError();
+    } else {
+        renderPlacesList(places);
+    }
+}
+
 function renderPlacesList(places) {
     const card  = document.getElementById('places-card');
     const list  = document.getElementById('places-list');
     const count = document.getElementById('places-count');
     if (!card || !list) return;
 
+    card.removeAttribute('aria-busy');
     list.innerHTML = '';
     const top = Array.isArray(places) ? places.slice(0, MAX_PLACES) : [];
 
@@ -270,6 +292,46 @@ function renderPlacesList(places) {
         row.addEventListener('click', () => selectPlace(place, row));
         list.appendChild(row);
     });
+}
+
+/* ==========================================================================
+   Internal: Places loading state – zeigt die Places-Card mit Shimmer-
+   Platzhaltern + Hinweistext, solange die Geoapify-Antwort aussteht.
+   Wird von renderPlacesList (Erfolg/leer) ersetzt bzw. ausgeblendet.
+   ========================================================================== */
+function showPlacesLoading() {
+    const card  = document.getElementById('places-card');
+    const list  = document.getElementById('places-list');
+    const count = document.getElementById('places-count');
+    if (!card || !list) return;
+
+    card.classList.remove('hidden');
+    card.setAttribute('aria-busy', 'true');
+    if (count) count.textContent = 'Looking for places\u2026';
+
+    const skeletonRow =
+        '<div class="place-row place-row--loading" aria-hidden="true">' +
+            '<span class="skel skel-place-icon"></span>' +
+            '<span class="skel place-row-skel-name"></span>' +
+            '<span class="skel skel-place-dist"></span>' +
+        '</div>';
+    list.innerHTML = skeletonRow + skeletonRow + skeletonRow;
+}
+
+/* ==========================================================================
+   Internal: Places-Fehlerzustand – ersetzt den Ladezustand durch eine dezente
+   Meldung, wenn Places nicht geladen werden konnten (Timeout/503/Netz).
+   ========================================================================== */
+function renderPlacesError() {
+    const card  = document.getElementById('places-card');
+    const list  = document.getElementById('places-list');
+    const count = document.getElementById('places-count');
+    if (!card || !list) return;
+
+    card.removeAttribute('aria-busy');
+    if (count) count.textContent = '';
+    card.classList.remove('hidden');
+    list.innerHTML = `<div class="places-error" role="status">Couldn't load places around you right now.</div>`;
 }
 
 function selectPlace(place, row) {
@@ -390,7 +452,9 @@ function setOfflineBanner(show) {
 /* ==========================================================================
    Step 1: GET /api/positions/current + GET /api/places – Preview Renderer
    Fetches the enriched preview (weather/address) and the nearby places in
-   parallel. A places failure degrades gracefully to the address-only chooser.
+   parallel. The chooser (weather/address) is shown as soon as the preview is
+   ready; the places list fills in asynchronously when Geoapify answers. A
+   places failure degrades gracefully to the address-only chooser.
    ========================================================================== */
 function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus }) {
     const statusText = document.getElementById('status');
@@ -401,44 +465,67 @@ function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus })
 
     const { latitude, longitude } = position.coords;
     const userId = getActiveUserId();
+    const epoch  = ++fetchEpoch;
 
-    const placesPromise = apiGetPlaces(userId, latitude, longitude).catch(() => []);
+    const placesPromise = apiGetPlaces(userId, latitude, longitude)
+        .catch(() => PLACES_UNAVAILABLE);
 
-    Promise.all([
-        apiGetCurrentPosition(userId, latitude, longitude),
-        placesPromise
-    ])
-    .then(([data, places]) => {
-        const timeLabel = new Date().toLocaleString('de-DE', {
-            hour: '2-digit', minute: '2-digit'
-        });
+    // Reihenfolge-robuste Verarbeitung: Places darf vor ODER nach dem Preview
+    // eintreffen, ohne dass eine der beiden Antworten verloren geht.
+    let previewDone   = false; // Vorschau erfolgreich gerendert
+    let failed        = false; // Vorschau-Fetch schlug fehl
+    let arrived       = false; // Places-Antwort eingetroffen
+    let arrivedPlaces = [];
 
-        renderChooser(data, places);
+    apiGetCurrentPosition(userId, latitude, longitude)
+        .then(data => {
+            if (epoch !== fetchEpoch) return; // neuere Runde übernimmt die UI
+            const timeLabel = new Date().toLocaleString('de-DE', {
+                hour: '2-digit', minute: '2-digit'
+            });
 
-        setCachedLocatePosition({ ...data, accuracy: position.coords.accuracy });
-        fetchBtn.textContent = 'Refresh';
-        showView('chooser');
-        statusText.innerText = `Preview from ${timeLabel} \u2014 not yet saved.`;
-        statusText.className = "status-preview";
+            // Vorschau (Adresse/Wetter) sofort rendern; Places füllt später nach.
+            renderChooser(data, []);
+            previewDone = true;
 
-        checkBackendStatus();
-        setOfflineBanner(false);
-        setFetchBusy(false);
-    })
-    .catch(err => {
-        if (err && err.status === 429) {
-            showError(TOO_MANY_REQUESTS_MESSAGE);
+            setCachedLocatePosition({ ...data, accuracy: position.coords.accuracy });
+            fetchBtn.textContent = 'Refresh';
+            showView('chooser');
+            statusText.innerText = `Preview from ${timeLabel} \u2014 not yet saved.`;
+            statusText.className = "status-preview";
+
+            if (arrived) renderPlacesResult(arrivedPlaces);
+            else showPlacesLoading();
+
+            checkBackendStatus();
+            setOfflineBanner(false);
+            setFetchBusy(false);
+        })
+        .catch(err => {
+            if (epoch !== fetchEpoch) return; // neuere Runde übernimmt die UI
+            failed = true;
+            if (err && err.status === 429) {
+                showError(TOO_MANY_REQUESTS_MESSAGE);
+                checkBackendStatus();
+                setFetchBusy(false);
+                return;
+            }
+            if (!navigator.onLine) {
+                ensureOfflineBanner();
+                setOfflineBanner(true);
+            }
+            showError(`Fetch Error: ${err.message}`);
             checkBackendStatus();
             setFetchBusy(false);
-            return;
-        }
-        if (!navigator.onLine) {
-            ensureOfflineBanner();
-            setOfflineBanner(true);
-        }
-        showError(`Fetch Error: ${err.message}`);
-        checkBackendStatus();
-        setFetchBusy(false);
+        });
+
+    // Places-Antwort unabhängig vom Preview anwenden (nicht blockierend).
+    placesPromise.then(places => {
+        arrived = true;
+        arrivedPlaces = places;
+        if (epoch !== fetchEpoch) return; // neuere Fetch-Runde gestartet
+        if (failed) return;               // Vorschau schlug fehl -> ignorieren
+        if (previewDone) renderPlacesResult(places); // sonst übernimmt der Preview-Pfad
     });
 }
 

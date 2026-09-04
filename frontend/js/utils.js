@@ -248,3 +248,18 @@ export function getPlaceIconSvg(primaryCategory) {
             return defaultIcon;
     }
 }
+
+/* ==========================================================================
+   History Filter: Match predicate, shared by the List and Map views so both
+   filter identically. Central place to extend matching (e.g. more fields).
+   ========================================================================== */
+export function posMatchesFilter(pos, term) {
+    if (!term) return true;
+    if (!pos) return false;
+    const t = term.toLowerCase();
+    return (
+        (pos.displayName  || '').toLowerCase().includes(t) ||
+        (pos.comment      || '').toLowerCase().includes(t) ||
+        (pos.tag          || '').toLowerCase().includes(t)
+    );
+}
