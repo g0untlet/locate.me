@@ -1,13 +1,14 @@
 import {
     getHistoryMap, setHistoryMap,
     getHistoryMapData,
+    getHistoryFilterTerm,
     getCurrentHistoryView, setCurrentHistoryView,
     getLocateMap, setLocateMap,
     getLocateMarker, setLocateMarker,
     getLocateSavedMap, setLocateSavedMap,
     getLocateSavedMarker, setLocateSavedMarker
 } from '../state.js';
-import { formatShortAddress, formatRelativeDate } from '../utils.js';
+import { formatShortAddress, formatRelativeDate, posMatchesFilter } from '../utils.js';
 
 const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OSM_ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
@@ -66,6 +67,10 @@ function initOrRefreshMap() {
 
 /* ==========================================================================
    History Map: Marker Rendering
+   Nummerierte divIcon-Marker über dem vollen Datensatz. Ein aktiver
+   Filter-Term (identisch zur List-View, posMatchesFilter) blendet nicht
+   passende Pins aus; die Nummer entspricht weiterhin der Position im vollen
+   Array (+1) und damit der Nummerierung in der List-View.
    ========================================================================== */
 export function renderMapMarkers() {
     const map = getHistoryMap();
@@ -80,9 +85,11 @@ export function renderMapMarkers() {
     const data = getHistoryMapData();
     if (!data || data.length === 0) return;
 
+    const filterTerm = (getHistoryFilterTerm() || '').trim();
     const bounds = [];
 
     data.forEach((pos, index) => {
+        if (!posMatchesFilter(pos, filterTerm)) return;
         if (!pos.latitude || !pos.longitude) return;
 
         const lat = parseFloat(pos.latitude);
@@ -94,7 +101,14 @@ export function renderMapMarkers() {
         const mapsUrl      = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
         const escapedAddr  = shortAddr.replace(/"/g, '&quot;');
 
-        const marker = L.marker([lat, lon]).addTo(map);
+        const numberedIcon = L.divIcon({
+            className: 'history-pin-wrapper',
+            html: `<div class="history-pin">${index + 1}</div>`,
+            iconSize: [26, 26],
+            iconAnchor: [13, 13]
+        });
+
+        const marker = L.marker([lat, lon], { icon: numberedIcon }).addTo(map);
         marker.bindPopup(
             `<div class="map-popup">` +
             `<span class="map-popup-index">#${index + 1}</span>` +

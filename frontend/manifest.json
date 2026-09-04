@@ -1,8 +1,12 @@
 {
+  "id": "/",
   "name": "Locate Me",
   "short_name": "locate.me",
+  "description": "Track, save and share your location privately with people you trust.",
   "start_url": ".",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#ffffff",
   "theme_color": "#72b2dc",
   "icons": [

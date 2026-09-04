@@ -169,9 +169,19 @@ properties in Chrome Android.
 - Shimmer animation via CSS `@keyframes shimmer`
 
 ### History Filter
-- `posMatchesFilter(pos, term)` – central function, ready for extension:
+- `posMatchesFilter(pos, term)` – zentral in `utils.js`, von List **und** Map
+  (`map.js`) genutzt, damit beide Views identisch filtern. Ready for extension:
 ```js
 (pos.displayName || '').toLowerCase().includes(t) ||
 (pos.comment     || '').toLowerCase().includes(t) ||  // prepared
 (pos.tags        || []).some(tag => tag.toLowerCase().includes(t)) // prepared
 ```
+- Der aktive Filter-Term liegt zentral im State (`history.js` schreibt,
+  `map.js` liest): `getHistoryFilterTerm()` / `setHistoryFilterTerm()`
+  (`state.js`). `applyFilter()` toggelt nur die List-Cards; die Map-View
+  wertet den Term in `renderMapMarkers()` aus.
+- Suchfeld ist im Map-View per CSS ausgeblendet; Filter wird in der List
+  gesetzt und beim Map-Wechsel angewendet.
+- **History-Map-Pins:** nummerierte `L.divIcon`-Marker
+  (`.history-pin`-Badge, Nummer = Position im vollen Datensatz +1, identisch
+  zur List-View; Popup zeigt weiterhin `#n`).
