@@ -631,6 +631,20 @@ a.app-url:hover {
     color: var(--primary-dark);
 }
 
+.footer-legal {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+}
+
+.footer-legal a {
+    color: var(--text-muted);
+}
+
+.footer-legal a:hover {
+    color: var(--primary-dark);
+}
+
 .footer-status {
     display: inline-flex;
     align-items: center;
@@ -788,6 +802,114 @@ a.app-url:hover {
 }
 
 /* ==========================================================================
+   Privacy / legal pages
+   ========================================================================== */
+.lang-jump {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.lang-jump-link {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    border-radius: 9999px;
+    background-color: var(--card-bg);
+    padding: 7px 18px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.lang-jump-link:hover {
+    color: var(--primary-dark);
+    border-color: var(--primary-color);
+    text-decoration: none;
+}
+
+.legal-jump {
+    margin: 8px 0 30px;
+}
+
+.legal-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 26px 24px 30px;
+    box-shadow: var(--shadow-card);
+    scroll-margin-top: 100px;
+}
+
+.legal-card + .legal-card {
+    margin-top: 26px;
+}
+
+.legal-head {
+    margin-bottom: 4px;
+}
+
+.legal-badge {
+    display: inline-block;
+    background-color: var(--primary-tint);
+    color: var(--primary-dark);
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.3px;
+    border-radius: 9999px;
+    padding: 3px 12px;
+}
+
+.legal-title {
+    font-size: clamp(1.4rem, 3vw, 1.8rem);
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text-strong);
+    margin: 14px 0 22px;
+}
+
+.legal-card h3.legal-sec {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-strong);
+    margin: 24px 0 8px;
+}
+
+.legal-num {
+    color: var(--primary-dark);
+    margin-right: 2px;
+}
+
+.legal-card p {
+    font-size: 0.95rem;
+    color: var(--text-color);
+    margin: 0 0 12px;
+}
+
+.legal-address {
+    margin: 0 0 12px;
+}
+
+.legal-card strong {
+    color: var(--text-strong);
+}
+
+.legal-card ul {
+    margin: 0 0 12px;
+    padding-left: 22px;
+}
+
+.legal-card li {
+    font-size: 0.95rem;
+    color: var(--text-color);
+    margin: 4px 0;
+}
+
+/* ==========================================================================
    Responsive
    ========================================================================== */
 @media (max-width: 860px) {
@@ -819,6 +941,10 @@ a.app-url:hover {
 
     .install-card {
         padding: 22px 18px;
+    }
+
+    .legal-card {
+        padding: 22px 18px 26px;
     }
 
     .header-inner {
