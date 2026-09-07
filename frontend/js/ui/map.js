@@ -1,7 +1,7 @@
 import {
     getHistoryMap, setHistoryMap,
     getHistoryMapData,
-    getHistoryFilterTerm,
+    getHistoryFilter,
     getCurrentHistoryView, setCurrentHistoryView,
     getLocateMap, setLocateMap,
     getLocateMarker, setLocateMarker,
@@ -67,10 +67,10 @@ function initOrRefreshMap() {
 
 /* ==========================================================================
    History Map: Marker Rendering
-   Nummerierte divIcon-Marker über dem vollen Datensatz. Ein aktiver
-   Filter-Term (identisch zur List-View, posMatchesFilter) blendet nicht
-   passende Pins aus; die Nummer entspricht weiterhin der Position im vollen
-   Array (+1) und damit der Nummerierung in der List-View.
+   Nummerierte divIcon-Marker über dem vollen Datensatz. Der aktive Filter
+   (Tag + Text, identisch zur List-View über posMatchesFilter + State) blendet
+   nicht passende Pins aus; die Nummer entspricht weiterhin der Position im
+   vollen Array (+1) und damit der Nummerierung in der List-View.
    ========================================================================== */
 export function renderMapMarkers() {
     const map = getHistoryMap();
@@ -85,11 +85,11 @@ export function renderMapMarkers() {
     const data = getHistoryMapData();
     if (!data || data.length === 0) return;
 
-    const filterTerm = (getHistoryFilterTerm() || '').trim();
+    const filter = getHistoryFilter();
     const bounds = [];
 
     data.forEach((pos, index) => {
-        if (!posMatchesFilter(pos, filterTerm)) return;
+        if (!posMatchesFilter(pos, filter)) return;
         if (!pos.latitude || !pos.longitude) return;
 
         const lat = parseFloat(pos.latitude);

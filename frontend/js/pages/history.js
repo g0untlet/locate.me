@@ -1,5 +1,5 @@
 import { apiGetPositionsWithMeta, apiDeletePosition, TOO_MANY_REQUESTS_MESSAGE } from '../api.js';
-import { setHistoryMapData, getCurrentHistoryView, setHistoryFilterTerm } from '../state.js';
+import { setHistoryMapData, getCurrentHistoryView, getHistoryFilter, setHistoryFilter } from '../state.js';
 import { renderMapMarkers } from '../ui/map.js';
 import { updateHistoryBadge } from '../ui/badge.js';
 import {
@@ -11,6 +11,7 @@ import {
     formatRelativeDate,
     formatTravelTime,
     formatElevation,
+    PREDEFINED_TAGS,
     posMatchesFilter
 } from '../utils.js';
 
@@ -406,20 +407,31 @@ export function showHistorySkeleton() {
 
 /* ==========================================================================
    Search / Filter
-   Match-Prädikat liegt zentral in utils.js (posMatchesFilter), damit die
-   Map-View exakt dieselbe Filterung anwendet wie die List-View.
+   Kombiniert einen Tag (exakte Single-Select-Chips wie im Locate-Save-Screen)
+   mit einem Textterm über Adresse/Kommentar:
+   - Tag UND Text gesetzt  -> AND-Filter (Tag muss passen UND Adresse/Kommentar)
+   - nur Tag / nur Text    -> Filter auf das gesetzte Kriterium allein
+   Das Match-Prädikat liegt zentral in utils.js (posMatchesFilter) und wird vom
+   Map-View identisch über den State (getHistoryFilter) angewandt.
    ========================================================================== */
-function applyFilter(term) {
+function applyFilter(filter) {
     const cards = document.querySelectorAll('#history-list .log-card');
     let visibleCount = 0;
     cards.forEach(card => {
-        const matches = posMatchesFilter(card._pos, term);
-        card.style.display = matches ? '' : 'none';
+        const matches = posMatchesFilter(card._pos, filter);
+        card.classList.toggle('hidden', !matches);
         if (matches) visibleCount++;
     });
 
     const noResult = document.getElementById('history-no-results');
-    if (noResult) noResult.style.display = visibleCount === 0 ? 'block' : 'none';
+    if (noResult) noResult.classList.toggle('hidden', visibleCount !== 0);
+}
+
+function getSelectedHistoryTag() {
+    const tagsEl = document.getElementById('history-filter-tags');
+    if (!tagsEl) return '';
+    const selected = tagsEl.querySelector('.tag-chip--selected');
+    return selected ? selected.getAttribute('data-tag') : '';
 }
 
 function ensureSearchBar() {
@@ -429,6 +441,7 @@ function ensureSearchBar() {
     bar.id = 'history-search-bar';
     bar.className = 'history-search-bar';
     bar.innerHTML = `
+        <div id="history-filter-tags" class="history-filter-tags"></div>
         <div class="history-search-input-wrapper">
             <svg class="history-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -436,7 +449,7 @@ function ensureSearchBar() {
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
             <input id="history-search-input" class="history-search-input"
-                   type="search" placeholder="Filter by address, tag or comment…" autocomplete="off">
+                   type="search" placeholder="Filter by address or comment…" autocomplete="off">
             <button id="history-search-clear" class="history-search-clear hidden" aria-label="Clear filter">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                      stroke-linecap="round" stroke-linejoin="round">
@@ -451,35 +464,63 @@ function ensureSearchBar() {
     const list = document.getElementById('history-list');
     list.parentNode.insertBefore(bar, list);
 
-    const input     = bar.querySelector('#history-search-input');
-    const clearBtn  = bar.querySelector('#history-search-clear');
-    const noResults = bar.querySelector('#history-no-results');
+    const input    = bar.querySelector('#history-search-input');
+    const clearBtn = bar.querySelector('#history-search-clear');
+    const tagsEl   = bar.querySelector('#history-filter-tags');
 
-    input.addEventListener('input', () => {
-        const term = input.value.trim();
-        setHistoryFilterTerm(term);
-        clearBtn.classList.toggle('hidden', term === '');
-        applyFilter(term);
+    // Tag-Chips (Single-Select wie im Locate-Save-Screen): aktiven Chip
+    // erneut antippen, um den Tag-Filter zu entfernen.
+    PREDEFINED_TAGS.forEach(tag => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'tag-chip';
+        chip.setAttribute('data-tag', tag);
+        chip.textContent = tag;
+        tagsEl.appendChild(chip);
     });
+
+    // Liest die UI-Steuerungen aus, schreibt sie in den State (Map-View liest
+    // denselben State) und wendet den Filter auf die List-Cards an.
+    const syncFromControls = () => {
+        const tag  = getSelectedHistoryTag();
+        const text = input.value.trim();
+        setHistoryFilter({ tag, text });
+        applyFilter({ tag, text });
+        clearBtn.classList.toggle('hidden', text === '');
+    };
+
+    tagsEl.addEventListener('click', (e) => {
+        const chip = e.target.closest('.tag-chip');
+        if (!chip) return;
+        const wasSelected = chip.classList.contains('tag-chip--selected');
+        tagsEl.querySelectorAll('.tag-chip--selected').forEach(c => c.classList.remove('tag-chip--selected'));
+        if (!wasSelected) chip.classList.add('tag-chip--selected');
+        syncFromControls();
+    });
+
+    input.addEventListener('input', syncFromControls);
 
     clearBtn.addEventListener('click', () => {
         input.value = '';
-        setHistoryFilterTerm('');
         clearBtn.classList.add('hidden');
-        applyFilter('');
+        syncFromControls();
         input.focus();
     });
 }
 
 function resetSearchBar() {
-    // Suchfeld beim Reload leeren, damit Filter nicht auf alten Term läuft
-    const input    = document.getElementById('history-search-input');
-    const clearBtn = document.getElementById('history-search-clear');
+    // Filter beim Reload leeren, damit kein alter Tag/Text weiter filtert
+    const input     = document.getElementById('history-search-input');
+    const clearBtn  = document.getElementById('history-search-clear');
+    const tagsEl    = document.getElementById('history-filter-tags');
+    const noResults = document.getElementById('history-no-results');
     if (input)    { input.value = ''; }
     if (clearBtn) { clearBtn.classList.add('hidden'); }
-    const noResults = document.getElementById('history-no-results');
+    if (tagsEl) {
+        tagsEl.querySelectorAll('.tag-chip--selected').forEach(c => c.classList.remove('tag-chip--selected'));
+    }
     if (noResults) { noResults.classList.add('hidden'); }
-    setHistoryFilterTerm('');
+    setHistoryFilter({ tag: '', text: '' });
 }
 
 /* ==========================================================================
