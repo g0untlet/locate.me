@@ -19,6 +19,8 @@
     --border-radius: 24px;
     --shadow: 0 20px 40px rgba(0, 0, 0, 0.03);
     --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --compass-north: #e11d48;
+    --compass-south: #64748b;
 }
 
 [data-theme="dark"] {
@@ -37,6 +39,8 @@
     --border-color: #334155;
     --card-border: #475569;
     --shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+    --compass-north: #fb7185;
+    --compass-south: #94a3b8;
 }
 
 * {
@@ -945,40 +949,41 @@ body {
 }
 
 /* Compass (North indicator) next to the places counter. The needle rotates so
-   its red half always points North; hidden until orientation events arrive. */
+   its crimson half always points North; hidden until orientation events arrive.
+   Größerer, kontrastreicher Dial für gute Lesbarkeit auf dem Handy. */
 .places-compass {
-    width: 22px;
-    height: 22px;
+    width: 30px;
+    height: 30px;
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--border-color);
+    border: 1.5px solid var(--border-color);
     border-radius: 50%;
     background-color: var(--card-bg);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 
 .places-compass .compass-needle {
-    width: 13px;
-    height: 13px;
+    width: 22px;
+    height: 22px;
     transform-origin: 50% 50%;
     transition: transform 0.15s ease-out;
     will-change: transform;
 }
 
 .places-compass .compass-needle-n {
-    fill: var(--primary-color);
+    fill: var(--compass-north);
 }
 
 .places-compass .compass-needle-s {
-    fill: var(--text-muted);
-    opacity: 0.5;
+    fill: var(--compass-south);
 }
 
 .places-compass .compass-pin {
     fill: var(--card-bg);
     stroke: var(--border-color);
-    stroke-width: 1.2;
+    stroke-width: 1.5;
 }
 
 .places-error {
@@ -1682,15 +1687,6 @@ body {
     width: 100%;
     margin-bottom: 10px;
     flex-shrink: 0;
-}
-
-/* Tag chips row inside the history filter bar (single-select, like the Locate
-   save screen). Wraps over multiple lines; text field sits below. */
-.history-filter-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 8px;
 }
 
 /* Suchfeld ausblenden wenn Map-View aktiv (history-map nicht hidden) */

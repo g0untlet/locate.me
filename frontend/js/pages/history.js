@@ -437,36 +437,70 @@ function getSelectedHistoryTag() {
 function ensureSearchBar() {
     if (document.getElementById('history-search-bar')) return;
 
+    // Aufklappbarer Filter (Disclosure), optisch identisch zum Locate
+    // "Tag & Comment"-Block (.save-options): kompakt eingeklappt mit Summary,
+    // erweitert zeigt Tag-Chips + Adresse/Kommentar-Eingabe.
     const bar = document.createElement('div');
     bar.id = 'history-search-bar';
-    bar.className = 'history-search-bar';
+    bar.className = 'history-search-bar save-options';
     bar.innerHTML = `
-        <div id="history-filter-tags" class="history-filter-tags"></div>
-        <div class="history-search-input-wrapper">
-            <svg class="history-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        <button id="history-filter-toggle" class="save-options-toggle" type="button" aria-expanded="false">
+            <svg class="save-options-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
             </svg>
-            <input id="history-search-input" class="history-search-input"
-                   type="search" placeholder="Filter by address or comment…" autocomplete="off">
-            <button id="history-search-clear" class="history-search-clear hidden" aria-label="Clear filter">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                     stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-            </button>
+            <span class="save-options-toggle-label">Filter</span>
+            <span id="history-filter-summary" class="save-options-summary hidden"></span>
+            <svg class="save-options-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </button>
+        <div class="save-options-body">
+            <div class="save-options-inner">
+                <div class="save-options-row">
+                    <span class="label">TAG</span>
+                    <div id="history-filter-tags" class="tag-chips"></div>
+                </div>
+                <div class="save-options-row">
+                    <span class="label">ADDRESS / COMMENT</span>
+                    <div class="history-search-input-wrapper">
+                        <svg class="history-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input id="history-search-input" class="history-search-input"
+                               type="search" placeholder="Filter by address or comment…" autocomplete="off">
+                        <button id="history-search-clear" class="history-search-clear hidden" aria-label="Clear filter">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="history-no-results" class="history-no-results hidden">No matches found.</div>
         </div>
-        <div id="history-no-results" class="history-no-results hidden">No matches found.</div>
     `;
 
     const list = document.getElementById('history-list');
     list.parentNode.insertBefore(bar, list);
 
+    const toggle   = bar.querySelector('#history-filter-toggle');
     const input    = bar.querySelector('#history-search-input');
     const clearBtn = bar.querySelector('#history-search-clear');
     const tagsEl   = bar.querySelector('#history-filter-tags');
+    const summary  = bar.querySelector('#history-filter-summary');
+
+    // Disclosure: auf-/zuklappen (gleiche Logik wie Locate save-options)
+    toggle.addEventListener('click', () => {
+        const expanded = toggle.getAttribute('aria-expanded') === 'true';
+        toggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+        bar.classList.toggle('expanded', !expanded);
+    });
 
     // Tag-Chips (Single-Select wie im Locate-Save-Screen): aktiven Chip
     // erneut antippen, um den Tag-Filter zu entfernen.
@@ -480,13 +514,19 @@ function ensureSearchBar() {
     });
 
     // Liest die UI-Steuerungen aus, schreibt sie in den State (Map-View liest
-    // denselben State) und wendet den Filter auf die List-Cards an.
+    // denselben State), wendet den Filter an und aktualisiert die Summary.
     const syncFromControls = () => {
         const tag  = getSelectedHistoryTag();
         const text = input.value.trim();
         setHistoryFilter({ tag, text });
         applyFilter({ tag, text });
         clearBtn.classList.toggle('hidden', text === '');
+
+        const parts = [];
+        if (tag) parts.push(tag);
+        if (text) parts.push(text);
+        summary.textContent = parts.join(' \u00B7 ');
+        summary.classList.toggle('hidden', parts.length === 0);
     };
 
     tagsEl.addEventListener('click', (e) => {
@@ -514,12 +554,14 @@ function resetSearchBar() {
     const clearBtn  = document.getElementById('history-search-clear');
     const tagsEl    = document.getElementById('history-filter-tags');
     const noResults = document.getElementById('history-no-results');
+    const summary   = document.getElementById('history-filter-summary');
     if (input)    { input.value = ''; }
     if (clearBtn) { clearBtn.classList.add('hidden'); }
     if (tagsEl) {
         tagsEl.querySelectorAll('.tag-chip--selected').forEach(c => c.classList.remove('tag-chip--selected'));
     }
     if (noResults) { noResults.classList.add('hidden'); }
+    if (summary)  { summary.textContent = ''; summary.classList.add('hidden'); }
     setHistoryFilter({ tag: '', text: '' });
 }
 

@@ -90,9 +90,31 @@ function updateCompassVisibility() {
     compass.classList.toggle('hidden', !show);
 }
 
-/* Zentrale Verarbeitung eines Heading-Werts (Peilung der Geräte-Oberseite,
-   0 = Nord). Kümmert sich um Sichtbarkeit, Akkumulator und Nadel-Rotation. */
-function applyCompassHeading(heading) {
+/* Android/Chrome & Brave liefern keinen tilt-kompensierten Compass-Wert wie
+   iOS webkitCompassHeading. Deren alpha/beta/gamma folgen der Gegen-Drehrichtung
+   (CCW). Die Nadel dreht deshalb um den rohen Yaw (+). Falls ein Gerät die
+   Werte gespiegelt meldet (Nord zeigt 180° daneben), hier auf -1 stellen. */
+const DEG_TO_RAD = Math.PI / 180;
+const ANDROID_ROTATION_SIGN = 1;
+
+/* Tilt-kompensierter Gier-Winkel (0..360) aus alpha/beta/gamma. Bei flach
+   gehaltenem Gerät reduziert sich das Ergebnis auf alpha; im aufrechten
+   Halten (z.B. beim Lesen der Liste) wird die Neigung ausgeglichen. */
+function computeYawDeg(alpha, beta, gamma) {
+    const a = alpha * DEG_TO_RAD;
+    const b = beta  * DEG_TO_RAD;
+    const g = gamma * DEG_TO_RAD;
+    const yaw = Math.atan2(
+        Math.sin(a) * Math.cos(b) + Math.cos(a) * Math.sin(b) * Math.sin(g),
+        Math.cos(a) * Math.cos(b) - Math.sin(a) * Math.sin(b) * Math.sin(g)
+    );
+    return (yaw * 180 / Math.PI + 360) % 360;
+}
+
+/* Zentrale Verarbeitung eines Nadel-Rotationswinkels in Grad (Screen-Frame,
+   das rote Nadel-Ende zeigt Richtung Norden). Kümmert sich um Sichtbarkeit,
+   den Shortest-Path-Akkumulator und die Nadel-Rotation. */
+function applyCompassRotation(rotationDeg) {
     const compass = getCompassElement();
     if (!compass) return;
 
@@ -102,9 +124,8 @@ function applyCompassHeading(heading) {
     }
     if (compass.classList.contains('hidden') || compass.offsetParent === null) return;
 
-    // Nadel gegen den Uhrzeigersinn um den Heading drehen (rotes Ende -> Nord).
     // Shortest-Path-Akkumulator verhindert eine volle Umdrehung am 359°->0°-Wrap.
-    const target = ((360 - heading) % 360 + 360) % 360;
+    const target = (rotationDeg % 360 + 360) % 360;
     let angle;
     if (compassLastAngle === null) {
         angle = target;
@@ -131,26 +152,34 @@ function applyCompassHeading(heading) {
 }
 
 /* deviceorientation (nicht absolut): iOS Safari liefert webkitCompassHeading
-   (= echtes Heading), ansonsten alpha. Sobald absolute Events aktiv sind,
-   werden die relativen verworfen (eine Quelle, kein Wackeln). */
+   (= tilt-kompensiertes Heading); Android/Brave liefern stattdessen Raw-
+   alpha/beta/gamma. Sobald absolute Events aktiv sind, werden die relativen
+   verworfen (eine Quelle, kein Wackeln). */
 function onDeviceOrientation(e) {
     if (compassUseAbsolute) return;
-    let heading = null;
+
     if (typeof e.webkitCompassHeading === 'number') {
-        heading = e.webkitCompassHeading;
-    } else if (e.alpha !== null && e.alpha !== undefined) {
-        heading = e.alpha;
+        // iOS: rotes Nadel-Ende gegen die (CW-)Peilung drehen
+        applyCompassRotation(-e.webkitCompassHeading);
+        return;
     }
-    if (heading === null) return;
-    applyCompassHeading(heading);
+    if (e.alpha === null || e.alpha === undefined ||
+        e.beta  === null || e.beta  === undefined ||
+        e.gamma === null || e.gamma === undefined) return;
+    const yaw = computeYawDeg(e.alpha, e.beta, e.gamma);
+    applyCompassRotation(ANDROID_ROTATION_SIGN * yaw);
 }
 
-/* deviceorientationabsolute: alpha ist hier das echte Nord-Heading (Chrome/
-   Android liefert dieses Event, wenn der Sensor erlaubt ist). */
+/* deviceorientationabsolute: alpha/beta/gamma sind hier absolut (echtes
+   Nord-Heading; Chrome/Android liefert dieses Event, wenn der Sensor erlaubt
+   ist). */
 function onDeviceOrientationAbsolute(e) {
-    if (e.alpha === null || e.alpha === undefined) return;
+    if (e.alpha === null || e.alpha === undefined ||
+        e.beta  === null || e.beta  === undefined ||
+        e.gamma === null || e.gamma === undefined) return;
     compassUseAbsolute = true;
-    applyCompassHeading(e.alpha);
+    const yaw = computeYawDeg(e.alpha, e.beta, e.gamma);
+    applyCompassRotation(ANDROID_ROTATION_SIGN * yaw);
 }
 
 /* Schaltet die Sensor-Listener ein (auf beiden Event-Quellen) und prüft die
