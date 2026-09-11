@@ -4,7 +4,7 @@
 SERVER_IP="192.168.178.88"
 SERVER_USER="gauntlet"
 PORT="8082"
-H2_JAR="/home/gauntlet/homelab/locate.me.dev/backend/h2-2.4.240.jar"
+H2_JAR="/media/ssd/locate.me/dev/backend/h2-2.4.240.jar"
 
 echo "=================================================="
 echo " Öffne SSH-Tunnel und starte H2 Console..."

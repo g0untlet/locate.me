@@ -12,7 +12,7 @@ set -euo pipefail
 LOCAL_WEBSITE_DIR="./website"
 REMOTE_USER="gauntlet"
 REMOTE_HOST="192.168.178.88"
-REMOTE_APP_DIR="/home/gauntlet/homelab/locate.me.dev"
+REMOTE_APP_DIR="/media/ssd/locate.me/dev"
 REMOTE_TARGET_DIR="$REMOTE_APP_DIR/website/"
 
 SAFETY_DIR_NAME="website"

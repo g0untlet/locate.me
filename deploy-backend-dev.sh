@@ -10,7 +10,7 @@ set -euo pipefail
 LOCAL_TARGET_DIR="./backend/target"
 REMOTE_USER="gauntlet"
 REMOTE_HOST="192.168.178.88"
-REMOTE_TARGET_DIR="/home/gauntlet/homelab/locate.me.dev/backend/"
+REMOTE_TARGET_DIR="/media/ssd/locate.me/dev/backend/"
 
 echo "===================================================="
 echo "🚀 Starting Backend Deployment -> DEV Server"

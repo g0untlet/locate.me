@@ -21,6 +21,9 @@
     --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     --compass-north: #e11d48;
     --compass-south: #64748b;
+    --demo-color: #b91c1c;
+    --demo-bg: #fee2e2;
+    --demo-border: #fca5a5;
 }
 
 [data-theme="dark"] {
@@ -41,6 +44,9 @@
     --shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
     --compass-north: #fb7185;
     --compass-south: #94a3b8;
+    --demo-color: #fecaca;
+    --demo-bg: #450a0a;
+    --demo-border: #7f1d1d;
 }
 
 * {
@@ -817,7 +823,12 @@ body {
 
 .demo-mode-note {
     font-size: 0.75rem;
-    color: var(--text-muted);
+    font-weight: 600;
+    color: var(--demo-color);
+    background-color: var(--demo-bg);
+    border: 1px solid var(--demo-border);
+    border-radius: 8px;
+    padding: 6px 12px;
     text-align: center;
     animation: pulse 1.5s infinite;
 }

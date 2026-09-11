@@ -48,6 +48,10 @@ let isFetching = false;
    neuere Runde hineinfunkt (Stale-Guard). */
 let fetchEpoch = 0;
 
+/* Zeit-Label ("HH:MM") der zuletzt gerenderten Vorschau – wird beim "Back" aus
+   der Saved-Ansicht genutzt, um den Chooser-Status wiederherzustellen. */
+let lastPreviewLabel = '';
+
 function setFetchBusy(busy) {
     isFetching = busy;
     const btn = document.getElementById('btn-fetch-location');
@@ -677,6 +681,7 @@ function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus })
             const timeLabel = new Date().toLocaleString('de-DE', {
                 hour: '2-digit', minute: '2-digit'
             });
+            lastPreviewLabel = timeLabel;
 
             // Vorschau (Adresse/Wetter) sofort rendern; Places füllt später nach.
             renderChooser(data, []);
@@ -739,7 +744,8 @@ function sendPositionToBackend(payload, { getActiveUserId, checkBackendStatus, s
             showLocateSavedMap(data.latitude, data.longitude);
 
             resetSaveOptions();
-            setCachedLocatePosition(null);
+            // Preview bewusst NICHT verwerfen: der "Back"-Button der Saved-
+            // Ansicht kehrt in den Chooser zurück (Weiter/Save erneut möglich).
             selectedPlace = null;
             document.getElementById('btn-fetch-location').textContent = 'Fetch Location';
 
@@ -911,6 +917,18 @@ export function initLocatePage(deps) {
     // --- Saver: BACK to chooser view (no backend reload – the chooser state
     //     and the cached preview are still in the DOM) ---
     document.getElementById('btn-back').addEventListener('click', () => showView('chooser'));
+
+    // --- Saved: BACK to the chooser view (weather, resolved address and places
+    //     are still in the DOM; the preview cache is kept) ---
+    document.getElementById('btn-saved-back').addEventListener('click', () => {
+        showView('chooser');
+        document.getElementById('btn-fetch-location').textContent = 'Refresh';
+        const statusText = document.getElementById('status');
+        statusText.innerText = lastPreviewLabel
+            ? `Preview from ${lastPreviewLabel} \u2014 not yet saved.`
+            : 'Preview \u2014 not yet saved.';
+        statusText.className = 'status-preview';
+    });
 
     // --- SAVE LOCATION Button ---
     document.getElementById('track-btn').addEventListener('click', () => {
