@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "net.locate_me.app.twa",
+        "sha256_cert_fingerprints": ["BC:FC:7C:CF:60:AD:A2:13:00:1E:4A:32:84:CB:E6:AF:F6:24:8E:7B:B7:78:CE:A5:86:D2:72:22:CF:1F:93:22"]
+      }
+    }]

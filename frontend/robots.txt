@@ -1,0 +1,47 @@
+# robots.txt for PWA
+
+# 1. BLOCK AI TRAINING CRAWLERS
+# These bots scrape content for training AI models. Blocking them is safe for SEO.
+# OpenAI (GPTBot - model training)
+User-agent: GPTBot
+Disallow: /
+
+# Google (Google-Extended - Gemini/Vertex AI training, NOT Search)
+# Note: Blocking this does NOT affect your Google Search ranking.
+User-agent: Google-Extended
+Disallow: /
+
+# Anthropic (ClaudeBot - model training)
+User-agent: ClaudeBot
+Disallow: /
+
+# Common Crawl (CCBot - major dataset for many open-source LLMs)
+User-agent: CCBot
+Disallow: /
+
+# Meta (Meta-ExternalAgent - AI training)
+User-agent: Meta-ExternalAgent
+Disallow: /
+
+# ByteDance (Bytespider - AI training)
+User-agent: Bytespider
+Disallow: /
+
+# 2. ALLOW TRADITIONAL SEARCH ENGINES
+# These are the crawlers you want to keep for indexing.
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+# 3. DEFAULT RULES FOR EVERYONE ELSE
+User-agent: *
+Allow: /
+
+# 4. OPTIONAL: DISALLOW PRIVATE/DYNAMIC PWA SECTIONS
+# Disallow user-specific or backend API routes from being indexed.
+Disallow: /api/
