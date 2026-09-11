@@ -10,7 +10,8 @@ import {
     getLocationIconSvg,
     getPlaceIconSvg,
     formatPlaceLabel,
-    formatShortAddress
+    formatShortAddress,
+    PREDEFINED_TAGS
 } from '../utils.js';
 
 /* ==========================================================================
@@ -54,9 +55,198 @@ function setFetchBusy(busy) {
 }
 
 /* ==========================================================================
-   Predefined Tags – single-select vocabulary, must match backend PositionTag
+   Compass (North) – kleine Kompassnadel im "PLACES AROUND ME"-Header. Die
+   rote Hälfte der Nadel zeigt immer nach Norden, während sich der User dreht.
+   Ohne Sensor-Events (oder nach verweigerter iOS-Permission) bleibt der Dial
+   verborgen (compassAvailable bleibt false).
+
+   Android/Brave/Desktop: Start erfolgt direkt beim Seiten-Init (keine
+   Permission nötig); gehört wird sowohl deviceorientation (Fallback) als auch
+   deviceorientationabsolute (echtes Nord-Heading, wenn verfügbar). Brave kann
+   die Orientierungssensoren per Shields/Fingerprinting-Schutz still legen –
+   dann greift der No-Signal-Watchdog mit einem konkreten Hinweis.
+   iOS: Permission über requestPermission() innerhalb der Fetch-User-Geste.
    ========================================================================== */
-const PREDEFINED_TAGS = ['HOME', 'WORK', 'PARKING', 'SHOPPING', 'EATING', 'LEISURE', 'FRIENDS', 'HEALTH'];
+let compassAvailable    = false; // erster echter Orientation-Event empfangen?
+let compassLastAngle    = null;  // fortlaufend akkumulierter Rotationswinkel
+let compassStarted      = false;
+let compassUseAbsolute  = false; // absolute Events liefern echtes Nord-Heading
+let compassWarnedNoSens = false;
+
+const COMPASS_NO_SIGNAL_WARN =
+    "No orientation sensor data received — the compass stays hidden. " +
+    "If you expected it, allow motion sensors for this site (disable Brave " +
+    "Shields fingerprinting protection, or allow sensors in the site settings).";
+
+function getCompassElement() {
+    return document.getElementById('places-compass');
+}
+
+function updateCompassVisibility() {
+    const compass = getCompassElement();
+    if (!compass) return;
+    const card = document.getElementById('places-card');
+    const show  = compassAvailable && card && !card.classList.contains('hidden');
+    compass.classList.toggle('hidden', !show);
+}
+
+/* Android/Chrome & Brave liefern keinen tilt-kompensierten Compass-Wert wie
+   iOS webkitCompassHeading. Deren alpha/beta/gamma folgen der Gegen-Drehrichtung
+   (CCW). Die Nadel dreht deshalb um den rohen Yaw (+). Falls ein Gerät die
+   Werte gespiegelt meldet (Nord zeigt 180° daneben), hier auf -1 stellen. */
+const DEG_TO_RAD = Math.PI / 180;
+const ANDROID_ROTATION_SIGN = 1;
+
+/* Tilt-kompensierter Gier-Winkel (0..360) aus alpha/beta/gamma. Bei flach
+   gehaltenem Gerät reduziert sich das Ergebnis auf alpha; im aufrechten
+   Halten (z.B. beim Lesen der Liste) wird die Neigung ausgeglichen. */
+function computeYawDeg(alpha, beta, gamma) {
+    const a = alpha * DEG_TO_RAD;
+    const b = beta  * DEG_TO_RAD;
+    const g = gamma * DEG_TO_RAD;
+    const yaw = Math.atan2(
+        Math.sin(a) * Math.cos(b) + Math.cos(a) * Math.sin(b) * Math.sin(g),
+        Math.cos(a) * Math.cos(b) - Math.sin(a) * Math.sin(b) * Math.sin(g)
+    );
+    return (yaw * 180 / Math.PI + 360) % 360;
+}
+
+/* Zentrale Verarbeitung eines Nadel-Rotationswinkels in Grad (Screen-Frame,
+   das rote Nadel-Ende zeigt Richtung Norden). Kümmert sich um Sichtbarkeit,
+   den Shortest-Path-Akkumulator und die Nadel-Rotation. */
+function applyCompassRotation(rotationDeg) {
+    const compass = getCompassElement();
+    if (!compass) return;
+
+    if (!compassAvailable) {
+        compassAvailable = true;
+        updateCompassVisibility();
+    }
+    if (compass.classList.contains('hidden') || compass.offsetParent === null) return;
+
+    // Shortest-Path-Akkumulator verhindert eine volle Umdrehung am 359°->0°-Wrap.
+    const target = (rotationDeg % 360 + 360) % 360;
+    let angle;
+    if (compassLastAngle === null) {
+        angle = target;
+    } else {
+        let delta = target - compassLastAngle;
+        if (delta > 180)  delta -= 360;
+        if (delta < -180) delta += 360;
+        angle = compassLastAngle + delta;
+    }
+    compassLastAngle = angle;
+
+    const needle = compass.querySelector('.compass-needle');
+    if (!needle) return;
+    // Erster Event: ohne Transition anwenden, damit die Nadel nicht von der
+    // Ausgangslage (0°) einmal schnell herumspult – danach CSS-Transition wieder.
+    if (compassLastAngle === target && !needle.dataset.compassInit) {
+        needle.dataset.compassInit = '1';
+        needle.style.transition = 'none';
+    }
+    needle.style.transform = `rotate(${compassLastAngle}deg)`;
+    if (needle.style.transition === 'none') {
+        requestAnimationFrame(() => { needle.style.transition = ''; });
+    }
+}
+
+/* deviceorientation (nicht absolut): iOS Safari liefert webkitCompassHeading
+   (= tilt-kompensiertes Heading); Android/Brave liefern stattdessen Raw-
+   alpha/beta/gamma. Sobald absolute Events aktiv sind, werden die relativen
+   verworfen (eine Quelle, kein Wackeln). */
+function onDeviceOrientation(e) {
+    if (compassUseAbsolute) return;
+
+    if (typeof e.webkitCompassHeading === 'number') {
+        // iOS: rotes Nadel-Ende gegen die (CW-)Peilung drehen
+        applyCompassRotation(-e.webkitCompassHeading);
+        return;
+    }
+    if (e.alpha === null || e.alpha === undefined ||
+        e.beta  === null || e.beta  === undefined ||
+        e.gamma === null || e.gamma === undefined) return;
+    const yaw = computeYawDeg(e.alpha, e.beta, e.gamma);
+    applyCompassRotation(ANDROID_ROTATION_SIGN * yaw);
+}
+
+/* deviceorientationabsolute: alpha/beta/gamma sind hier absolut (echtes
+   Nord-Heading; Chrome/Android liefert dieses Event, wenn der Sensor erlaubt
+   ist). */
+function onDeviceOrientationAbsolute(e) {
+    if (e.alpha === null || e.alpha === undefined ||
+        e.beta  === null || e.beta  === undefined ||
+        e.gamma === null || e.gamma === undefined) return;
+    compassUseAbsolute = true;
+    const yaw = computeYawDeg(e.alpha, e.beta, e.gamma);
+    applyCompassRotation(ANDROID_ROTATION_SIGN * yaw);
+}
+
+/* Schaltet die Sensor-Listener ein (auf beiden Event-Quellen) und prüft die
+   Sensor-Permission – rein diagnostisch, damit ein stilles Blockieren (z.B.
+   Brave Shields) nicht unbemerkt bleibt. */
+function startCompass() {
+    if (compassStarted) return;
+    if (!('DeviceOrientationEvent' in window)) return;
+    window.addEventListener('deviceorientation', onDeviceOrientation);
+    window.addEventListener('deviceorientationabsolute', onDeviceOrientationAbsolute);
+    compassStarted = true;
+    checkSensorPermissions();
+}
+
+function checkSensorPermissions() {
+    if (!('permissions' in navigator) || typeof navigator.permissions.query !== 'function') return;
+    ['gyroscope', 'magnetometer', 'accelerometer'].forEach(name => {
+        navigator.permissions.query({ name }).then(status => {
+            if (status.state === 'denied') {
+                console.warn(
+                    `Motion sensor "${name}" is blocked for this site — the compass stays hidden. ` +
+                    "Allow sensors for the site (site settings / Brave Shields fingerprinting protection off)."
+                );
+            }
+        }).catch(() => { /* Permission-Name hier nicht unterstützt – ignorieren */ });
+    });
+}
+
+/* No-Signal-Watchdog: Falls die Places-Card sichtbar ist und nach 6 s immer
+   noch kein einziges Orientation-Event ankam, einmalig einen konkreten Hinweis
+   loggen (statt den Dial nur stillschweigend verborgen zu lassen). */
+function scheduleCompassWatchdog() {
+    if (compassWarnedNoSens || compassAvailable) return;
+    setTimeout(() => {
+        if (compassWarnedNoSens || compassAvailable) return;
+        const page = document.getElementById('page-locate');
+        if (!page || page.classList.contains('hidden')) return; // beim nächsten Besuch erneut prüfen
+        compassWarnedNoSens = true;
+        console.warn(COMPASS_NO_SIGNAL_WARN);
+    }, 6000);
+}
+
+/* Seiten-Init: Android/Brave/Desktop ohne Permission-Gate sofort lauschen.
+   iOS startet erst über die Permission in der Fetch-User-Geste. */
+function initCompass() {
+    const req = window.DeviceOrientationEvent && window.DeviceOrientationEvent.requestPermission;
+    if (typeof req !== 'function') {
+        startCompass();
+    }
+}
+
+/* iOS 13+: DeviceOrientationEvent.requestPermission() nur innerhalb einer
+   User-Geste (eingehängt in den "Fetch Location"-Tap). Android/Desktop
+   brauchen keine Permission – dort sofort starten. */
+function requestCompassPermission() {
+    const req = window.DeviceOrientationEvent && window.DeviceOrientationEvent.requestPermission;
+    if (typeof req !== 'function') {
+        startCompass();
+        return;
+    }
+    req.call(window.DeviceOrientationEvent)
+        .then(state => {
+            if (state === 'granted') startCompass();
+            // denied / prompt -> Compass bleibt verborgen
+        })
+        .catch(() => {});
+}
 
 /* ==========================================================================
    Locate Page Selection State
@@ -277,6 +467,10 @@ function renderPlacesList(places) {
     if (count) {
         count.textContent = `${top.length} place${top.length === 1 ? '' : 's'}`;
     }
+
+    // Compass-Dial nur sichtbar, wenn Sensor-Events vorhanden sind
+    updateCompassVisibility();
+    scheduleCompassWatchdog();
 
     top.forEach(place => {
         const row = document.createElement('button');
@@ -632,10 +826,16 @@ function handleContinue() {
 export function initLocatePage(deps) {
 
     initSaveOptions();
+    // Android/Brave/Desktop sofort (ohne Permission) auf Sensor-Events hören;
+    // iOS startet über die Permission im Fetch-Tap weiter unten.
+    initCompass();
 
     // --- FETCH LOCATION / REFRESH Button ---
     document.getElementById('btn-fetch-location').addEventListener('click', () => {
         if (isFetching) return;
+        // iOS braucht die Orientation-Permission in einer User-Geste – der Tap
+        // auf den Fetch-Button ist dafür der natürliche Ort.
+        requestCompassPermission();
         setFetchBusy(true);
 
         const statusText = document.getElementById('status');

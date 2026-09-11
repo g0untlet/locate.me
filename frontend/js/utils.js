@@ -250,16 +250,39 @@ export function getPlaceIconSvg(primaryCategory) {
 }
 
 /* ==========================================================================
-   History Filter: Match predicate, shared by the List and Map views so both
-   filter identically. Central place to extend matching (e.g. more fields).
+   Predefined Tags – single-select vocabulary, must match the backend
+   PositionTag enum. Shared by the Locate save screen (chips) and the History
+   filter (chips) so both offer the identical vocabulary.
    ========================================================================== */
-export function posMatchesFilter(pos, term) {
-    if (!term) return true;
+export const PREDEFINED_TAGS = ['HOME', 'WORK', 'PARKING', 'SHOPPING', 'EATING', 'LEISURE', 'FRIENDS', 'HEALTH'];
+
+/* ==========================================================================
+   History Filter: Match predicate, shared by the List and Map views so both
+   filter identically.
+   filter = { tag, text }:
+   - tag  set  -> position tag must equal it (exact, case-insensitive)
+   - text set  -> address (displayName) or comment must contain it
+   Both set -> AND combination. Empty filter matches everything.
+   ========================================================================== */
+export function posMatchesFilter(pos, filter) {
+    if (!filter) return true;
     if (!pos) return false;
-    const t = term.toLowerCase();
-    return (
-        (pos.displayName  || '').toLowerCase().includes(t) ||
-        (pos.comment      || '').toLowerCase().includes(t) ||
-        (pos.tag          || '').toLowerCase().includes(t)
-    );
+
+    const tag  = (filter.tag  || '').trim();
+    const text = (filter.text || '').trim().toLowerCase();
+
+    if (!tag && !text) return true;
+
+    if (tag) {
+        const posTag = String(pos.tag || '').trim().toLowerCase();
+        if (posTag !== tag.toLowerCase()) return false;
+    }
+
+    if (text) {
+        const displayName = (pos.displayName || '').toLowerCase();
+        const comment     = (pos.comment     || '').toLowerCase();
+        if (!displayName.includes(text) && !comment.includes(text)) return false;
+    }
+
+    return true;
 }
