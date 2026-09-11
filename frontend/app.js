@@ -70,9 +70,31 @@ function registerServiceWorker() {
 }
 
 /* ==========================================================================
+   Native-App Feel: Zoom-Guards
+   iOS Safari/PWA ignoriert "user-scalable=no", daher zusätzlich:
+   - iOS-Gesture-Events (Pinch) unterdrücken
+   - Mehrfinger-Pinch außerhalb der Leaflet-Karten unterdrücken
+   Einfinger-Scrollen und Leaflet-eigener Zoom bleiben unberührt.
+   ========================================================================== */
+function initViewportZoomGuards() {
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(type => {
+        document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
+    });
+
+    document.addEventListener('touchmove', (e) => {
+        if (e.touches.length > 1 &&
+            !(e.target instanceof Element && e.target.closest('.leaflet-container'))) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+}
+
+/* ==========================================================================
    App Bootstrap
    ========================================================================== */
 document.addEventListener('DOMContentLoaded', () => {
+
+    initViewportZoomGuards();
 
     initMapListeners();
 

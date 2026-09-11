@@ -45,3 +45,28 @@ export function setLocateSavedMap(val)  { _locateSavedMap = val; }
 
 export function getLocateSavedMarker()  { return _locateSavedMarker; }
 export function setLocateSavedMarker(val) { _locateSavedMarker = val; }
+
+// --- Last Known GPS Fix (localStorage, per user) ---
+// Wird bei jedem erfolgreichen Preview gespeichert und dient als Fallback,
+// wenn kein GPS-Signal verfügbar ist (z.B. U-Bahn). Lokal und pro User.
+const LAST_FIX_PREFIX = 'locate.me.lastFix.';
+
+export function getLastKnownFix(userId) {
+    try {
+        const raw = localStorage.getItem(LAST_FIX_PREFIX + userId);
+        if (!raw) return null;
+        const fix = JSON.parse(raw);
+        if (!fix || typeof fix.latitude !== 'number' || typeof fix.longitude !== 'number') return null;
+        return fix;
+    } catch (e) {
+        return null;
+    }
+}
+
+export function setLastKnownFix(userId, fix) {
+    try {
+        localStorage.setItem(LAST_FIX_PREFIX + userId, JSON.stringify(fix));
+    } catch (e) {
+        /* quota / private mode – ignorieren */
+    }
+}
