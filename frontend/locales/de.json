@@ -130,5 +130,12 @@
     "errors.removeRecord": "Eintrag konnte nicht entfernt werden",
 
     "toast.online": "✓ Backend online",
-    "toast.offline": "✗ Backend nicht erreichbar"
+    "toast.offline": "✗ Backend nicht erreichbar",
+
+    "install.androidTitle": "locate.me installieren",
+    "install.androidText": "Füge die App für schnellen Zugriff zum Startbildschirm hinzu.",
+    "install.install": "Installieren",
+    "install.dismiss": "Ausblenden",
+    "install.iosTitle": "locate.me installieren",
+    "install.iosText": "Tippe auf Teilen und dann auf „Zum Home-Bildschirm“."
 }

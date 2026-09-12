@@ -6,6 +6,7 @@ import { initI18n } from './js/i18n.js';
 import { checkBackendStatus } from './js/ui/status.js';
 import { silentBadgeSync } from './js/ui/badge.js';
 import { setHistoryView, initMapListeners } from './js/ui/map.js';
+import { initInstallPrompt } from './js/ui/install.js';
 import { initSettingsPage } from './js/pages/settings.js';
 import { initLocatePage, resetLocatePage } from './js/pages/locate.js';
 import { fetchAndRenderHistory, showHistorySkeleton, invalidateHistoryI18n } from './js/pages/history.js';
@@ -102,6 +103,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     initViewportZoomGuards();
 
     initMapListeners();
+
+    initInstallPrompt();
 
     initSettingsPage({
         onSave: (userId) => {

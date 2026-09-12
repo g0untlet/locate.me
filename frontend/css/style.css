@@ -1530,6 +1530,128 @@ html.i18n-loading .app-container {
     border: 1px solid #fecaca;
 }
 
+/* ==========================================================================
+   PWA Install Banner (top, browser-style) + iOS Add-to-Home-Screen hint
+   ========================================================================== */
+.install-banner {
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    left: 12px;
+    right: 12px;
+    z-index: 150;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 10px 10px 12px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    transform: translateY(calc(-100% - 24px));
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.install-banner--visible {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.install-banner-icon {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 9px;
+    object-fit: cover;
+}
+
+.install-banner-share {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-dark);
+    background-color: var(--primary-tint);
+}
+
+.install-banner-share svg {
+    width: 20px;
+    height: 20px;
+}
+
+.install-banner-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+
+.install-banner-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-strong);
+    line-height: 1.2;
+}
+
+.install-banner-text-body {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.25;
+}
+
+.install-banner-action {
+    flex-shrink: 0;
+    padding: 7px 14px;
+    border: none;
+    border-radius: 9px;
+    background-color: var(--primary-color);
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.install-banner-action:hover {
+    background-color: var(--primary-hover);
+}
+
+.install-banner-close {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.install-banner-close:hover {
+    background-color: var(--surface-subtle);
+    color: var(--text-color);
+}
+
+.install-banner-close svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Never show the promotion inside an already-installed (standalone) window */
+@media all and (display-mode: standalone) {
+    .install-banner {
+        display: none !important;
+    }
+}
+
 
 /* ==========================================================================
    History View Toggle Bar

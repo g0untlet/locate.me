@@ -130,5 +130,12 @@
     "errors.removeRecord": "Could not process record removal",
 
     "toast.online": "✓ Backend online",
-    "toast.offline": "✗ Backend not reachable"
+    "toast.offline": "✗ Backend not reachable",
+
+    "install.androidTitle": "Install locate.me",
+    "install.androidText": "Add the app to your home screen for quick access.",
+    "install.install": "Install",
+    "install.dismiss": "Dismiss",
+    "install.iosTitle": "Install locate.me",
+    "install.iosText": "Tap Share, then \"Add to Home Screen\"."
 }

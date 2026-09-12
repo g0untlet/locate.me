@@ -130,5 +130,12 @@
     "errors.removeRecord": "No se pudo eliminar el registro",
 
     "toast.online": "✓ Backend en línea",
-    "toast.offline": "✗ Backend no disponible"
+    "toast.offline": "✗ Backend no disponible",
+
+    "install.androidTitle": "Instalar locate.me",
+    "install.androidText": "Añade la app a tu pantalla de inicio para un acceso rápido.",
+    "install.install": "Instalar",
+    "install.dismiss": "Descartar",
+    "install.iosTitle": "Instalar locate.me",
+    "install.iosText": "Toca Compartir y luego «Añadir a pantalla de inicio»."
 }
