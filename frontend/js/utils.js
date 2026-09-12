@@ -1,27 +1,30 @@
+import { t, getLocaleTag } from './i18n.js';
+
 /* ==========================================================================
    Date Formatting Utility
    ========================================================================== */
 export function formatRelativeDate(timestamp) {
-    if (!timestamp) return 'Unknown Date';
+    if (!timestamp) return t('date.unknown');
     const d = new Date(timestamp);
-    if (isNaN(d.getTime())) return 'Unknown Date';
+    if (isNaN(d.getTime())) return t('date.unknown');
 
     const now = new Date();
     const todayStart     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterdayStart = new Date(todayStart.getTime() - 86400000);
     const threeDaysAgoStart = new Date(yesterdayStart.getTime() - 2 * 86400000);
 
-    const timeStr = d.toLocaleString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    const localeTag = getLocaleTag();
+    const timeStr = d.toLocaleString(localeTag, { hour: '2-digit', minute: '2-digit' });
 
     if (d >= todayStart) {
-        return `Today, ${timeStr}`;
+        return t('date.today', { time: timeStr });
     } else if (d >= yesterdayStart) {
-        return `Yesterday, ${timeStr}`;
+        return t('date.yesterday', { time: timeStr });
     } else if (d >= threeDaysAgoStart) {
-        const weekday = d.toLocaleString('en-GB', { weekday: 'long' });
-        return `${weekday}, ${timeStr}`;
+        const weekday = d.toLocaleString(localeTag, { weekday: 'long' });
+        return t('date.weekday', { weekday, time: timeStr });
     } else {
-        return d.toLocaleString('de-DE', {
+        return d.toLocaleString(localeTag, {
             day: '2-digit', month: '2-digit', year: 'numeric',
             hour: '2-digit', minute: '2-digit'
         });
@@ -32,7 +35,7 @@ export function formatRelativeDate(timestamp) {
    Global Helper: Semantic Address Formatter
    ========================================================================== */
 export function formatShortAddress(pos) {
-    if (!pos) return "Unknown Location";
+    if (!pos) return t('common.unknownLocation');
     let shortAddress = '';
 
     if (pos.osmName && pos.osmName.trim() !== '') {
@@ -42,7 +45,10 @@ export function formatShortAddress(pos) {
     } else if (pos.road) {
         shortAddress = pos.road;
     } else {
-        return pos.displayName || `Lat: ${pos.latitude.toFixed(4)}, Lon: ${pos.longitude.toFixed(4)}`;
+        return pos.displayName || t('common.latLon', {
+            lat: pos.latitude.toFixed(4),
+            lon: pos.longitude.toFixed(4)
+        });
     }
 
     if (pos.city) shortAddress += `, ${pos.city}`;
@@ -57,8 +63,8 @@ export function formatShortAddress(pos) {
    address box, the saver LOCATION row and the saved position label.
    ========================================================================== */
 export function formatPlaceLabel(place) {
-    if (!place) return 'Unknown Location';
-    const name = place.name || place.formattedAddress || 'Selected place';
+    if (!place) return t('common.unknownLocation');
+    const name = place.name || place.formattedAddress || t('common.selectedPlace');
     const street = (place.street || '').trim();
     const houseNumber = (place.houseNumber || '').trim();
 
@@ -116,23 +122,23 @@ export function formatElevation(value) {
 }
 
 export function getWeatherText(code) {
-    if (code === undefined || code === null) return "Unknown";
+    if (code === undefined || code === null) return t('weather.unknown');
 
     switch (true) {
-        case (code === 0): return "Clear sky";
-        case (code >= 1 && code <= 3): return "Mainly clear";
-        case (code >= 45 && code <= 48): return "Fog";
-        case (code >= 51 && code <= 55): return "Drizzle";
-        case (code === 56 || code === 57): return "Freezing drizzle";
-        case (code >= 61 && code <= 65): return "Rain";
-        case (code === 66 || code === 67): return "Freezing rain";
-        case (code >= 71 && code <= 75): return "Snow fall";
-        case (code === 77): return "Snow grains";
-        case (code >= 80 && code <= 82): return "Rain showers";
-        case (code === 85 || code === 86): return "Snow showers";
-        case (code === 95): return "Thunderstorm";
-        case (code === 96 || code === 99): return "Thunderstorm with hail";
-        default: return "Unknown";
+        case (code === 0): return t('weather.clearSky');
+        case (code >= 1 && code <= 3): return t('weather.mainlyClear');
+        case (code >= 45 && code <= 48): return t('weather.fog');
+        case (code >= 51 && code <= 55): return t('weather.drizzle');
+        case (code === 56 || code === 57): return t('weather.freezingDrizzle');
+        case (code >= 61 && code <= 65): return t('weather.rain');
+        case (code === 66 || code === 67): return t('weather.freezingRain');
+        case (code >= 71 && code <= 75): return t('weather.snowFall');
+        case (code === 77): return t('weather.snowGrains');
+        case (code >= 80 && code <= 82): return t('weather.rainShowers');
+        case (code === 85 || code === 86): return t('weather.snowShowers');
+        case (code === 95): return t('weather.thunderstorm');
+        case (code === 96 || code === 99): return t('weather.thunderstormHail');
+        default: return t('weather.unknown');
     }
 }
 

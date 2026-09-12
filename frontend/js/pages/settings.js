@@ -1,3 +1,5 @@
+import { t, getLanguage, setLanguage } from '../i18n.js';
+
 /* ==========================================================================
    Page: Settings
    Verwaltet LocalStorage (userId), Password-Toggle und Save-Button.
@@ -29,6 +31,13 @@ export function initSettingsPage({ onSave, getActiveUserId }) {
         darkToggle.setAttribute('aria-checked', next === 'dark');
     });
 
+    // --- Language selector: aktuelle Sprache setzen, Wechsel persistiert + reload ---
+    const languageSelect = document.getElementById('language-select');
+    if (languageSelect) {
+        languageSelect.value = getLanguage();
+        languageSelect.addEventListener('change', () => setLanguage(languageSelect.value));
+    }
+
     // --- LocalStorage: userId beim Start ins Feld laden ---
     const savedId = localStorage.getItem('userId');
     if (savedId) {
@@ -43,7 +52,7 @@ export function initSettingsPage({ onSave, getActiveUserId }) {
         localStorage.setItem('userId', inputVal);
 
         statusDiv.style.color = "#16a34a";
-        statusDiv.innerText = "Settings saved successfully!";
+        statusDiv.innerText = t('settings.saved');
 
         if (onSave) onSave(getActiveUserId());
 

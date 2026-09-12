@@ -9,6 +9,7 @@ import {
     getLocateSavedMarker, setLocateSavedMarker
 } from '../state.js';
 import { formatShortAddress, formatRelativeDate, posMatchesFilter } from '../utils.js';
+import { t } from '../i18n.js';
 
 const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OSM_ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
@@ -118,7 +119,7 @@ export function renderMapMarkers() {
             `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">` +
             `<circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle>` +
             `<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>` +
-            `Share</button>` +
+            `${t('history.share')}</button>` +
             `</div>`,
             { maxWidth: 220 }
         );
@@ -206,7 +207,7 @@ export function initMapListeners() {
             } else {
                 navigator.clipboard.writeText(mapsUrl).then(() => {
                     const originalHTML = btn.innerHTML;
-                    btn.textContent = 'Copied!';
+                    btn.textContent = t('history.copied');
                     setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
                 }).catch(() => {});
             }

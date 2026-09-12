@@ -2,6 +2,7 @@
    locate.me – Application Entry Point
    Importiert alle Module und verdrahtet die App-Initialisierung.
    ========================================================================== */
+import { initI18n } from './js/i18n.js';
 import { checkBackendStatus } from './js/ui/status.js';
 import { silentBadgeSync } from './js/ui/badge.js';
 import { setHistoryView, initMapListeners } from './js/ui/map.js';
@@ -92,7 +93,11 @@ function initViewportZoomGuards() {
 /* ==========================================================================
    App Bootstrap
    ========================================================================== */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+    // Load the stored language and translate the static markup before any
+    // page module renders (t() is used throughout the app).
+    await initI18n();
 
     initViewportZoomGuards();
 

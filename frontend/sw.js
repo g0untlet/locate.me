@@ -8,19 +8,25 @@ importScripts('https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox
 
 /* Precache manifest – MUST stay in sync with index.html (?v= cache busters)
    and the js/ module tree. Only files actually served by the Network-First
-   routes below (navigations + same-origin script/style) belong here –
-   manifest.json, favicon and icons are not intercepted by the SW and are
-   therefore not precached. Precache is only the offline fallback: the
-   Network-First routes remain the only serving strategy, so content is
+   routes below (navigations + same-origin script/style + /locales/*.json)
+   belong here – manifest.json, favicon and icons are not intercepted by the
+   SW and are therefore not precached. Precache is only the offline fallback:
+   the Network-First routes remain the only serving strategy, so content is
    always fresh while online. */
 const SHELL = ['/', '/index.html'];
 const ASSETS = [
-    '/app.js?v=0.4.1_3',
-    '/css/style.css?v=0.4.1_4',
+    '/app.js?v=0.4.1_4',
+    '/css/style.css?v=0.4.1_6',
     '/js/config.js?v=0.3.1_34', '/js/utils.js', '/js/api.js', '/js/state.js',
-    '/js/ui/toast.js', '/js/ui/badge.js', '/js/ui/status.js', '/js/ui/map.js',
-    '/js/pages/settings.js', '/js/pages/locate.js', '/js/pages/history.js'
+    '/js/i18n.js', '/js/ui/toast.js', '/js/ui/badge.js', '/js/ui/status.js',
+    '/js/ui/map.js', '/js/pages/settings.js', '/js/pages/locate.js',
+    '/js/pages/history.js'
 ];
+
+// Locale dictionaries (fetched at runtime by js/i18n.js). Precached into their
+// own cache and served Network-First so the selected language also works
+// offline after the first online visit.
+const LOCALES = ['/locales/en.json', '/locales/de.json', '/locales/es.json'];
 
 // Third-party assets cached for offline map support. NetworkFirst keeps them
 // fresh when online (network wins); the cache is only the offline fallback.
@@ -38,9 +44,11 @@ self.addEventListener('install', (event) => {
     event.waitUntil((async () => {
         const shellCache = await caches.open('locateme-shell');
         const assetsCache = await caches.open('locateme-assets');
+        const localesCache = await caches.open('locateme-locales');
         const thirdPartyCache = await caches.open('locateme-thirdparty');
         await Promise.allSettled(SHELL.map(url => shellCache.add(url)));
         await Promise.allSettled(ASSETS.map(url => assetsCache.add(url)));
+        await Promise.allSettled(LOCALES.map(url => localesCache.add(url)));
         await Promise.allSettled(THIRD_PARTY.map(url => thirdPartyCache.add(url)));
         self.skipWaiting();
     })());
@@ -81,6 +89,23 @@ if (!self.workbox) {
             plugins: [
                 new CacheableResponsePlugin({ statuses: [0, 200] }),
                 new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+            ],
+        })
+    );
+
+    // Locale dictionaries (same-origin JSON) – network-first, offline fallback
+    // via the precached locateme-locales cache.
+    registerRoute(
+        ({ request, url }) =>
+            request.method === 'GET' &&
+            url.origin === self.location.origin &&
+            url.pathname.startsWith('/locales/') &&
+            url.pathname.endsWith('.json'),
+        new NetworkFirst({
+            cacheName: 'locateme-locales',
+            plugins: [
+                new CacheableResponsePlugin({ statuses: [0, 200] }),
+                new ExpirationPlugin({ maxEntries: 10, maxAgeSeconds: 30 * 24 * 60 * 60 }),
             ],
         })
     );
