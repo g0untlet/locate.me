@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/css" href="https://www.xml-sitemaps.com/css/sitemap.css"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <url>
+       <loc>https://www.locate-me.net/</loc>
+       <lastmod>2026-09-06T20:10:28+00:00</lastmod>
+       <priority>1.0000</priority>
+  </url>
+  <url>
+       <loc>https://www.locate-me.net/index.de.html</loc>
+       <lastmod>2026-09-06T20:10:25+00:00</lastmod>
+       <priority>0.8000</priority>
+  </url>
+  <url>
+       <loc>https://www.locate-me.net/index.html</loc>
+       <lastmod>2026-09-06T20:10:28+00:00</lastmod>
+       <priority>0.8000</priority>
+  </url>
+  <url>
+       <loc>https://www.locate-me.net/index.es.html</loc>
+       <lastmod>2026-09-06T20:10:30+00:00</lastmod>
+       <priority>0.8000</priority>
+  </url>
+  <url>
+       <loc>https://www.locate-me.net/release-notes.html</loc>
+       <lastmod>2026-09-06T19:57:28+00:00</lastmod>
+       <priority>0.8000</priority>
+  </url>
+  <url>
+       <loc>https://www.locate-me.net/privacy-policy.html</loc>
+       <lastmod>2026-09-06T19:56:58+00:00</lastmod>
+       <priority>0.8000</priority>
+  </url>
+  <url>
+       <loc>https://www.locate-me.net/release-notes.de.html</loc>
+       <lastmod>2026-09-06T19:57:35+00:00</lastmod>
+       <priority>0.6400</priority>
+  </url>
+  <url>
+       <loc>https://www.locate-me.net/release-notes.es.html</loc>
+       <lastmod>2026-09-06T19:57:47+00:00</lastmod>
+       <priority>0.6400</priority>
+  </url>
+</urlset>

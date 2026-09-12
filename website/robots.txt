@@ -1,0 +1,80 @@
+# robots.txt for www.locate-me.net
+
+# ---------------------------------------------------------------
+# 1. BLOCK AI TRAINING CRAWLERS
+# These bots scrape content to train large language models.
+# Blocking them does NOT affect your visibility in Google Search.
+# ---------------------------------------------------------------
+
+# OpenAI (GPTBot - model training)
+User-agent: GPTBot
+Disallow: /
+
+# Google (Google-Extended - Gemini/Vertex AI training, NOT Search)
+User-agent: Google-Extended
+Disallow: /
+
+# Anthropic (ClaudeBot - model training)
+User-agent: ClaudeBot
+Disallow: /
+
+# Common Crawl (CCBot - dataset used by many open-source LLMs)
+User-agent: CCBot
+Disallow: /
+
+# Meta (Meta-ExternalAgent - AI training)
+User-agent: Meta-ExternalAgent
+Disallow: /
+
+# ByteDance (Bytespider - AI training)
+User-agent: Bytespider
+Disallow: /
+
+# Perplexity (PerplexityBot - AI answer engine)
+User-agent: PerplexityBot
+Disallow: /
+
+# Apple (Applebot-Extended - Apple Intelligence training)
+User-agent: Applebot-Extended
+Disallow: /
+
+# ---------------------------------------------------------------
+# 2. ALLOW TRADITIONAL SEARCH ENGINES
+# You want the marketing site fully indexed.
+# ---------------------------------------------------------------
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+# ---------------------------------------------------------------
+# 3. DEFAULT RULE FOR EVERYONE ELSE
+# Allow all other well-behaved crawlers to index the site.
+# ---------------------------------------------------------------
+
+User-agent: *
+Allow: /
+
+# ---------------------------------------------------------------
+# 4. OPTIONAL: KEEP THE API OUT OF SEARCH RESULTS
+# If your static site ever links to /api/ endpoints, this prevents
+# them from being indexed. Safe to keep even if unused.
+# ---------------------------------------------------------------
+
+Disallow: /api/
+
+# ---------------------------------------------------------------
+# 5. SITEMAP (RECOMMENDED)
+# Helps search engines discover all your pages.
+# Only include this line if you actually create a sitemap.xml.
+# ---------------------------------------------------------------
+
+Sitemap: https://www.locate-me.net/sitemap.xml

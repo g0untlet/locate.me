@@ -10,7 +10,7 @@ set -euo pipefail
 LOCAL_FRONTEND_DIR="./frontend"
 REMOTE_USER="gauntlet"
 REMOTE_HOST="192.168.178.88"
-REMOTE_TARGET_DIR="/home/gauntlet/homelab/locate.me.dev/frontend/"
+REMOTE_TARGET_DIR="/media/ssd/locate.me/dev/frontend/"
 
 echo "===================================================="
 echo "🚀 Starting Frontend Deployment -> DEV Server"

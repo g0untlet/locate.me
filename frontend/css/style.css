@@ -21,6 +21,12 @@
     --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     --compass-north: #e11d48;
     --compass-south: #64748b;
+    --demo-color: #b91c1c;
+    --demo-bg: #fee2e2;
+    --demo-border: #fca5a5;
+    --warning-color: #b45309;
+    --warning-bg: #fffbeb;
+    --warning-border: #fde68a;
 }
 
 [data-theme="dark"] {
@@ -41,6 +47,12 @@
     --shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
     --compass-north: #fb7185;
     --compass-south: #94a3b8;
+    --demo-color: #fecaca;
+    --demo-bg: #450a0a;
+    --demo-border: #7f1d1d;
+    --warning-color: #fcd34d;
+    --warning-bg: #422006;
+    --warning-border: #78350f;
 }
 
 * {
@@ -59,6 +71,17 @@ body {
     height: 100dvh;
     overflow: hidden;
     padding: 0;
+}
+
+/* Native-app feel: suppress browser pinch- and double-tap-zoom in the app UI.
+   Panning/scrolling stays enabled; Leaflet maps override this below so their
+   own pinch/double-tap zoom keeps working. */
+html, body {
+    touch-action: pan-x pan-y;
+}
+
+.leaflet-container {
+    touch-action: none;
 }
 
 /* ==========================================================================
@@ -260,6 +283,9 @@ body {
 #status {
     font-size: 0.9rem;
     font-weight: 500;
+    display: inline-flex;   /* icon + text on one line, still page-centered */
+    align-items: center;
+    gap: 7px;
 }
 
 .status-ready { color: #0284c7; }
@@ -267,6 +293,65 @@ body {
 .status-loading { color: #d97706; animation: pulse 1.5s infinite; }
 .status-success { color: #16a34a; }
 .status-error { color: #dc2626; }
+
+/* GPS acquisition: steady text + pulsing "signal" dot (loading amber) */
+.status-searching {
+    color: #d97706;
+}
+
+.status-searching::before {
+    content: "";
+    width: 9px;
+    height: 9px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: currentColor;
+    animation: gps-ping 1.4s ease-out infinite;
+}
+
+@keyframes gps-ping {
+    0%   { box-shadow: 0 0 0 0 currentColor; }
+    70%  { box-shadow: 0 0 0 8px rgba(217, 119, 6, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .status-searching::before { animation: none; }
+}
+
+/* GPS fallback prompt: amber warning card offering the last known location */
+.gps-fallback {
+    width: 100%;
+    max-width: 320px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border: 1px solid var(--warning-border);
+    border-radius: 12px;
+    background-color: var(--warning-bg);
+    color: var(--warning-color);
+    text-align: center;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.gps-fallback-text {
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.gps-fallback .track-btn {
+    margin-bottom: 0;
+}
+
+.gps-fallback .track-btn-row {
+    width: 100%;
+    max-width: 280px;
+    margin-bottom: 0;
+}
 
 @keyframes pulse {
     0% { opacity: 0.6; }
@@ -817,7 +902,12 @@ body {
 
 .demo-mode-note {
     font-size: 0.75rem;
-    color: var(--text-muted);
+    font-weight: 600;
+    color: var(--demo-color);
+    background-color: var(--demo-bg);
+    border: 1px solid var(--demo-border);
+    border-radius: 8px;
+    padding: 6px 12px;
     text-align: center;
     animation: pulse 1.5s infinite;
 }
@@ -1785,6 +1875,13 @@ body {
     width: 14px;
     height: 14px;
     flex-shrink: 0;
+}
+
+/* Amber variant of the banner used when a last-known (fallback) fix is shown */
+.fallback-banner {
+    color: var(--warning-color);
+    background-color: var(--warning-bg);
+    border-color: var(--warning-border);
 }
 
 .app-container {

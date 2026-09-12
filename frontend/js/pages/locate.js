@@ -1,5 +1,5 @@
 import { apiGetCurrentPosition, apiGetPlaces, apiPostPosition, TOO_MANY_REQUESTS_MESSAGE } from '../api.js';
-import { getCachedLocatePosition, setCachedLocatePosition } from '../state.js';
+import { getCachedLocatePosition, setCachedLocatePosition, getLastKnownFix, setLastKnownFix } from '../state.js';
 import { showLocateMap, showLocateSavedMap } from '../ui/map.js';
 import { showError } from '../ui/status.js';
 import {
@@ -11,6 +11,7 @@ import {
     getPlaceIconSvg,
     formatPlaceLabel,
     formatShortAddress,
+    formatRelativeDate,
     PREDEFINED_TAGS
 } from '../utils.js';
 
@@ -47,6 +48,10 @@ let isFetching = false;
    dass eine langsame (Geoapify-)Places-Antwort einer älteren Runde in eine
    neuere Runde hineinfunkt (Stale-Guard). */
 let fetchEpoch = 0;
+
+/* Zeit-Label ("HH:MM") der zuletzt gerenderten Vorschau – wird beim "Back" aus
+   der Saved-Ansicht genutzt, um den Chooser-Status wiederherzustellen. */
+let lastPreviewLabel = '';
 
 function setFetchBusy(busy) {
     isFetching = busy;
@@ -644,13 +649,201 @@ function setOfflineBanner(show) {
 }
 
 /* ==========================================================================
+   GPS-Fallback: Kommt kein Fix zustande, wird zuerst ein schneller
+   Low-Accuracy-/Netzwerk-Versuch unternommen; schlägt auch der fehl, wird der
+   letzte bekannte Fix angeboten (mit Alter + Genauigkeit). Ohne Netz bleibt
+   das bisherige Offline-Verhalten (Preview/Save brauchen ohnehin Netz).
+   ========================================================================== */
+const FALLBACK_BANNER_ID = 'fallback-banner-locate';
+
+function ensureFallbackBanner() {
+    if (document.getElementById(FALLBACK_BANNER_ID)) return;
+    const page = document.getElementById('page-locate');
+    if (!page) return;
+    const banner = document.createElement('div');
+    banner.id = FALLBACK_BANNER_ID;
+    banner.className = 'offline-banner fallback-banner hidden';
+    banner.setAttribute('role', 'status');
+    banner.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <span></span>`;
+    page.insertBefore(banner, page.firstChild);
+}
+
+function setFallbackBanner(show, text) {
+    if (show) ensureFallbackBanner();
+    const banner = document.getElementById(FALLBACK_BANNER_ID);
+    if (!banner) return;
+    if (text) {
+        const span = banner.querySelector('span');
+        if (span) span.textContent = text;
+    }
+    banner.classList.toggle('hidden', !show);
+}
+
+function hideLastFixPrompt() {
+    const el = document.getElementById('gps-fallback');
+    if (el) el.classList.add('hidden');
+}
+
+/* Zeigt den Fallback-Dialog mit Alter + Genauigkeit des letzten Fixes. */
+function showLastFixPrompt(fix, deps) {
+    const el   = document.getElementById('gps-fallback');
+    const text = document.getElementById('gps-fallback-text');
+    if (!el || !text) {
+        // Kein Prompt-Markup verfügbar -> bisheriges Fehlerverhalten
+        showError('GPS Timeout: No position found.');
+        setFetchBusy(false);
+        return;
+    }
+
+    const age = formatRelativeDate(fix.timestamp);
+    const acc = Number.isFinite(fix.accuracy) ? ` \u00B1${Math.round(fix.accuracy)}m` : '';
+    text.textContent = `No GPS signal. Use last known location from ${age}${acc}?`;
+
+    // onclick-Zuweisung statt addEventListener: verhindert doppelte Listener
+    // bei mehrfachem Öffnen des Prompts.
+    document.getElementById('gps-fallback-use').onclick = () => {
+        hideLastFixPrompt();
+        setFetchBusy(true);
+        fetchCurrentPosition(
+            {
+                coords: {
+                    latitude: fix.latitude,
+                    longitude: fix.longitude,
+                    accuracy: Number.isFinite(fix.accuracy) ? fix.accuracy : null
+                }
+            },
+            deps,
+            {
+                persistFix: false,
+                fallback: true,
+                fallbackText: `Using last known location from ${age}${acc} \u2014 may be inaccurate.`
+            }
+        );
+    };
+
+    document.getElementById('gps-fallback-retry').onclick = () => {
+        hideLastFixPrompt();
+        setFetchBusy(true);
+        startGpsWatch(deps);
+    };
+
+    document.getElementById('gps-fallback-cancel').onclick = () => {
+        hideLastFixPrompt();
+        showError('GPS Timeout: No position found.');
+        setFetchBusy(false);
+    };
+
+    setFetchBusy(false);
+    el.classList.remove('hidden');
+}
+
+/* Kein GPS-Fix: Low-Accuracy-Netzwerkversuch, danach letzten Fix anbieten. */
+function handleNoFix(deps, reasonText) {
+    const reason = reasonText || 'GPS Timeout: No position found.';
+
+    if (!navigator.onLine) {
+        ensureOfflineBanner();
+        setOfflineBanner(true);
+        showError(reason);
+        setFetchBusy(false);
+        return;
+    }
+
+    if (!navigator.geolocation) {
+        showError('Geolocation is not supported by your browser.');
+        setFetchBusy(false);
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        (pos) => fetchCurrentPosition(pos, deps),
+        () => {
+            const lastFix = getLastKnownFix(deps.getActiveUserId());
+            if (lastFix) {
+                showLastFixPrompt(lastFix, deps);
+            } else {
+                showError(reason);
+                setFetchBusy(false);
+            }
+        },
+        { enableHighAccuracy: false, timeout: 6000, maximumAge: 300000 }
+    );
+}
+
+/* Startet die GPS-Suche – Fetch-Button und "Retry GPS" teilen diese Logik. */
+function startGpsWatch(deps) {
+    const statusText = document.getElementById('status');
+
+    hideLastFixPrompt();
+    setFallbackBanner(false);
+
+    statusText.innerText = "Searching for GPS signal...";
+    statusText.className = "status-searching";
+    hideViews();
+    selectedPlace = null;
+    setCachedLocatePosition(null);
+
+    if (!navigator.geolocation) {
+        showError("Geolocation is not supported by your browser.");
+        setFetchBusy(false);
+        return;
+    }
+
+    let watchId      = null;
+    let bestPosition = null;
+
+    const maxWaitTimer = setTimeout(() => {
+        if (watchId) {
+            navigator.geolocation.clearWatch(watchId);
+            if (bestPosition) {
+                statusText.innerText = "Timeout reached. Fetching best available...";
+                fetchCurrentPosition(bestPosition, deps);
+            } else {
+                handleNoFix(deps, "GPS Timeout: No position found.");
+            }
+        }
+    }, GPS_MAX_WAIT_MS);
+
+    watchId = navigator.geolocation.watchPosition(
+        (position) => {
+            if (!bestPosition || position.coords.accuracy < bestPosition.coords.accuracy) {
+                bestPosition = position;
+                statusText.innerText = `Improving signal... (\u00B1${Math.round(position.coords.accuracy)}m)`;
+            }
+            if (position.coords.accuracy <= GPS_TARGET_ACCURACY_M) {
+                clearTimeout(maxWaitTimer);
+                navigator.geolocation.clearWatch(watchId);
+                fetchCurrentPosition(position, deps);
+            }
+        },
+        (error) => {
+            clearTimeout(maxWaitTimer);
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+            if (bestPosition) {
+                fetchCurrentPosition(bestPosition, deps);
+            } else {
+                handleNoFix(deps, `GPS Error: ${error.message}`);
+            }
+        },
+        GEO_OPTIONS
+    );
+}
+
+/* ==========================================================================
    Step 1: GET /api/positions/current + GET /api/places – Preview Renderer
    Fetches the enriched preview (weather/address) and the nearby places in
    parallel. The chooser (weather/address) is shown as soon as the preview is
    ready; the places list fills in asynchronously when Geoapify answers. A
    places failure degrades gracefully to the address-only chooser.
    ========================================================================== */
-function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus }) {
+function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus }, options = {}) {
     const statusText = document.getElementById('status');
     const fetchBtn   = document.getElementById('btn-fetch-location');
 
@@ -677,12 +870,25 @@ function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus })
             const timeLabel = new Date().toLocaleString('de-DE', {
                 hour: '2-digit', minute: '2-digit'
             });
+            lastPreviewLabel = timeLabel;
 
             // Vorschau (Adresse/Wetter) sofort rendern; Places füllt später nach.
             renderChooser(data, []);
             previewDone = true;
 
             setCachedLocatePosition({ ...data, accuracy: position.coords.accuracy });
+
+            // Letzten echten Fix für den GPS-Fallback merken. Ein bereits als
+            // Fallback genutzter Fix darf seinen Zeitstempel nicht auffrischen.
+            if (options.persistFix !== false) {
+                setLastKnownFix(userId, {
+                    latitude,
+                    longitude,
+                    accuracy: position.coords.accuracy,
+                    timestamp: Date.now()
+                });
+            }
+
             fetchBtn.textContent = 'Refresh';
             showView('chooser');
             statusText.innerText = `Preview from ${timeLabel} \u2014 not yet saved.`;
@@ -693,11 +899,13 @@ function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus })
 
             checkBackendStatus();
             setOfflineBanner(false);
+            setFallbackBanner(!!options.fallback, options.fallbackText);
             setFetchBusy(false);
         })
         .catch(err => {
             if (epoch !== fetchEpoch) return; // neuere Runde übernimmt die UI
             failed = true;
+            setFallbackBanner(false);
             if (err && err.status === 429) {
                 showError(TOO_MANY_REQUESTS_MESSAGE);
                 checkBackendStatus();
@@ -739,8 +947,10 @@ function sendPositionToBackend(payload, { getActiveUserId, checkBackendStatus, s
             showLocateSavedMap(data.latitude, data.longitude);
 
             resetSaveOptions();
-            setCachedLocatePosition(null);
+            // Preview bewusst NICHT verwerfen: der "Back"-Button der Saved-
+            // Ansicht kehrt in den Chooser zurück (Weiter/Save erneut möglich).
             selectedPlace = null;
+            setFallbackBanner(false);
             document.getElementById('btn-fetch-location').textContent = 'Fetch Location';
 
             statusText.innerText = "Location successfully saved.";
@@ -837,69 +1047,7 @@ export function initLocatePage(deps) {
         // auf den Fetch-Button ist dafür der natürliche Ort.
         requestCompassPermission();
         setFetchBusy(true);
-
-        const statusText = document.getElementById('status');
-
-        statusText.innerText = "Searching for GPS signal...";
-        statusText.className = "status-loading";
-        hideViews();
-        selectedPlace = null;
-        setCachedLocatePosition(null);
-
-        if (!navigator.geolocation) {
-            showError("Geolocation is not supported by your browser.");
-            setFetchBusy(false);
-            return;
-        }
-
-        let watchId      = null;
-        let bestPosition = null;
-
-        const maxWaitTimer = setTimeout(() => {
-            if (watchId) {
-                navigator.geolocation.clearWatch(watchId);
-                if (bestPosition) {
-                    statusText.innerText = "Timeout reached. Fetching best available...";
-                    fetchCurrentPosition(bestPosition, deps);
-                } else {
-                    if (!navigator.onLine) {
-                        ensureOfflineBanner();
-                        setOfflineBanner(true);
-                    }
-                    showError("GPS Timeout: No position found.");
-                    setFetchBusy(false);
-                }
-            }
-        }, GPS_MAX_WAIT_MS);
-
-        watchId = navigator.geolocation.watchPosition(
-            (position) => {
-                if (!bestPosition || position.coords.accuracy < bestPosition.coords.accuracy) {
-                    bestPosition = position;
-                    statusText.innerText = `Improving signal... (\u00B1${Math.round(position.coords.accuracy)}m)`;
-                }
-                if (position.coords.accuracy <= GPS_TARGET_ACCURACY_M) {
-                    clearTimeout(maxWaitTimer);
-                    navigator.geolocation.clearWatch(watchId);
-                    fetchCurrentPosition(position, deps);
-                }
-            },
-            (error) => {
-                clearTimeout(maxWaitTimer);
-                if (watchId) navigator.geolocation.clearWatch(watchId);
-                if (bestPosition) {
-                    fetchCurrentPosition(bestPosition, deps);
-                } else {
-                    if (!navigator.onLine) {
-                        ensureOfflineBanner();
-                        setOfflineBanner(true);
-                    }
-                    showError(`GPS Error: ${error.message}`);
-                    setFetchBusy(false);
-                }
-            },
-            GEO_OPTIONS
-        );
+        startGpsWatch(deps);
     });
 
     // --- Chooser: select resolved address ---
@@ -911,6 +1059,18 @@ export function initLocatePage(deps) {
     // --- Saver: BACK to chooser view (no backend reload – the chooser state
     //     and the cached preview are still in the DOM) ---
     document.getElementById('btn-back').addEventListener('click', () => showView('chooser'));
+
+    // --- Saved: BACK to the chooser view (weather, resolved address and places
+    //     are still in the DOM; the preview cache is kept) ---
+    document.getElementById('btn-saved-back').addEventListener('click', () => {
+        showView('chooser');
+        document.getElementById('btn-fetch-location').textContent = 'Refresh';
+        const statusText = document.getElementById('status');
+        statusText.innerText = lastPreviewLabel
+            ? `Preview from ${lastPreviewLabel} \u2014 not yet saved.`
+            : 'Preview \u2014 not yet saved.';
+        statusText.className = 'status-preview';
+    });
 
     // --- SAVE LOCATION Button ---
     document.getElementById('track-btn').addEventListener('click', () => {
