@@ -1109,3 +1109,44 @@ export function initLocatePage(deps) {
         sendPositionToBackend(payload, deps);
     });
 }
+
+/* ==========================================================================
+   Language-Change Support: reset the Locate page to a clean, correctly
+   translated initial state. Called from app.js on "i18n:languagechanged".
+   An unsaved preview is discarded (the user changes the language rarely), and
+   any in-flight preview/places fetch is invalidated so it cannot repaint the
+   reset UI with stale-language content.
+   ========================================================================== */
+export function resetLocatePage() {
+    fetchEpoch += 1; // invalidiert eine evtl. laufende Vorschau/Places-Runde
+
+    setFetchBusy(false);
+    hideLastFixPrompt();
+    // Dynamische Banner entfernen, damit sie beim nächsten Mal mit dem neuen
+    // Sprachtext neu aufgebaut werden (ensure* würde sonst early-returnen).
+    document.getElementById(OFFLINE_BANNER_ID)?.remove();
+    document.getElementById(FALLBACK_BANNER_ID)?.remove();
+
+    hideViews();
+    selectedPlace = null;
+    lastPreviewLabel = '';
+    setCachedLocatePosition(null);
+    resetSaveOptions();
+
+    const statusText = document.getElementById('status');
+    if (statusText) {
+        statusText.innerText = t('locate.ready');
+        statusText.className = 'status-ready';
+    }
+
+    const fetchBtn = document.getElementById('btn-fetch-location');
+    if (fetchBtn) fetchBtn.textContent = t('locate.fetchLocation');
+
+    const placesList = document.getElementById('places-list');
+    if (placesList) placesList.innerHTML = '';
+    const placesCard = document.getElementById('places-card');
+    if (placesCard) {
+        placesCard.classList.add('hidden');
+        placesCard.removeAttribute('aria-busy');
+    }
+}

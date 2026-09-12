@@ -66,22 +66,39 @@ async function fetchLocale(lang) {
 }
 
 /* ==========================================================================
-   Public: bootstrap – load the stored language + English fallback, then
-   translate the static markup. Never throws: on failure the app falls back to
-   English / raw keys so it stays usable.
+   Internal: load the English fallback + the requested language into memory.
+   A request token guards against out-of-order responses when the language is
+   changed again before the previous load finished. Never throws (fetch
+   failures fall back to empty/previous dictionaries).
+   Returns true when this call was the latest one and applied its result.
    ========================================================================== */
-export async function initI18n() {
-    currentLanguage = normalizeLanguage(localStorage.getItem('lang') || DEFAULT_LANGUAGE);
+let loadToken = 0;
+
+async function loadDictionaries(lang) {
+    const token = ++loadToken;
 
     const [fallback, selected] = await Promise.all([
-        fetchLocale(DEFAULT_LANGUAGE).catch(() => ({})),
-        currentLanguage === DEFAULT_LANGUAGE
+        fetchLocale(DEFAULT_LANGUAGE).catch(() => fallbackStrings || {}),
+        lang === DEFAULT_LANGUAGE
             ? Promise.resolve(null)
-            : fetchLocale(currentLanguage).catch(() => null)
+            : fetchLocale(lang).catch(() => null)
     ]);
+
+    if (token !== loadToken) return false; // a newer load superseded this one
 
     fallbackStrings = fallback || {};
     currentStrings = selected || fallbackStrings;
+    currentLanguage = lang;
+    return true;
+}
+
+/* ==========================================================================
+   Public: bootstrap – load the stored language + English fallback, then
+   translate the static markup.
+   ========================================================================== */
+export async function initI18n() {
+    const stored = normalizeLanguage(localStorage.getItem('lang') || DEFAULT_LANGUAGE);
+    await loadDictionaries(stored);
 
     try {
         applyTranslations();
@@ -116,12 +133,22 @@ export function applyTranslations(root = document) {
 }
 
 /* ==========================================================================
-   Public: persist a new language and reload so every rendered string is
-   re-translated from a clean boot.
+   Public: persist a new language and apply it in place (no page reload).
+   Reloading a standalone PWA leaves the mobile viewport mis-measured (the
+   bottom navigation got clipped until the app was killed), so the static
+   markup is re-translated and an "i18n:languagechanged" event is dispatched
+   so page modules can re-render their dynamic content.
    ========================================================================== */
-export function setLanguage(lang) {
+export async function setLanguage(lang) {
     const next = normalizeLanguage(lang);
+    if (next === currentLanguage) return next;
+
     localStorage.setItem('lang', next);
-    if (next === currentLanguage) return;
-    window.location.reload();
+
+    const applied = await loadDictionaries(next);
+    if (!applied) return currentLanguage; // superseded by a newer request
+
+    applyTranslations();
+    document.dispatchEvent(new Event('i18n:languagechanged'));
+    return next;
 }

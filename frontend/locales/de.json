@@ -42,7 +42,7 @@
     "locate.offlineBanner": "Offline — du bist offline. Vorschau nicht verfügbar.",
 
     "label.temperature": "TEMPERATUR",
-    "label.condition": "ZUSTAND",
+    "label.condition": "WETTERLAGE",
     "label.uvIndex": "UV-INDEX",
     "label.resolvedAddress": "ERMITTELTE ADRESSE",
     "label.location": "STANDORT",

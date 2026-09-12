@@ -352,6 +352,9 @@ function initPullToRefresh(deps) {
     }
 
     page.addEventListener('touchstart', (e) => {
+        // Map-View: Pull-to-Refresh aus, damit Pinch-Zoom/Pan der Leaflet-Karte
+        // keinen Reload auslöst. In der List-View bleibt PTR aktiv.
+        if (getCurrentHistoryView() === 'map') return;
         if (refreshing) return;
         if (list.scrollTop > 0) return;
         startY  = e.touches[0].clientY;
@@ -359,6 +362,7 @@ function initPullToRefresh(deps) {
     }, { passive: true });
 
     page.addEventListener('touchmove', (e) => {
+        if (getCurrentHistoryView() === 'map') return;
         if (!pulling || refreshing) return;
         const pullY = e.touches[0].clientY - startY;
         if (pullY <= 0) { pulling = false; return; }
@@ -685,4 +689,17 @@ export function fetchAndRenderHistory(deps) {
     } else {
         fetchWithCoords(null, null);
     }
+}
+
+/* ==========================================================================
+   Language-Change Support: drop the dynamically created widgets that carry
+   translated text (filter bar incl. the empty-result hint, offline banner).
+   Both early-return when re-created, so removing them makes the next History
+   visit rebuild them in the new language. The log cards themselves are already
+   rebuilt by fetchAndRenderHistory on every visit.
+   Called from app.js on "i18n:languagechanged".
+   ========================================================================== */
+export function invalidateHistoryI18n() {
+    document.getElementById('history-search-bar')?.remove();
+    document.getElementById(OFFLINE_BANNER_ID)?.remove();
 }
