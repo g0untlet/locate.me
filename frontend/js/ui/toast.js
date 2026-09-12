@@ -1,3 +1,5 @@
+import { t } from '../i18n.js';
+
 /* ==========================================================================
    Status Toast Notification
    Zeigt einen temporären Online/Offline-Hinweis am oberen Bildschirmrand.
@@ -10,7 +12,7 @@ export function showStatusToast(state) {
     const toast = document.createElement('div');
     toast.id = 'status-toast';
     toast.className = `status-toast status-toast--${state}`;
-    toast.textContent = state === 'online' ? '✓ Backend online' : '✗ Backend not reachable';
+    toast.textContent = state === 'online' ? t('toast.online') : t('toast.offline');
 
     document.querySelector('.app-container').appendChild(toast);
 

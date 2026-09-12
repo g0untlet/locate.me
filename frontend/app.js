@@ -2,12 +2,13 @@
    locate.me – Application Entry Point
    Importiert alle Module und verdrahtet die App-Initialisierung.
    ========================================================================== */
+import { initI18n } from './js/i18n.js';
 import { checkBackendStatus } from './js/ui/status.js';
 import { silentBadgeSync } from './js/ui/badge.js';
 import { setHistoryView, initMapListeners } from './js/ui/map.js';
 import { initSettingsPage } from './js/pages/settings.js';
-import { initLocatePage } from './js/pages/locate.js';
-import { fetchAndRenderHistory, showHistorySkeleton } from './js/pages/history.js';
+import { initLocatePage, resetLocatePage } from './js/pages/locate.js';
+import { fetchAndRenderHistory, showHistorySkeleton, invalidateHistoryI18n } from './js/pages/history.js';
 
 /* ==========================================================================
    Global Helper: Aktive User-ID aus LocalStorage lesen
@@ -92,7 +93,11 @@ function initViewportZoomGuards() {
 /* ==========================================================================
    App Bootstrap
    ========================================================================== */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+    // Load the stored language and translate the static markup before any
+    // page module renders (t() is used throughout the app).
+    await initI18n();
 
     initViewportZoomGuards();
 
@@ -133,6 +138,20 @@ document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
         checkBackendStatus();
     }
+});
+
+/* ==========================================================================
+   Language switch: setLanguage() applies the static markup in place (no
+   reload) and fires "i18n:languagechanged". Refresh the page-specific
+   dynamic content so nothing keeps rendering in the previous language.
+   ========================================================================== */
+document.addEventListener('i18n:languagechanged', () => {
+    checkBackendStatus();          // Settings backend-info + status title
+    resetLocatePage();             // discard preview, rebuild dynamic strings
+    invalidateHistoryI18n();       // filter bar + offline banner rebuild lazily
+
+    const settingsStatus = document.getElementById('settings-status');
+    if (settingsStatus) settingsStatus.innerText = '';
 });
 
 registerServiceWorker();

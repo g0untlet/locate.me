@@ -1,7 +1,8 @@
-import { apiGetCurrentPosition, apiGetPlaces, apiPostPosition, TOO_MANY_REQUESTS_MESSAGE } from '../api.js';
+import { apiGetCurrentPosition, apiGetPlaces, apiPostPosition } from '../api.js';
 import { getCachedLocatePosition, setCachedLocatePosition, getLastKnownFix, setLastKnownFix } from '../state.js';
 import { showLocateMap, showLocateSavedMap } from '../ui/map.js';
 import { showError } from '../ui/status.js';
+import { t } from '../i18n.js';
 import {
     getWeatherIconSvg,
     getWeatherText,
@@ -308,7 +309,7 @@ function resetSaveOptions() {
         chips.querySelectorAll('.tag-chip--selected').forEach(c => c.classList.remove('tag-chip--selected'));
     }
     if (comment) comment.value = '';
-    if (counter) counter.textContent = '0/25';
+    if (counter) counter.textContent = t('saveOptions.commentCounter', { count: 0 });
     updateSaveOptionsSummary();
 }
 
@@ -353,7 +354,7 @@ function initSaveOptions() {
 
     if (comment && counter) {
         comment.addEventListener('input', () => {
-            counter.textContent = `${comment.value.length}/25`;
+            counter.textContent = t('saveOptions.commentCounter', { count: comment.value.length });
             updateSaveOptionsSummary();
         });
     }
@@ -406,7 +407,7 @@ function fillAddress(container, data) {
         ${getLocationIconSvg(data.osmCategory, data.osmType)}
         <span>${formatShortAddress(data)}</span>
     `;
-    container.title = data.displayName || "No detailed address available.";
+    container.title = data.displayName || t('common.noDetailedAddress');
 }
 
 function setElevation(el, data) {
@@ -470,7 +471,7 @@ function renderPlacesList(places) {
 
     card.classList.remove('hidden');
     if (count) {
-        count.textContent = `${top.length} place${top.length === 1 ? '' : 's'}`;
+        count.textContent = t(top.length === 1 ? 'places.countOne' : 'places.countOther', { count: top.length });
     }
 
     // Compass-Dial nur sichtbar, wenn Sensor-Events vorhanden sind
@@ -485,7 +486,7 @@ function renderPlacesList(places) {
         const direction = place.direction || '';
         row.innerHTML = `
             ${getPlaceIconSvg(place.primaryCategory)}
-            <span class="place-row-name">${escapeHtml(place.name || place.formattedAddress || 'Unknown place')}</span>
+            <span class="place-row-name">${escapeHtml(place.name || place.formattedAddress || t('places.unknownPlace'))}</span>
             <span class="place-row-distance">${formatDistanceMeters(place.distance)}${direction ? ` ${direction}` : ''}</span>
         `;
         row.addEventListener('click', () => selectPlace(place, row));
@@ -506,7 +507,7 @@ function showPlacesLoading() {
 
     card.classList.remove('hidden');
     card.setAttribute('aria-busy', 'true');
-    if (count) count.textContent = 'Looking for places\u2026';
+    if (count) count.textContent = t('places.loading');
 
     const skeletonRow =
         '<div class="place-row place-row--loading" aria-hidden="true">' +
@@ -530,7 +531,7 @@ function renderPlacesError() {
     card.removeAttribute('aria-busy');
     if (count) count.textContent = '';
     card.classList.remove('hidden');
-    list.innerHTML = `<div class="places-error" role="status">Couldn't load places around you right now.</div>`;
+    list.innerHTML = `<div class="places-error" role="status">${t('places.error')}</div>`;
 }
 
 function selectPlace(place, row) {
@@ -618,7 +619,6 @@ function showSavedCard(data) {
    Eigene ID, damit keine Kollision mit dem History-Banner entsteht.
    ========================================================================== */
 const OFFLINE_BANNER_ID = 'offline-banner-locate';
-const OFFLINE_BANNER_TEXT = "Offline — you're offline. Preview unavailable.";
 
 function ensureOfflineBanner() {
     if (document.getElementById(OFFLINE_BANNER_ID)) return;
@@ -639,7 +639,7 @@ function ensureOfflineBanner() {
             <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
             <line x1="12" y1="20" x2="12.01" y2="20"></line>
         </svg>
-        <span>${OFFLINE_BANNER_TEXT}</span>`;
+        <span>${t('locate.offlineBanner')}</span>`;
     page.insertBefore(banner, page.firstChild);
 }
 
@@ -697,14 +697,14 @@ function showLastFixPrompt(fix, deps) {
     const text = document.getElementById('gps-fallback-text');
     if (!el || !text) {
         // Kein Prompt-Markup verfügbar -> bisheriges Fehlerverhalten
-        showError('GPS Timeout: No position found.');
+        showError(t('locate.gpsTimeout'));
         setFetchBusy(false);
         return;
     }
 
     const age = formatRelativeDate(fix.timestamp);
     const acc = Number.isFinite(fix.accuracy) ? ` \u00B1${Math.round(fix.accuracy)}m` : '';
-    text.textContent = `No GPS signal. Use last known location from ${age}${acc}?`;
+    text.textContent = t('locate.noGpsUseLast', { age, accuracy: acc });
 
     // onclick-Zuweisung statt addEventListener: verhindert doppelte Listener
     // bei mehrfachem Öffnen des Prompts.
@@ -723,7 +723,7 @@ function showLastFixPrompt(fix, deps) {
             {
                 persistFix: false,
                 fallback: true,
-                fallbackText: `Using last known location from ${age}${acc} \u2014 may be inaccurate.`
+                fallbackText: t('locate.usingLast', { age, accuracy: acc })
             }
         );
     };
@@ -736,7 +736,7 @@ function showLastFixPrompt(fix, deps) {
 
     document.getElementById('gps-fallback-cancel').onclick = () => {
         hideLastFixPrompt();
-        showError('GPS Timeout: No position found.');
+        showError(t('locate.gpsTimeout'));
         setFetchBusy(false);
     };
 
@@ -746,7 +746,7 @@ function showLastFixPrompt(fix, deps) {
 
 /* Kein GPS-Fix: Low-Accuracy-Netzwerkversuch, danach letzten Fix anbieten. */
 function handleNoFix(deps, reasonText) {
-    const reason = reasonText || 'GPS Timeout: No position found.';
+    const reason = reasonText || t('locate.gpsTimeout');
 
     if (!navigator.onLine) {
         ensureOfflineBanner();
@@ -757,7 +757,7 @@ function handleNoFix(deps, reasonText) {
     }
 
     if (!navigator.geolocation) {
-        showError('Geolocation is not supported by your browser.');
+        showError(t('locate.geolocationUnsupported'));
         setFetchBusy(false);
         return;
     }
@@ -784,14 +784,14 @@ function startGpsWatch(deps) {
     hideLastFixPrompt();
     setFallbackBanner(false);
 
-    statusText.innerText = "Searching for GPS signal...";
+    statusText.innerText = t('locate.searchingGps');
     statusText.className = "status-searching";
     hideViews();
     selectedPlace = null;
     setCachedLocatePosition(null);
 
     if (!navigator.geolocation) {
-        showError("Geolocation is not supported by your browser.");
+        showError(t('locate.geolocationUnsupported'));
         setFetchBusy(false);
         return;
     }
@@ -803,10 +803,10 @@ function startGpsWatch(deps) {
         if (watchId) {
             navigator.geolocation.clearWatch(watchId);
             if (bestPosition) {
-                statusText.innerText = "Timeout reached. Fetching best available...";
+                statusText.innerText = t('locate.timeoutBestAvailable');
                 fetchCurrentPosition(bestPosition, deps);
             } else {
-                handleNoFix(deps, "GPS Timeout: No position found.");
+                handleNoFix(deps, t('locate.gpsTimeout'));
             }
         }
     }, GPS_MAX_WAIT_MS);
@@ -815,7 +815,7 @@ function startGpsWatch(deps) {
         (position) => {
             if (!bestPosition || position.coords.accuracy < bestPosition.coords.accuracy) {
                 bestPosition = position;
-                statusText.innerText = `Improving signal... (\u00B1${Math.round(position.coords.accuracy)}m)`;
+                statusText.innerText = t('locate.improvingSignal', { accuracy: Math.round(position.coords.accuracy) });
             }
             if (position.coords.accuracy <= GPS_TARGET_ACCURACY_M) {
                 clearTimeout(maxWaitTimer);
@@ -829,7 +829,7 @@ function startGpsWatch(deps) {
             if (bestPosition) {
                 fetchCurrentPosition(bestPosition, deps);
             } else {
-                handleNoFix(deps, `GPS Error: ${error.message}`);
+                handleNoFix(deps, t('locate.gpsError', { message: error.message }));
             }
         },
         GEO_OPTIONS
@@ -847,7 +847,7 @@ function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus },
     const statusText = document.getElementById('status');
     const fetchBtn   = document.getElementById('btn-fetch-location');
 
-    statusText.innerText = "Fetching location data...";
+    statusText.innerText = t('locate.fetching');
     statusText.className = "status-loading";
 
     const { latitude, longitude } = position.coords;
@@ -889,9 +889,9 @@ function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus },
                 });
             }
 
-            fetchBtn.textContent = 'Refresh';
+            fetchBtn.textContent = t('locate.refresh');
             showView('chooser');
-            statusText.innerText = `Preview from ${timeLabel} \u2014 not yet saved.`;
+            statusText.innerText = t('locate.previewFrom', { time: timeLabel });
             statusText.className = "status-preview";
 
             if (arrived) renderPlacesResult(arrivedPlaces);
@@ -907,7 +907,7 @@ function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus },
             failed = true;
             setFallbackBanner(false);
             if (err && err.status === 429) {
-                showError(TOO_MANY_REQUESTS_MESSAGE);
+                showError(t('errors.tooManyRequests'));
                 checkBackendStatus();
                 setFetchBusy(false);
                 return;
@@ -916,7 +916,7 @@ function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus },
                 ensureOfflineBanner();
                 setOfflineBanner(true);
             }
-            showError(`Fetch Error: ${err.message}`);
+            showError(t('locate.fetchError', { message: err.message }));
             checkBackendStatus();
             setFetchBusy(false);
         });
@@ -937,7 +937,7 @@ function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus },
    ========================================================================== */
 function sendPositionToBackend(payload, { getActiveUserId, checkBackendStatus, silentBadgeSync }) {
     const statusText = document.getElementById('status');
-    statusText.innerText = "Sending to backend...";
+    statusText.innerText = t('locate.sending');
 
     apiPostPosition(getActiveUserId(), payload)
         .then(data => {
@@ -951,9 +951,9 @@ function sendPositionToBackend(payload, { getActiveUserId, checkBackendStatus, s
             // Ansicht kehrt in den Chooser zurück (Weiter/Save erneut möglich).
             selectedPlace = null;
             setFallbackBanner(false);
-            document.getElementById('btn-fetch-location').textContent = 'Fetch Location';
+            document.getElementById('btn-fetch-location').textContent = t('locate.fetchLocation');
 
-            statusText.innerText = "Location successfully saved.";
+            statusText.innerText = t('locate.saved');
             statusText.className = "status-success";
 
             silentBadgeSync(getActiveUserId());
@@ -961,11 +961,11 @@ function sendPositionToBackend(payload, { getActiveUserId, checkBackendStatus, s
         })
         .catch(err => {
             if (err && err.status === 429) {
-                showError(TOO_MANY_REQUESTS_MESSAGE);
+                showError(t('errors.tooManyRequests'));
                 checkBackendStatus();
                 return;
             }
-            showError(`Backend Error: ${err.message}`);
+            showError(t('locate.backendError', { message: err.message }));
             checkBackendStatus();
         });
 }
@@ -1003,7 +1003,7 @@ function applySelectedPlace(payload) {
 function handleContinue() {
     const cached = getCachedLocatePosition();
     if (!cached) {
-        showError("No position available. Please fetch first.");
+        showError(t('locate.noPosition'));
         return;
     }
 
@@ -1064,11 +1064,11 @@ export function initLocatePage(deps) {
     //     are still in the DOM; the preview cache is kept) ---
     document.getElementById('btn-saved-back').addEventListener('click', () => {
         showView('chooser');
-        document.getElementById('btn-fetch-location').textContent = 'Refresh';
+        document.getElementById('btn-fetch-location').textContent = t('locate.refresh');
         const statusText = document.getElementById('status');
         statusText.innerText = lastPreviewLabel
-            ? `Preview from ${lastPreviewLabel} \u2014 not yet saved.`
-            : 'Preview \u2014 not yet saved.';
+            ? t('locate.previewFrom', { time: lastPreviewLabel })
+            : t('locate.preview');
         statusText.className = 'status-preview';
     });
 
@@ -1076,12 +1076,12 @@ export function initLocatePage(deps) {
     document.getElementById('track-btn').addEventListener('click', () => {
         const cached = getCachedLocatePosition();
         if (!cached) {
-            showError("No position available. Please fetch first.");
+            showError(t('locate.noPosition'));
             return;
         }
 
         const statusText = document.getElementById('status');
-        statusText.innerText = "Saving location...";
+        statusText.innerText = t('locate.saving');
         statusText.className = "status-loading";
 
         const payload = {
@@ -1108,4 +1108,45 @@ export function initLocatePage(deps) {
 
         sendPositionToBackend(payload, deps);
     });
+}
+
+/* ==========================================================================
+   Language-Change Support: reset the Locate page to a clean, correctly
+   translated initial state. Called from app.js on "i18n:languagechanged".
+   An unsaved preview is discarded (the user changes the language rarely), and
+   any in-flight preview/places fetch is invalidated so it cannot repaint the
+   reset UI with stale-language content.
+   ========================================================================== */
+export function resetLocatePage() {
+    fetchEpoch += 1; // invalidiert eine evtl. laufende Vorschau/Places-Runde
+
+    setFetchBusy(false);
+    hideLastFixPrompt();
+    // Dynamische Banner entfernen, damit sie beim nächsten Mal mit dem neuen
+    // Sprachtext neu aufgebaut werden (ensure* würde sonst early-returnen).
+    document.getElementById(OFFLINE_BANNER_ID)?.remove();
+    document.getElementById(FALLBACK_BANNER_ID)?.remove();
+
+    hideViews();
+    selectedPlace = null;
+    lastPreviewLabel = '';
+    setCachedLocatePosition(null);
+    resetSaveOptions();
+
+    const statusText = document.getElementById('status');
+    if (statusText) {
+        statusText.innerText = t('locate.ready');
+        statusText.className = 'status-ready';
+    }
+
+    const fetchBtn = document.getElementById('btn-fetch-location');
+    if (fetchBtn) fetchBtn.textContent = t('locate.fetchLocation');
+
+    const placesList = document.getElementById('places-list');
+    if (placesList) placesList.innerHTML = '';
+    const placesCard = document.getElementById('places-card');
+    if (placesCard) {
+        placesCard.classList.add('hidden');
+        placesCard.removeAttribute('aria-busy');
+    }
 }

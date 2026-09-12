@@ -6,10 +6,13 @@
     <title>locate.me</title>
     <script>
         const APP_VERSION = '0.4.1';
-        const APP_BUILD   = '20260911';
+        const APP_BUILD   = '20260912';
         document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light';
+        document.documentElement.lang = localStorage.getItem('lang') || 'en';
+        document.documentElement.classList.add('i18n-loading');
+        setTimeout(() => document.documentElement.classList.remove('i18n-loading'), 4000);
     </script>
-    <link rel="stylesheet" href="css/style.css?v=0.4.1_4">
+    <link rel="stylesheet" href="css/style.css?v=0.4.1_8">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -18,35 +21,35 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 <body>
-    <script type="module" src="app.js?v=0.4.1_3"></script>
+    <script type="module" src="app.js?v=0.4.1_5"></script>
 
     <div class="app-container">
         <header class="app-header">
             <h1 class="app-title">locate<span class="title-accent">.me</span></h1>
-            <div class="header-status-indicator" title="Application Online">
+            <div class="header-status-indicator" title="Application Online" data-i18n-title="header.applicationOnline">
                 <span class="status-dot"></span>
             </div>
         </header>
         
         <section id="page-locate" class="app-page">
             <div class="locate-action-group">
-                <div id="demo-mode-note" class="demo-mode-note hidden">Demo mode.<br>Request your own user id in Settings.</div>
-                <button id="btn-fetch-location" class="track-btn">
+                <div id="demo-mode-note" class="demo-mode-note hidden"><span data-i18n="locate.demoMode">Demo mode.</span><br><span data-i18n="locate.demoModeHint">Request your own user id in Settings.</span></div>
+                <button id="btn-fetch-location" class="track-btn" data-i18n="locate.fetchLocation">
                     Fetch Location
                 </button>
             </div>
 
             <div class="status-container">
-                <div id="status" class="status-ready">Ready</div>
+                <div id="status" class="status-ready" data-i18n="locate.ready">Ready</div>
             </div>
 
             <!-- GPS-Fallback: letzte bekannte Position anbieten -->
             <div id="gps-fallback" class="gps-fallback hidden" role="alert">
                 <span id="gps-fallback-text" class="gps-fallback-text"></span>
-                <button id="gps-fallback-use" class="track-btn" type="button">Use last location</button>
+                <button id="gps-fallback-use" class="track-btn" type="button" data-i18n="locate.useLastLocation">Use last location</button>
                 <div class="track-btn-row">
-                    <button id="gps-fallback-retry" class="track-btn" type="button">Retry GPS</button>
-                    <button id="gps-fallback-cancel" class="track-btn" type="button">Cancel</button>
+                    <button id="gps-fallback-retry" class="track-btn" type="button" data-i18n="locate.retryGps">Retry GPS</button>
+                    <button id="gps-fallback-cancel" class="track-btn" type="button" data-i18n="locate.cancel">Cancel</button>
                 </div>
             </div>
 
@@ -56,28 +59,28 @@
                     <div class="flex-rows">
                         <div class="row-split border-bottom">
                             <div class="cell">
-                                <span class="label">TEMPERATURE</span>
+                                <span class="label" data-i18n="label.temperature">TEMPERATURE</span>
                                 <div class="temp-display-wrapper">
                                     <span id="chooser-weather-icon-container"></span>
                                     <span id="chooser-temp" class="value">-</span>
                                 </div>
                             </div>
                             <div class="cell text-right">
-                                <span class="label">CONDITION</span>
+                                <span class="label" data-i18n="label.condition">CONDITION</span>
                                 <span id="chooser-weather" class="value">-</span>
                             </div>
                             <div class="cell text-right">
-                                <span class="label">UV-INDEX</span>
+                                <span class="label" data-i18n="label.uvIndex">UV-INDEX</span>
                                 <span id="chooser-uv" class="value">-</span>
                             </div>
                         </div>
                         <button id="res-address-select" type="button" class="locate-select-row locate-select-row--selected">
                             <span class="locate-select-row-main">
-                                <span class="label">RESOLVED ADDRESS</span>
+                                <span class="label" data-i18n="label.resolvedAddress">RESOLVED ADDRESS</span>
                                 <span id="chooser-address-container" class="value address-container">-</span>
                             </span>
                             <span class="locate-select-row-side text-right">
-                                <span class="label">ELEVATION</span>
+                                <span class="label" data-i18n="label.elevation">ELEVATION</span>
                                 <span id="chooser-elevation" class="value">-</span>
                             </span>
                         </button>
@@ -86,10 +89,10 @@
 
                 <div id="places-card" class="response-card places-card hidden">
                     <div class="places-header">
-                        <span class="label">PLACES AROUND ME</span>
+                        <span class="label" data-i18n="label.placesAroundMe">PLACES AROUND ME</span>
                         <span class="places-header-right">
                             <span id="places-count" class="places-count"></span>
-                            <span id="places-compass" class="places-compass hidden" role="img" aria-label="Compass pointing north" title="North">
+                            <span id="places-compass" class="places-compass hidden" role="img" aria-label="Compass pointing north" title="North" data-i18n-aria-label="places.compassLabel" data-i18n-title="places.compassTitle">
                                 <svg class="compass-needle" viewBox="0 0 24 24" aria-hidden="true">
                                     <polygon class="compass-needle-n" points="12 1 17 12 7 12"></polygon>
                                     <polygon class="compass-needle-s" points="12 23 17 12 7 12"></polygon>
@@ -101,7 +104,7 @@
                     <div id="places-list" class="places-list"></div>
                 </div>
 
-                <button id="btn-locate-continue" class="track-btn">Continue</button>
+                <button id="btn-locate-continue" class="track-btn" data-i18n="locate.continue">Continue</button>
             </div>
 
             <!-- ================= VIEW 2: SAVER ================= -->
@@ -112,7 +115,7 @@
                             <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"></path>
                             <line x1="7" y1="7" x2="7.01" y2="7"></line>
                         </svg>
-                        <span class="save-options-toggle-label">Tag &amp; Comment</span>
+                        <span class="save-options-toggle-label" data-i18n="saveOptions.tagComment">Tag &amp; Comment</span>
                         <span id="save-options-summary" class="save-options-summary hidden"></span>
                         <svg class="save-options-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="6 9 12 15 18 9"></polyline>
@@ -121,14 +124,14 @@
                     <div class="save-options-body">
                         <div class="save-options-inner">
                             <div class="save-options-row">
-                                <span class="label">TAG</span>
+                                <span class="label" data-i18n="label.tag">TAG</span>
                                 <div id="tag-chips" class="tag-chips"></div>
                             </div>
                             <div class="save-options-row">
-                                <span class="label">COMMENT</span>
+                                <span class="label" data-i18n="label.comment">COMMENT</span>
                                 <div class="comment-input-wrapper">
                                     <input id="comment-input" class="comment-input" type="text"
-                                           maxlength="25" placeholder="Add a comment (optional)…" autocomplete="off">
+                                           maxlength="25" placeholder="Add a comment (optional)…" data-i18n-placeholder="saveOptions.commentPlaceholder" autocomplete="off">
                                     <span id="comment-counter" class="comment-counter">0/25</span>
                                 </div>
                             </div>
@@ -140,28 +143,28 @@
                     <div class="flex-rows">
                         <div class="row-split border-bottom">
                             <div class="cell">
-                                <span class="label">TEMPERATURE</span>
+                                <span class="label" data-i18n="label.temperature">TEMPERATURE</span>
                                 <div class="temp-display-wrapper">
                                     <span id="saver-weather-icon-container"></span>
                                     <span id="saver-temp" class="value">-</span>
                                 </div>
                             </div>
                             <div class="cell text-right">
-                                <span class="label">CONDITION</span>
+                                <span class="label" data-i18n="label.condition">CONDITION</span>
                                 <span id="saver-weather" class="value">-</span>
                             </div>
                             <div class="cell text-right">
-                                <span class="label">UV-INDEX</span>
+                                <span class="label" data-i18n="label.uvIndex">UV-INDEX</span>
                                 <span id="saver-uv" class="value">-</span>
                             </div>
                         </div>
                         <div class="row-split">
                             <div class="cell address-cell">
-                                <span class="label">LOCATION</span>
+                                <span class="label" data-i18n="label.location">LOCATION</span>
                                 <div id="saver-location-container" class="value address-container">-</div>
                             </div>
                             <div class="cell text-right elevation-cell">
-                                <span class="label">ELEVATION</span>
+                                <span class="label" data-i18n="label.elevation">ELEVATION</span>
                                 <span id="saver-elevation" class="value">-</span>
                             </div>
                         </div>
@@ -172,8 +175,8 @@
                 </div>
 
                 <div class="track-btn-row">
-                    <button id="btn-back" class="track-btn" type="button">Back</button>
-                    <button id="track-btn" class="track-btn">Save Location</button>
+                    <button id="btn-back" class="track-btn" type="button" data-i18n="locate.back">Back</button>
+                    <button id="track-btn" class="track-btn" data-i18n="locate.saveLocation">Save Location</button>
                 </div>
             </div>
 
@@ -187,28 +190,28 @@
                         </div>
                         <div class="row-split border-bottom">
                             <div class="cell">
-                                <span class="label">TEMPERATURE</span>
+                                <span class="label" data-i18n="label.temperature">TEMPERATURE</span>
                                 <div class="temp-display-wrapper">
                                     <span id="saved-weather-icon-container"></span>
                                     <span id="saved-temp" class="value">-</span>
                                 </div>
                             </div>
                             <div class="cell text-right">
-                                <span class="label">CONDITION</span>
+                                <span class="label" data-i18n="label.condition">CONDITION</span>
                                 <span id="saved-weather" class="value">-</span>
                             </div>
                             <div class="cell text-right">
-                                <span class="label">UV-INDEX</span>
+                                <span class="label" data-i18n="label.uvIndex">UV-INDEX</span>
                                 <span id="saved-uv" class="value">-</span>
                             </div>
                         </div>
                         <div class="row-split">
                             <div class="cell address-cell">
-                                <span class="label">LOCATION</span>
+                                <span class="label" data-i18n="label.location">LOCATION</span>
                                 <div id="saved-location-container" class="value address-container">-</div>
                             </div>
                             <div class="cell text-right elevation-cell">
-                                <span class="label">ELEVATION</span>
+                                <span class="label" data-i18n="label.elevation">ELEVATION</span>
                                 <span id="saved-elevation" class="value">-</span>
                             </div>
                         </div>
@@ -217,7 +220,7 @@
                         </div>
                     </div>
                 </div>
-                <button id="btn-saved-back" class="track-btn" type="button">Back</button>
+                <button id="btn-saved-back" class="track-btn" type="button" data-i18n="locate.back">Back</button>
             </div>
         </section>
 
@@ -232,7 +235,7 @@
                         <line x1="3" y1="12" x2="3.01" y2="12"></line>
                         <line x1="3" y1="18" x2="3.01" y2="18"></line>
                     </svg>
-                    List
+                    <span data-i18n="history.list">List</span>
                 </button>
                 <button id="toggle-map-btn" class="view-toggle-btn">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -240,7 +243,7 @@
                         <line x1="9" y1="3" x2="9" y2="18"></line>
                         <line x1="15" y1="6" x2="15" y2="21"></line>
                     </svg>
-                    Map
+                    <span data-i18n="history.map">Map</span>
                 </button>
             </div>
             <div id="history-list" class="history-list">
@@ -250,22 +253,31 @@
 
         <section id="page-settings" class="app-page hidden">
             <div class="settings-card">
-                <h2 class="settings-title">Application Settings</h2>
+                <h2 class="settings-title" data-i18n="settings.title">Application Settings</h2>
                 <div class="form-group">
-                    <label class="label">APPEARANCE</label>
+                    <label class="label" data-i18n="label.appearance">APPEARANCE</label>
                     <div class="toggle-row">
-                        <span class="toggle-label">Dark Mode</span>
-                        <button id="dark-mode-toggle" class="toggle-switch" role="switch" aria-checked="false" aria-label="Toggle dark mode">
+                        <span class="toggle-label" data-i18n="settings.darkMode">Dark Mode</span>
+                        <button id="dark-mode-toggle" class="toggle-switch" role="switch" aria-checked="false" aria-label="Toggle dark mode" data-i18n-aria-label="settings.toggleDarkMode">
                             <span class="toggle-knob"></span>
                         </button>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="username-input" class="label">USER ID</label>
+                    <label for="language-select" class="label" data-i18n="label.language">LANGUAGE</label>
+                    <select id="language-select" class="settings-input">
+                        <option value="en">English</option>
+                        <option value="de">Deutsch</option>
+                        <option value="es">Español</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="username-input" class="label" data-i18n="label.userId">USER ID</label>
                     <div class="input-with-icon">
                         <input type="password" id="username-input" class="settings-input" placeholder="user123">
-                        <button type="button" id="toggle-password-btn" class="toggle-password-trigger" aria-label="Toggle user ID visibility">
+                        <button type="button" id="toggle-password-btn" class="toggle-password-trigger" aria-label="Toggle user ID visibility" data-i18n-aria-label="settings.toggleUserId">
                             <svg class="eye-icon" id="eye-icon-visible" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                 <circle cx="12" cy="12" r="3"></circle>
@@ -276,20 +288,20 @@
                             </svg>
                         </button>
                     </div>
-                    <small class="help-text">Left blank, demo "user123" will be used by default.</small>
+                    <small class="help-text" data-i18n="settings.userIdHelp">Left blank, demo "user123" will be used by default.</small>
                     <small class="help-text"><a id="request-user-id-link" class="request-user-id-link" href="#">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="2" y="4" width="20" height="16" rx="2"></rect>
                             <path d="M22 6l-10 7L2 6"></path>
                         </svg>
-                        Request your own User ID
+                        <span data-i18n="settings.requestUserId">Request your own User ID</span>
                     </a></small>
                 </div>
-                <button id="save-settings-btn" class="track-btn">Save Settings</button>
+                <button id="save-settings-btn" class="track-btn" data-i18n="settings.save">Save Settings</button>
                 <div id="settings-status" class="settings-status"></div>
                 
                 <div class="attribution-block">
-                    <span class="attribution-label">VERSION</span>
+                    <span class="attribution-label" data-i18n="label.version">VERSION</span>
                     <div class="attribution-links">
                         <span id="app-version-display" class="attribution-link"></span>
                         <a href="https://www.locate-me.net/" target="_blank" rel="noopener" class="attribution-link">locate-me.net</a>
@@ -301,7 +313,7 @@
                 </script>
 
                 <div class="attribution-block">
-                    <span class="attribution-label">BUILT WITH</span>
+                    <span class="attribution-label" data-i18n="label.builtWith">BUILT WITH</span>
                     <div class="attribution-links">
                         <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" class="attribution-link">
                             OpenStreetMap
@@ -326,7 +338,7 @@
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                     <circle cx="12" cy="10" r="3"></circle>
                 </svg>
-                <span class="nav-label">Locate</span>
+                <span class="nav-label" data-i18n="nav.locate">Locate</span>
             </button>
             
             <button class="nav-item" data-target="page-history">
@@ -337,7 +349,7 @@
                     </svg>
                     <span id="history-badge" class="nav-badge" style="display: none;">0</span>
                 </div>
-                <span class="nav-label">History</span>
+                <span class="nav-label" data-i18n="nav.history">History</span>
             </button>
             
             <button class="nav-item" data-target="page-settings">
@@ -345,7 +357,7 @@
                     <circle cx="12" cy="12" r="3"></circle>
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                 </svg>
-                <span class="nav-label">Settings</span>
+                <span class="nav-label" data-i18n="nav.settings">Settings</span>
             </button>
         </nav>
     </div>

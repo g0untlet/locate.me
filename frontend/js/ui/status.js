@@ -1,5 +1,6 @@
 import { apiGetSystemInfo } from '../api.js';
 import { showStatusToast } from './toast.js';
+import { t, getLocaleTag } from '../i18n.js';
 
 /* ==========================================================================
    Backend Info Renderer (Settings-Seite)
@@ -11,7 +12,7 @@ function renderBackendInfo(info) {
     if (!info) {
         el.innerHTML = `
             <div class="attribution-links">
-                <span class="attribution-link attribution-link--offline">Backend not reachable</span>
+                <span class="attribution-link attribution-link--offline">${t('settings.backendNotReachable')}</span>
             </div>`;
         return;
     }
@@ -20,7 +21,7 @@ function renderBackendInfo(info) {
     if (info.startupTime) {
         const d = new Date(info.startupTime);
         if (!isNaN(d.getTime())) {
-            onlineSince = d.toLocaleString('de-DE', {
+            onlineSince = d.toLocaleString(getLocaleTag(), {
                 day: '2-digit', month: '2-digit', year: 'numeric',
                 hour: '2-digit', minute: '2-digit'
             });
@@ -30,7 +31,7 @@ function renderBackendInfo(info) {
     el.innerHTML = `
         <div class="attribution-links">
             <span class="attribution-link">${info.artifactId || '–'} ${info.version || ''}</span>
-            <span class="attribution-link">Online since ${onlineSince}</span>
+            <span class="attribution-link">${t('settings.onlineSince', { date: onlineSince })}</span>
         </div>`;
 }
 
@@ -45,7 +46,7 @@ export async function checkBackendStatus(showToast = false) {
         const info = await apiGetSystemInfo();
         statusDot.classList.remove('offline');
         statusDot.classList.add('online');
-        statusDot.parentElement.title = "Application Online";
+        statusDot.parentElement.title = t('header.applicationOnline');
         if (showToast) showStatusToast('online');
         renderBackendInfo(info);
     } catch (error) {
@@ -54,12 +55,12 @@ export async function checkBackendStatus(showToast = false) {
         if (error && error.status === 429) {
             statusDot.classList.remove('offline');
             statusDot.classList.add('online');
-            statusDot.parentElement.title = "Application Online";
+            statusDot.parentElement.title = t('header.applicationOnline');
             return;
         }
         statusDot.classList.remove('online');
         statusDot.classList.add('offline');
-        statusDot.parentElement.title = "Backend unreachable";
+        statusDot.parentElement.title = t('header.backendUnreachable');
         if (showToast) showStatusToast('offline');
         renderBackendInfo(null);
     }

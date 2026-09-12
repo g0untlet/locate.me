@@ -1,5 +1,6 @@
-import { apiGetPositionsWithMeta, apiDeletePosition, TOO_MANY_REQUESTS_MESSAGE } from '../api.js';
+import { apiGetPositionsWithMeta, apiDeletePosition } from '../api.js';
 import { setHistoryMapData, getCurrentHistoryView, getHistoryFilter, setHistoryFilter } from '../state.js';
+import { t } from '../i18n.js';
 import { renderMapMarkers } from '../ui/map.js';
 import { updateHistoryBadge } from '../ui/badge.js';
 import {
@@ -70,7 +71,7 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
         const uvVal   = parseFloat(pos.uvIndex);
         const uvLevel = getUvLevel(uvVal);
         uvHtml = `
-            <div class="uv-display uv-${uvLevel}" title="UV Index ${uvVal.toFixed(1)}">
+            <div class="uv-display uv-${uvLevel}" title="${t('history.uvTitle', { value: uvVal.toFixed(1) })}">
                 <span>UV</span>
                 <span>${uvVal.toFixed(1)}</span>
             </div>
@@ -95,9 +96,9 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
 
     // --- Travel Times (walk / bike / drive) ---
     const travelModes = [
-        { mode: 'walk',  label: 'walk',  minutes: pos.walkingTimeMinutes },
-        { mode: 'bike',  label: 'bike',  minutes: pos.bikingTimeMinutes },
-        { mode: 'drive', label: 'drive', minutes: pos.drivingTimeMinutes }
+        { mode: 'walk',  label: t('travel.walk'),  minutes: pos.walkingTimeMinutes },
+        { mode: 'bike',  label: t('travel.bike'),  minutes: pos.bikingTimeMinutes },
+        { mode: 'drive', label: t('travel.drive'), minutes: pos.drivingTimeMinutes }
     ];
     const presentTravelModes = travelModes.filter(m =>
         m.minutes !== undefined && m.minutes !== null && !isNaN(parseFloat(m.minutes))
@@ -108,7 +109,7 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
             ? parseFloat(pos.distance) : null;
         const compactTravelTimes = travelDistanceKm !== null && travelDistanceKm > 100;
         const travelItemsHtml = presentTravelModes.map(m => `
-            <span class="log-card-travel-item" title="Estimated ${m.label} time" aria-label="${m.label} time ${formatTravelTime(parseFloat(m.minutes))}">
+            <span class="log-card-travel-item" title="${t('history.estimatedTime', { mode: m.label })}" aria-label="${t('history.timeAria', { mode: m.label, time: formatTravelTime(parseFloat(m.minutes)) })}">
                 ${getTravelIconSvg(m.mode)}
                 <span>${formatTravelTime(parseFloat(m.minutes), compactTravelTimes)}</span>
             </span>
@@ -123,7 +124,7 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
     const dateFormatted      = formatRelativeDate(pos.timestamp);
     const shortAddress       = formatShortAddress(pos);
     const locationIcon       = getLocationIconSvg(pos.osmCategory, pos.osmType);
-    const fullAddressForTitle = pos.displayName || 'No detailed address available.';
+    const fullAddressForTitle = pos.displayName || t('common.noDetailedAddress');
     const elevationFormatted = formatElevation(pos.elevation);
 
     const isLowAccuracy    = pos.accuracy && parseFloat(pos.accuracy) > 30;
@@ -132,7 +133,7 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
     const roundedAccuracy  = pos.accuracy ? Math.round(pos.accuracy) : '?';
 
     const tagHtml = pos.tag
-        ? `<span class="log-card-tag" title="Tag ${pos.tag}">
+        ? `<span class="log-card-tag" title="${t('history.tagTitle', { tag: pos.tag })}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"></path>
                 <line x1="7" y1="7" x2="7.01" y2="7"></line>
@@ -195,7 +196,7 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                     <circle cx="12" cy="10" r="3"></circle>
                 </svg>
-                Maps
+                ${t('history.maps')}
             </a>
             <button class="tray-action-btn btn-action-share"
                     data-lat="${pos.latitude}"
@@ -208,14 +209,14 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
                     <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
                     <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
                 </svg>
-                Share
+                ${t('history.share')}
             </button>
             <button class="tray-action-btn btn-action-delete" data-id="${pos.id}">
                 <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="3 6 5 6 21 6"></polyline>
                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                 </svg>
-                Delete
+                ${t('history.delete')}
             </button>
         </div>
     `;
@@ -246,9 +247,9 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
             navigator.clipboard.writeText(
                 `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`
             ).then(() => {
-                shareBtn.textContent = 'Copied!';
+                shareBtn.textContent = t('history.copied');
                 setTimeout(() => {
-                    shareBtn.innerHTML = `<svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg> Share`;
+                    shareBtn.innerHTML = `<svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg> ${t('history.share')}`;
                 }, 1500);
             }).catch(() => {});
         }
@@ -274,16 +275,16 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
                     updateHistoryBadge(remainingCards.length);
 
                     if (remainingCards.length === 0) {
-                        listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">No locations logged yet for user "${activeUserId}".</div>`;
+                        listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">${t('history.noLocations', { userId: activeUserId })}</div>`;
                     }
                 });
                 checkBackendStatus();
             })
             .catch(err => {
                 if (err && err.status === 429) {
-                    alert(TOO_MANY_REQUESTS_MESSAGE);
+                    alert(t('errors.tooManyRequests'));
                 } else {
-                    alert(`Error removing entry: ${err.message}`);
+                    alert(t('history.errorRemoving', { message: err.message }));
                 }
                 checkBackendStatus();
             });
@@ -351,6 +352,9 @@ function initPullToRefresh(deps) {
     }
 
     page.addEventListener('touchstart', (e) => {
+        // Map-View: Pull-to-Refresh aus, damit Pinch-Zoom/Pan der Leaflet-Karte
+        // keinen Reload auslöst. In der List-View bleibt PTR aktiv.
+        if (getCurrentHistoryView() === 'map') return;
         if (refreshing) return;
         if (list.scrollTop > 0) return;
         startY  = e.touches[0].clientY;
@@ -358,6 +362,7 @@ function initPullToRefresh(deps) {
     }, { passive: true });
 
     page.addEventListener('touchmove', (e) => {
+        if (getCurrentHistoryView() === 'map') return;
         if (!pulling || refreshing) return;
         const pullY = e.touches[0].clientY - startY;
         if (pullY <= 0) { pulling = false; return; }
@@ -449,7 +454,7 @@ function ensureSearchBar() {
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
             </svg>
-            <span class="save-options-toggle-label">Filter</span>
+            <span class="save-options-toggle-label">${t('history.filter')}</span>
             <span id="history-filter-summary" class="save-options-summary hidden"></span>
             <svg class="save-options-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -459,11 +464,11 @@ function ensureSearchBar() {
         <div class="save-options-body">
             <div class="save-options-inner">
                 <div class="save-options-row">
-                    <span class="label">TAG</span>
+                    <span class="label">${t('label.tag')}</span>
                     <div id="history-filter-tags" class="tag-chips"></div>
                 </div>
                 <div class="save-options-row">
-                    <span class="label">ADDRESS / COMMENT</span>
+                    <span class="label">${t('history.addressComment')}</span>
                     <div class="history-search-input-wrapper">
                         <svg class="history-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -471,8 +476,8 @@ function ensureSearchBar() {
                             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                         </svg>
                         <input id="history-search-input" class="history-search-input"
-                               type="search" placeholder="Filter by address or comment…" autocomplete="off">
-                        <button id="history-search-clear" class="history-search-clear hidden" aria-label="Clear filter">
+                               type="search" placeholder="${t('history.filterPlaceholder')}" autocomplete="off">
+                        <button id="history-search-clear" class="history-search-clear hidden" aria-label="${t('history.clearFilter')}">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                                  stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -482,7 +487,7 @@ function ensureSearchBar() {
                     </div>
                 </div>
             </div>
-            <div id="history-no-results" class="history-no-results hidden">No matches found.</div>
+            <div id="history-no-results" class="history-no-results hidden">${t('history.noMatches')}</div>
         </div>
     `;
 
@@ -590,7 +595,7 @@ function ensureOfflineBanner() {
             <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
             <line x1="12" y1="20" x2="12.01" y2="20"></line>
         </svg>
-        <span>Offline — showing cached data</span>`;
+        <span>${t('history.offlineCached')}</span>`;
     page.insertBefore(banner, page.firstChild);
 }
 
@@ -630,7 +635,7 @@ export function fetchAndRenderHistory(deps) {
                 listContainer.innerHTML = "";
 
                 if (!data || !Array.isArray(data) || data.length === 0) {
-                    listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">No locations logged yet for user "${activeUserId}".</div>`;
+                    listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">${t('history.noLocations', { userId: activeUserId })}</div>`;
                     updateHistoryBadge(0);
                     setHistoryMapData([]);
                     return;
@@ -662,11 +667,11 @@ export function fetchAndRenderHistory(deps) {
             .catch(err => {
                 setOfflineBanner(false);
                 if (err && err.status === 429) {
-                    listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">${TOO_MANY_REQUESTS_MESSAGE}</div>`;
+                    listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">${t('errors.tooManyRequests')}</div>`;
                 } else if (!navigator.onLine) {
-                    listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">Offline — no cached history yet. Open History once while online to enable offline access.</div>`;
+                    listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">${t('history.offlineNone')}</div>`;
                 } else {
-                    listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--error-color, #dc2626); font-size:0.9rem; padding:20px 0;">Error: ${err.message}</div>`;
+                    listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--error-color, #dc2626); font-size:0.9rem; padding:20px 0;">${t('history.error', { message: err.message })}</div>`;
                 }
                 checkBackendStatus();
             });
@@ -684,4 +689,17 @@ export function fetchAndRenderHistory(deps) {
     } else {
         fetchWithCoords(null, null);
     }
+}
+
+/* ==========================================================================
+   Language-Change Support: drop the dynamically created widgets that carry
+   translated text (filter bar incl. the empty-result hint, offline banner).
+   Both early-return when re-created, so removing them makes the next History
+   visit rebuild them in the new language. The log cards themselves are already
+   rebuilt by fetchAndRenderHistory on every visit.
+   Called from app.js on "i18n:languagechanged".
+   ========================================================================== */
+export function invalidateHistoryI18n() {
+    document.getElementById('history-search-bar')?.remove();
+    document.getElementById(OFFLINE_BANNER_ID)?.remove();
 }
