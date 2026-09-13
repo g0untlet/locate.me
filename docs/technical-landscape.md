@@ -85,13 +85,13 @@ Browser (PWA) --HTTPS--> Caddy2 --/api--> Quarkus REST (Boundary /api)
 
 | Module | Purpose |
 |----------|----------|
-| `app.js` | Entry point: bootstrap, tab navigation, backend status polling, service worker registration |
+| `app.js` | Entry point: bootstrap, tab navigation, backend status polling, install-prompt init, service worker registration |
 | `sw.js` | Service worker: Workbox Network-First caching (app shell, same-origin JS/CSS) |
 | `js/config.js` | API base URL resolution (dev port vs. relative proxy paths) |
 | `js/api.js` | Fetch wrappers for all REST endpoints |
 | `js/state.js` | Central mutable state (maps, cached fix, history data) |
 | `js/utils.js` | Formatting helpers (relative/weekday dates, address, weather text/icons, UV level, elevation, travel-time formatting + walk/bike/drive icons) |
-| `js/ui/` | Reusable UI: `status.js`, `badge.js`, `toast.js`, `map.js` (Leaflet wrapper) |
+| `js/ui/` | Reusable UI: `status.js`, `badge.js`, `toast.js`, `map.js` (Leaflet wrapper), `install.js` (PWA install banner / iOS hint) |
 | `js/pages/` | Screens: `locate.js`, `history.js`, `settings.js` (deps injected) |
 
 ## Navigation / Routing
@@ -557,6 +557,7 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 
 | Version | Date | Description |
 |---------|---------|---------|
+| 0.4.1 | 2026-09-13 | Frontend: new PWA install promotion. New module `js/ui/install.js` consumes the browser's `beforeinstallprompt` event and shows a dismissible top-of-screen install banner ("Install" opens the native install dialog). Because Chrome/Brave no longer render a native install banner, the event is captured as early as possible by an inline script in `index.html` `<head>` (stashed on `window.__bipEvent` and re-broadcast as the custom `locateme:installavailable` event) so it is not missed before the ES module loads; `locateme:installed`/`appinstalled` hides and suppresses it. The banner is never shown in standalone display mode or after dismissal (`localStorage`); on iOS Safari (no `beforeinstallprompt`) a one-time "Add to Home Screen" hint is shown instead. `index.html` gains `theme-color`, `mobile-web-app-capable`/`apple-mobile-web-app-*` meta tags and an `apple-touch-icon`. `sw.js` `ASSETS` precaches `/js/ui/install.js`; cache-busters bumped to `0.4.1_10`; app version stays 0.4.1 / 20260913. Locales: `install.*` keys in `en`/`de`/`es`. Also `js/i18n.js`: on a first visit without a stored `lang`, the language is auto-detected from `navigator.languages`/`navigator.language` (primary subtag, English fallback) and not persisted, so an explicit Settings choice always wins. |
 | 0.4.0 | 2026-08-28 | Places cache schema: `V3__create_places_table.sql` (edited in place — 0.4.0 not yet in PROD) now stores the fetch origin on each cache row: `fetch_lat`/`fetch_lon` (DOUBLE, NOT NULL), set in `Places.toPlace` from the request coordinates and excluded from `Place.toJSON()` (no client leak). `Place` gains the `fetchLat`/`fetchLon` accessors. Tests: `PlaceTest` (accessors + JSON exclusion), `PlacesResourceIT.storesFetchOriginAndDoesNotExposeIt` (persisted origin matches the request, response has no fetch keys), `PlacesReadCacheDisabledIT` (origin stored with cache reads disabled). No index yet — deferred until a coverage-aware cache-read algorithm exists. Note: editing V3 changes its Flyway checksum — the DEV `places` table must be recreated (restore a 0.3.0 backup, then V2 + V3 re-apply). |
 | 0.4.0 | 2026-08-28 | Admin DB monitoring extended: `GET /api/positions/stats?adminKey=` now returns the grand total plus the per-user breakdown (`{"total", "perUser":[{"userId","locations"}]}`, total = sum of the per-user counts) and `GET /api/places/stats?adminKey=` now returns the cache entry count plus a per-city breakdown (`{"count", "perCity":[{"city","places"}]}` via `Places.countByCity`, excluding NULL-city rows which still count toward `count`). Tests extended in `PositionsResourceIT` (wrapped shape + empty-DB case) and `PlacesResourceIT` (multi-city + city-less seeding). |
 | 0.4.0 | 2026-08-28 | Admin DB monitoring: new `GET /api/positions/stats?adminKey=` (stored positions per user as `[{"userId","locations"}]`, ordered by userId) and `GET /api/places/stats?adminKey=` (places-cache entry count `{"count"}`). The `adminKey` query param is checked constant-time against the new `admin.key` config (`${ADMIN_KEY:change-me}`, `%dev`/`%test` overrides `dev-admin-key`/`test-admin-key`) by the new `security.AdminKeyVerifier`; missing or wrong key → 401. Both endpoints are deliberately **not** rate-limited. Tests: valid/missing/wrong-key cases added to `PositionsResourceIT` and `PlacesResourceIT`. |

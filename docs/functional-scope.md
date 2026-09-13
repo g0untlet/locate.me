@@ -46,6 +46,13 @@
 - Each place response includes the straight-line `distance` (meters) and an 8-point compass `direction` (`N, NE, E, SE, S, SW, W, NW`) from the requested coordinate — computed in the backend from the request lat/lon (the user's position); a place essentially at the user's location has an empty direction.
 - **Status:** fully integrated into the Locate view (0.4.0): the up-to-20 nearest places (configurable via `aroundme.max-places`) are shown with their distance and direction (e.g. `301 m NW`); the user can adopt a place as the location — its coordinates and label ("Name, street houseNumber") are then saved.
 
+### 1.8. Installation (PWA)
+- The application is installable as a Progressive Web App (web app manifest + service worker).
+- Chrome/Brave on Android no longer show a native install banner; when the browser signals installability (`beforeinstallprompt`) the app shows its own dismissible banner at the top with an "Install" action that opens the native install dialog.
+- The promotion is suppressed when the app already runs in standalone display mode or after the user has dismissed it (or installed it).
+- On iOS Safari, which never fires `beforeinstallprompt`, a one-time "Add to Home Screen" hint is shown instead.
+- The promotion text follows the application language (browser-detected on a first visit, otherwise the language chosen in Settings).
+
 ## 2. User Interface
 
 The application is a single-page application (SPA) with three main views:
@@ -77,8 +84,14 @@ The application is a single-page application (SPA) with three main views:
 - This view allows the user to configure the application.
 - The user can set their `userId`.
 - The user can toggle between light and dark mode.
-- The user can select the application language — English (default), German or Spanish. The choice is stored locally (`lang`) and applied in place (no page reload — a full reload in the installed Android PWA left the viewport mis-measured and clipped the bottom navigation until the app was killed); static and dynamic UI text is translated from flat JSON dictionaries (`frontend/locales/en.json`, `de.json`, `es.json`) via a lean, framework-free lookup (`frontend/js/i18n.js`). Missing keys fall back to English. The app name "locate.me" and the predefined tag vocabulary (`HOME`, `WORK`, …) stay in English (the backend only understands the English tags); the selected language is additionally sent as `Accept-Language` for the "Places around me" request so POI names come back localized.
+- The user can select the application language — English (default), German or Spanish. On a first visit without a stored choice the language is auto-detected from the browser (`navigator.languages`/`navigator.language`, reduced to the primary subtag; English is the fallback) and is not persisted, so it keeps following the browser until the user makes an explicit choice. The choice is stored locally (`lang`) and applied in place (no page reload — a full reload in the installed Android PWA left the viewport mis-measured and clipped the bottom navigation until the app was killed); static and dynamic UI text is translated from flat JSON dictionaries (`frontend/locales/en.json`, `de.json`, `es.json`) via a lean, framework-free lookup (`frontend/js/i18n.js`). Missing keys fall back to English. The app name "locate.me" and the predefined tag vocabulary (`HOME`, `WORK`, …) stay in English (the backend only understands the English tags); the selected language is additionally sent as `Accept-Language` for the "Places around me" request so POI names come back localized.
 - The view also displays the application version and links to the used services (OpenStreetMap, Leaflet, Open-Meteo).
+
+### 2.4. Install Prompt
+- A dismissible banner appears at the **top** of the app (over the header) to promote installation. On Android Chrome/Brave it is driven by the browser's `beforeinstallprompt` event; tapping "Install" opens the native install dialog and hides the banner. The event is captured in `index.html` before the module loads and consumed by `frontend/js/ui/install.js`.
+- Dismissal and successful installation are remembered (`localStorage`); the banner is never shown when the app already runs in standalone display mode.
+- On iOS Safari a one-time hint explains "Tap Share, then Add to Home Screen" (dismissal also remembered). The hint is not shown in an already-installed (standalone) window.
+- The banner/hint text follows the current application language: browser-detected on a first visit, otherwise the Settings choice.
 
 ## 3. Backend Services
 
@@ -173,6 +186,7 @@ component.
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.4.1 | 2026-09-13 | Frontend: PWA install promotion. New `frontend/js/ui/install.js` consumes the browser's `beforeinstallprompt` event (captured early in `index.html` and re-broadcast as `locateme:installavailable`) and shows a dismissible install banner at the top of the app; "Install" opens the native install dialog. Shown only when installable, not in standalone mode and not after dismissal/installation (`localStorage`). On iOS Safari (no `beforeinstallprompt`) a one-time "Add to Home Screen" hint is shown. `index.html` gains PWA/iOS meta tags and an `apple-touch-icon`. Also: the application language is auto-detected from the browser (`navigator.languages`/`navigator.language`, reduced to the primary subtag; English fallback) on a first visit without a stored preference and is not persisted — an explicit Settings choice still wins — so the install banner/hint and the UI start in the browser language. |
 | 0.4.1 | 2026-09-12 | Frontend: added a device-orientation compass needle to the "Places around me" header (points north, hidden without sensor data/permission). Internationalization: English (default), German and Spanish via a lean, framework-free JSON lookup (`frontend/locales/{en,de,es}.json`, `frontend/js/i18n.js`) with a language selector in Settings (stored in `localStorage`, applied in place via `setLanguage` + an `i18n:languagechanged` event — no page reload); missing keys fall back to English, tags and the app name stay English, and the selected language is sent as `Accept-Language` for Places POIs. |
 | 0.4.0 | 2026-08-28 | Places cache: each cached place now records the origin of the fetch that produced it (`fetch_lat`/`fetch_lon` = the user's request coordinates, set in `Places.toPlace`). Internal metadata — not part of the API response. Supports a later coverage-aware cache-read algorithm. |
 | 0.4.0 | 2026-08-28 | Admin DB monitoring extended: `GET /positions/stats?adminKey=` now returns the grand total plus the per-user breakdown (`{"total", "perUser":[{"userId","locations"}]}`) and `GET /places/stats?adminKey=` now returns the cache entry count plus a per-city breakdown (`{"count", "perCity":[{"city","places"}]}`); places without a city count toward `count` but are omitted from `perCity`. |

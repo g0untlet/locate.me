@@ -9,7 +9,7 @@
     "nav.settings": "Ajustes",
 
     "header.applicationOnline": "Aplicación en línea",
-    "header.backendUnreachable": "Backend no disponible",
+    "header.backendUnreachable": "Servidor no disponible",
 
     "locate.demoMode": "Modo demo.",
     "locate.demoModeHint": "Solicita tu propio ID de usuario en Ajustes.",
@@ -31,9 +31,9 @@
     "locate.previewFrom": "Vista previa de {time} — aún no guardada.",
     "locate.preview": "Vista previa — aún no guardada.",
     "locate.fetchError": "Error de obtención: {message}",
-    "locate.sending": "Enviando al backend...",
+    "locate.sending": "Enviando al servidor...",
     "locate.saved": "Ubicación guardada correctamente.",
-    "locate.backendError": "Error del backend: {message}",
+    "locate.backendError": "Error del servidor: {message}",
     "locate.noPosition": "No hay posición disponible. Obtén una primero.",
     "locate.saving": "Guardando ubicación...",
     "locate.gpsTimeout": "Tiempo de espera de GPS agotado: no se encontró posición.",
@@ -42,9 +42,9 @@
     "locate.offlineBanner": "Sin conexión — estás offline. Vista previa no disponible.",
 
     "label.temperature": "TEMPERATURA",
-    "label.condition": "CONDICIÓN",
+    "label.condition": "TÍEMPO",
     "label.uvIndex": "ÍNDICE UV",
-    "label.resolvedAddress": "DIRECCIÓN RESUELTA",
+    "label.resolvedAddress": "UBICACIÓN",
     "label.location": "UBICACIÓN",
     "label.elevation": "ALTITUD",
     "label.placesAroundMe": "LUGARES CERCANOS",
@@ -70,7 +70,7 @@
 
     "history.list": "Lista",
     "history.map": "Mapa",
-    "history.maps": "Mapas",
+    "history.maps": "Mapa",
     "history.share": "Compartir",
     "history.delete": "Eliminar",
     "history.copied": "¡Copiado!",
@@ -101,12 +101,12 @@
     "settings.requestUserId": "Solicita tu propio ID de usuario",
     "settings.save": "Guardar ajustes",
     "settings.saved": "¡Ajustes guardados correctamente!",
-    "settings.backendNotReachable": "Backend no disponible",
+    "settings.backendNotReachable": "Servidor no disponible",
     "settings.onlineSince": "En línea desde {date}",
 
     "weather.unknown": "Desconocido",
     "weather.clearSky": "Cielo despejado",
-    "weather.mainlyClear": "M. despejado",
+    "weather.mainlyClear": "Semi despejado",
     "weather.fog": "Niebla",
     "weather.drizzle": "Llovizna",
     "weather.freezingDrizzle": "Llovizna helada",
@@ -125,10 +125,17 @@
     "date.weekday": "{weekday}, {time}",
 
     "errors.tooManyRequests": "Demasiadas solicitudes. Espera un momento e inténtalo de nuevo.",
-    "errors.backendStatus": "El backend respondió con un código de error",
+    "errors.backendStatus": "El servidor respondió con un código de error",
     "errors.fetchHistory": "No se pudo cargar el historial",
     "errors.removeRecord": "No se pudo eliminar el registro",
 
-    "toast.online": "✓ Backend en línea",
-    "toast.offline": "✗ Backend no disponible"
+    "toast.online": "✓ Servidor en línea",
+    "toast.offline": "✗ Servidor no disponible",
+
+    "install.androidTitle": "Instalar locate.me",
+    "install.androidText": "Añade la app a tu pantalla de inicio para un acceso rápido.",
+    "install.install": "Instalar",
+    "install.dismiss": "Descartar",
+    "install.iosTitle": "Instalar locate.me",
+    "install.iosText": "Toca Compartir y luego «Añadir a pantalla de inicio»."
 }

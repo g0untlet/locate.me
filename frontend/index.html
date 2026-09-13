@@ -3,25 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#72b2dc">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="locate.me">
     <title>locate.me</title>
     <script>
         const APP_VERSION = '0.4.1';
-        const APP_BUILD   = '20260912';
+        const APP_BUILD   = '20260913';
         document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light';
         document.documentElement.lang = localStorage.getItem('lang') || 'en';
         document.documentElement.classList.add('i18n-loading');
         setTimeout(() => document.documentElement.classList.remove('i18n-loading'), 4000);
     </script>
-    <link rel="stylesheet" href="css/style.css?v=0.4.1_8">
+    <script>
+        // Capture the install prompt as early as possible: Chrome fires
+        // "beforeinstallprompt" only once and the ES module loads after parsing.
+        // The event is stashed on window and re-broadcast as a custom event so
+        // js/ui/install.js can consume it even if it loads afterwards.
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            window.__bipEvent = e;
+            window.dispatchEvent(new Event('locateme:installavailable'));
+        });
+        window.addEventListener('appinstalled', () => {
+            window.__bipEvent = null;
+            window.dispatchEvent(new Event('locateme:installed'));
+        });
+    </script>
+    <link rel="stylesheet" href="css/style.css?v=0.4.1_10">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="icons/icon_192.png">
 </head>
 <body>
-    <script type="module" src="app.js?v=0.4.1_5"></script>
+    <script type="module" src="app.js?v=0.4.1_10"></script>
 
     <div class="app-container">
         <header class="app-header">
