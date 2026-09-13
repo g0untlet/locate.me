@@ -28,6 +28,26 @@ function normalizeLanguage(lang) {
 }
 
 /* ==========================================================================
+   Internal: best-effort language detection from the browser.
+   Walks navigator.languages (fallback navigator.language), reduces each tag
+   to its primary subtag (e.g. "de-AT" -> "de") and returns the first
+   supported match. English is the fallback. The detected value is NOT
+   persisted – only an explicit setLanguage() choice is stored, so a user
+   selection always wins and is never overwritten.
+   ========================================================================== */
+function detectBrowserLanguage() {
+    const tags = (Array.isArray(navigator.languages) && navigator.languages.length)
+        ? navigator.languages
+        : [navigator.language];
+
+    for (const tag of tags) {
+        const primary = String(tag || '').toLowerCase().split('-')[0];
+        if (SUPPORTED_LANGUAGES.includes(primary)) return primary;
+    }
+    return DEFAULT_LANGUAGE;
+}
+
+/* ==========================================================================
    Public: current language / locale tag
    ========================================================================== */
 export function getLanguage() {
@@ -93,12 +113,14 @@ async function loadDictionaries(lang) {
 }
 
 /* ==========================================================================
-   Public: bootstrap – load the stored language + English fallback, then
-   translate the static markup.
+   Public: bootstrap – load the stored language (or, on a first visit without
+   a stored preference, the detected browser language) + English fallback,
+   then translate the static markup.
    ========================================================================== */
 export async function initI18n() {
-    const stored = normalizeLanguage(localStorage.getItem('lang') || DEFAULT_LANGUAGE);
-    await loadDictionaries(stored);
+    const stored = localStorage.getItem('lang');
+    const lang = stored ? normalizeLanguage(stored) : detectBrowserLanguage();
+    await loadDictionaries(lang);
 
     try {
         applyTranslations();

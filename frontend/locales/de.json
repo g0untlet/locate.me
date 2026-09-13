@@ -9,7 +9,7 @@
     "nav.settings": "Einstellungen",
 
     "header.applicationOnline": "Anwendung online",
-    "header.backendUnreachable": "Backend nicht erreichbar",
+    "header.backendUnreachable": "Server nicht erreichbar",
 
     "locate.demoMode": "Demo-Modus.",
     "locate.demoModeHint": "Fordere deine eigene Benutzer-ID in den Einstellungen an.",
@@ -31,9 +31,9 @@
     "locate.previewFrom": "Vorschau von {time} — noch nicht gespeichert.",
     "locate.preview": "Vorschau — noch nicht gespeichert.",
     "locate.fetchError": "Abruffehler: {message}",
-    "locate.sending": "Wird an das Backend gesendet...",
+    "locate.sending": "Wird an den Server gesendet...",
     "locate.saved": "Standort erfolgreich gespeichert.",
-    "locate.backendError": "Backend-Fehler: {message}",
+    "locate.backendError": "Server-Fehler: {message}",
     "locate.noPosition": "Keine Position verfügbar. Bitte zuerst abrufen.",
     "locate.saving": "Standort wird gespeichert...",
     "locate.gpsTimeout": "GPS-Zeitüberschreitung: Keine Position gefunden.",
@@ -93,7 +93,7 @@
     "travel.bike": "Radfahrzeit",
     "travel.drive": "Fahrzeit",
 
-    "settings.title": "Anwendungseinstellungen",
+    "settings.title": "Einstellungen",
     "settings.darkMode": "Dunkelmodus",
     "settings.toggleDarkMode": "Dunkelmodus umschalten",
     "settings.toggleUserId": "Sichtbarkeit der Benutzer-ID umschalten",
@@ -101,7 +101,7 @@
     "settings.requestUserId": "Eigene Benutzer-ID anfordern",
     "settings.save": "Einstellungen speichern",
     "settings.saved": "Einstellungen erfolgreich gespeichert!",
-    "settings.backendNotReachable": "Backend nicht erreichbar",
+    "settings.backendNotReachable": "Server nicht erreichbar",
     "settings.onlineSince": "Online seit {date}",
 
     "weather.unknown": "Unbekannt",
@@ -125,12 +125,12 @@
     "date.weekday": "{weekday}, {time}",
 
     "errors.tooManyRequests": "Zu viele Anfragen. Bitte warte einen Moment und versuche es erneut.",
-    "errors.backendStatus": "Backend hat mit einem Fehlerstatus geantwortet",
+    "errors.backendStatus": "Server hat mit einem Fehlerstatus geantwortet",
     "errors.fetchHistory": "Verlauf konnte nicht geladen werden",
     "errors.removeRecord": "Eintrag konnte nicht entfernt werden",
 
-    "toast.online": "✓ Backend online",
-    "toast.offline": "✗ Backend nicht erreichbar",
+    "toast.online": "✓ Server online",
+    "toast.offline": "✗ Server nicht erreichbar",
 
     "install.androidTitle": "locate.me installieren",
     "install.androidText": "Füge die App für schnellen Zugriff zum Startbildschirm hinzu.",

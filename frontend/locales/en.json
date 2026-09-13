@@ -9,7 +9,7 @@
     "nav.settings": "Settings",
 
     "header.applicationOnline": "Application Online",
-    "header.backendUnreachable": "Backend unreachable",
+    "header.backendUnreachable": "Server unreachable",
 
     "locate.demoMode": "Demo mode.",
     "locate.demoModeHint": "Request your own user id in Settings.",
@@ -31,9 +31,9 @@
     "locate.previewFrom": "Preview from {time} — not yet saved.",
     "locate.preview": "Preview — not yet saved.",
     "locate.fetchError": "Fetch Error: {message}",
-    "locate.sending": "Sending to backend...",
+    "locate.sending": "Sending to server...",
     "locate.saved": "Location successfully saved.",
-    "locate.backendError": "Backend Error: {message}",
+    "locate.backendError": "Server Error: {message}",
     "locate.noPosition": "No position available. Please fetch first.",
     "locate.saving": "Saving location...",
     "locate.gpsTimeout": "GPS Timeout: No position found.",
@@ -101,7 +101,7 @@
     "settings.requestUserId": "Request your own User ID",
     "settings.save": "Save Settings",
     "settings.saved": "Settings saved successfully!",
-    "settings.backendNotReachable": "Backend not reachable",
+    "settings.backendNotReachable": "Server not reachable",
     "settings.onlineSince": "Online since {date}",
 
     "weather.unknown": "Unknown",
@@ -125,12 +125,12 @@
     "date.weekday": "{weekday}, {time}",
 
     "errors.tooManyRequests": "Too many requests. Please wait a moment and try again.",
-    "errors.backendStatus": "Backend answered with error status code",
+    "errors.backendStatus": "Server answered with error status code",
     "errors.fetchHistory": "Could not fetch history",
     "errors.removeRecord": "Could not process record removal",
 
-    "toast.online": "✓ Backend online",
-    "toast.offline": "✗ Backend not reachable",
+    "toast.online": "✓ Server online",
+    "toast.offline": "✗ Server not reachable",
 
     "install.androidTitle": "Install locate.me",
     "install.androidText": "Add the app to your home screen for quick access.",
