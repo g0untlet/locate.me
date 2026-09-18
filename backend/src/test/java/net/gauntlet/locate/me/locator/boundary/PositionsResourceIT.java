@@ -48,7 +48,7 @@ public class PositionsResourceIT {
     public void setup() {
         em.createQuery("DELETE FROM Position").executeUpdate();
         // Provide a default mock for clients to prevent real calls in tests that don't care about the result
-        when(geocodingClient.reverse(anyDouble(), anyDouble(), anyString(), anyInt()))
+        when(geocodingClient.reverse(anyDouble(), anyDouble(), anyString(), anyInt(), anyString()))
             .thenReturn(Json.createObjectBuilder().add("display_name", "Mocked Location").build());
         when(weatherClient.forecast(anyDouble(), anyDouble(), anyString(), anyString(), anyInt(), anyString()))
             .thenReturn(Json.createObjectBuilder().build());
@@ -252,7 +252,7 @@ public class PositionsResourceIT {
                                 .add("uv_index", 9.9)
                                 .build())
                         .build());
-        when(geocodingClient.reverse(anyDouble(), anyDouble(), anyString(), anyInt()))
+        when(geocodingClient.reverse(anyDouble(), anyDouble(), anyString(), anyInt(), anyString()))
                 .thenReturn(Json.createObjectBuilder().add("display_name", "Server-Resolved Location").build());
 
         JsonObject json = Json.createObjectBuilder()
@@ -331,7 +331,7 @@ public class PositionsResourceIT {
 
     @Test
     void fetchCurrentPositionEnrichesAndDoesNotPersist() {
-        when(geocodingClient.reverse(48.1351, 11.5820, "jsonv2", 18))
+        when(geocodingClient.reverse(48.1351, 11.5820, "jsonv2", 18, "address"))
                 .thenReturn(Json.createObjectBuilder().add("display_name", "Mocked OSM Munich").build());
         when(weatherClient.forecast(anyDouble(), anyDouble(), anyString(), anyString(), anyInt(), anyString()))
                 .thenReturn(Json.createObjectBuilder()
@@ -341,19 +341,23 @@ public class PositionsResourceIT {
                                 .add("temperature_2m", 32.3)
                                 .add("weather_code", 2)
                                 .add("uv_index", 6.6)
+                                .add("is_day", 0)
                                 .build())
                         .add("hourly", Json.createObjectBuilder()
                                 .add("time", Json.createArrayBuilder()
                                         .add("2026-09-18T09:00")
                                         .add("2026-09-18T10:00")
                                         .add("2026-09-18T11:00")
-                                        .add("2026-09-18T12:00"))
+                                        .add("2026-09-18T12:00")
+                                        .add("2026-09-18T13:00"))
                                 .add("temperature_2m", Json.createArrayBuilder()
                                         .add(17.0)
                                         .add(18.0)
                                         .add(19.1)
-                                        .add(20.2))
+                                        .add(20.2)
+                                        .add(21.0))
                                 .add("weather_code", Json.createArrayBuilder()
+                                        .add(3)
                                         .add(3)
                                         .add(3)
                                         .add(3)
@@ -362,12 +366,20 @@ public class PositionsResourceIT {
                                         .add(2.95)
                                         .add(3.6)
                                         .add(3.75)
-                                        .add(4.0))
+                                        .add(4.0)
+                                        .add(4.2))
                                 .add("precipitation_probability", Json.createArrayBuilder()
                                         .add(0)
                                         .add(5)
                                         .add(10)
-                                        .add(15))
+                                        .add(15)
+                                        .add(20))
+                                .add("is_day", Json.createArrayBuilder()
+                                        .add(0)
+                                        .add(0)
+                                        .add(1)
+                                        .add(1)
+                                        .add(1))
                                 .build())
                         .build());
 
@@ -381,14 +393,17 @@ public class PositionsResourceIT {
                 .body("uvIndex", is(6.6f))
                 .body("elevation", is(520f))
                 .body("weatherCode", is(2))
-                .body("forecast.size()", is(3))
+                .body("isDay", is(false))
+                .body("forecast.size()", is(4))
                 .body("forecast[0].time", is("2026-09-18T10:00"))
                 .body("forecast[0].temperature", is(18.0f))
                 .body("forecast[0].weatherCode", is(3))
                 .body("forecast[0].uvIndex", is(3.6f))
                 .body("forecast[0].precipitationProbability", is(5))
-                .body("forecast[2].time", is("2026-09-18T12:00"))
-                .body("forecast[2].precipitationProbability", is(15));
+                .body("forecast[0].isDay", is(false))
+                .body("forecast[1].isDay", is(true))
+                .body("forecast[3].time", is("2026-09-18T13:00"))
+                .body("forecast[3].precipitationProbability", is(20));
 
         // Preview must not be persisted
         given()

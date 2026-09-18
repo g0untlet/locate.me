@@ -77,7 +77,7 @@ public class PositionsResourceEnrichmentIT {
                         .build())
                 .build();
         
-        when(geocodingClient.reverse(anyDouble(), anyDouble(), anyString(), anyInt())).thenReturn(nominatimResponse);
+        when(geocodingClient.reverse(anyDouble(), anyDouble(), anyString(), anyInt(), anyString())).thenReturn(nominatimResponse);
 
         JsonObject weatherResponse = Json.createObjectBuilder()
                 .add("elevation", 520)
@@ -86,19 +86,23 @@ public class PositionsResourceEnrichmentIT {
                         .add("temperature_2m", 32.3)
                         .add("weather_code", 2)
                         .add("uv_index", 6.6)
+                        .add("is_day", 0)
                         .build())
                 .add("hourly", Json.createObjectBuilder()
                         .add("time", Json.createArrayBuilder()
                                 .add("2026-09-18T09:00")
                                 .add("2026-09-18T10:00")
                                 .add("2026-09-18T11:00")
-                                .add("2026-09-18T12:00"))
+                                .add("2026-09-18T12:00")
+                                .add("2026-09-18T13:00"))
                         .add("temperature_2m", Json.createArrayBuilder()
                                 .add(17.0)
                                 .add(18.0)
                                 .add(19.1)
-                                .add(20.2))
+                                .add(20.2)
+                                .add(21.0))
                         .add("weather_code", Json.createArrayBuilder()
+                                .add(3)
                                 .add(3)
                                 .add(3)
                                 .add(3)
@@ -107,12 +111,20 @@ public class PositionsResourceEnrichmentIT {
                                 .add(2.95)
                                 .add(3.6)
                                 .add(3.75)
-                                .add(4.0))
+                                .add(4.0)
+                                .add(4.2))
                         .add("precipitation_probability", Json.createArrayBuilder()
                                 .add(0)
                                 .addNull()
                                 .add(10)
-                                .add(25))
+                                .add(25)
+                                .add(30))
+                        .add("is_day", Json.createArrayBuilder()
+                                .add(0)
+                                .add(0)
+                                .add(1)
+                                .add(1)
+                                .add(1))
                         .build())
                 .build();
 
@@ -145,9 +157,10 @@ public class PositionsResourceEnrichmentIT {
         assertThat((float) json.getJsonNumber("uvIndex").doubleValue()).isEqualTo(6.6f);
         assertThat(json.getJsonNumber("elevation").doubleValue()).isEqualTo(520);
         assertThat(json.getJsonNumber("weatherCode").intValue()).isEqualTo(2);
+        assertThat(json.getBoolean("isDay")).isFalse();
 
         JsonArray forecast = json.getJsonArray("forecast");
-        assertThat(forecast).hasSize(3);
+        assertThat(forecast).hasSize(4);
         // The current hour (09:00 for a 09:45 current time) is skipped; the preview
         // only shows future hours.
         JsonObject firstSlice = forecast.getJsonObject(0);
@@ -155,11 +168,13 @@ public class PositionsResourceEnrichmentIT {
         assertThat((float) firstSlice.getJsonNumber("temperature").doubleValue()).isEqualTo(18.0f);
         assertThat(firstSlice.getJsonNumber("weatherCode").intValue()).isEqualTo(3);
         assertThat((float) firstSlice.getJsonNumber("uvIndex").doubleValue()).isEqualTo(3.6f);
+        assertThat(firstSlice.getBoolean("isDay")).isFalse();
         // A null value in a parallel array must simply be omitted, not fail the request
         assertThat(firstSlice.containsKey("precipitationProbability")).isFalse();
         assertThat(forecast.getJsonObject(1).getJsonNumber("precipitationProbability").intValue()).isEqualTo(10);
-        assertThat(forecast.getJsonObject(2).getString("time")).isEqualTo("2026-09-18T12:00");
-        assertThat(forecast.getJsonObject(2).getJsonNumber("precipitationProbability").intValue()).isEqualTo(25);
+        assertThat(forecast.getJsonObject(1).getBoolean("isDay")).isTrue();
+        assertThat(forecast.getJsonObject(3).getString("time")).isEqualTo("2026-09-18T13:00");
+        assertThat(forecast.getJsonObject(3).getJsonNumber("precipitationProbability").intValue()).isEqualTo(30);
 
         // And the preview must not be persisted
         Long count = em.createQuery("SELECT COUNT(p) FROM Position p WHERE p.userId = :userId", Long.class)

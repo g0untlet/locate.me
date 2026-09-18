@@ -26,7 +26,7 @@ public class Positions {
     public record PositionCount(String userId, long locations) {
     }
 
-    public record ForecastTimeslice(String time, Float temperature, WeatherCode weatherCode, Float uvIndex, Integer precipitationProbability) {
+    public record ForecastTimeslice(String time, Float temperature, WeatherCode weatherCode, Float uvIndex, Integer precipitationProbability, Boolean isDay) {
 
         public JsonObject toJSON() {
             JsonObjectBuilder builder = Json.createObjectBuilder();
@@ -45,18 +45,24 @@ public class Positions {
             if (this.precipitationProbability != null) {
                 builder.add("precipitationProbability", this.precipitationProbability);
             }
+            if (this.isDay != null) {
+                builder.add("isDay", this.isDay);
+            }
             return builder.build();
         }
     }
 
-    public record Current(Position position, List<ForecastTimeslice> forecast) {
+    public record Current(Position position, List<ForecastTimeslice> forecast, Boolean isDay) {
 
         public JsonObject toJSON() {
             JsonArrayBuilder forecastBuilder = Json.createArrayBuilder();
             this.forecast.stream().map(ForecastTimeslice::toJSON).forEach(forecastBuilder::add);
-            return Json.createObjectBuilder(this.position.toJSON())
-                    .add("forecast", forecastBuilder)
-                    .build();
+            JsonObjectBuilder builder = Json.createObjectBuilder(this.position.toJSON())
+                    .add("forecast", forecastBuilder);
+            if (this.isDay != null) {
+                builder.add("isDay", this.isDay);
+            }
+            return builder.build();
         }
     }
 
@@ -74,6 +80,10 @@ public class Positions {
     @Inject
     @ConfigProperty(name = "nominatim.zoom")
     int geocodingZoom;
+
+    @Inject
+    @ConfigProperty(name = "nominatim.layer", defaultValue = "address")
+    String geocodingLayer;
 
     @Inject
     @RestClient
@@ -100,7 +110,7 @@ public class Positions {
         if (position.displayName() == null || position.displayName().isBlank()) {
             try {
                 JsonObject response = this.geocodingClient.reverse(position.latitude(), position.longitude(),
-                        this.geocodingFormat, this.geocodingZoom);
+                        this.geocodingFormat, this.geocodingZoom, this.geocodingLayer);
                 if (response != null) {
                     if (response.containsKey("display_name") && !response.isNull("display_name")) {
                         String displayName = response.getString("display_name");
@@ -127,6 +137,7 @@ public class Positions {
         }
 
         List<ForecastTimeslice> forecast = List.of();
+        Boolean isDay = null;
         try {
             JsonObject response = this.weatherClient.forecast(position.latitude(), position.longitude(),
                     this.currentFields, this.hourlyFields, this.forecastHours + 1, this.timezone);
@@ -142,6 +153,9 @@ public class Positions {
                     int code = current.getJsonNumber("weather_code").intValue();
                     position.weatherCode(WeatherCode.fromCode(code));
                 }
+                if (current.containsKey("is_day") && !current.isNull("is_day")) {
+                    isDay = current.getJsonNumber("is_day").intValue() != 0;
+                }
             }
             if (response != null && response.containsKey("elevation") && !response.isNull("elevation")) {
                 position.elevation((float) response.getJsonNumber("elevation").doubleValue());
@@ -151,7 +165,7 @@ public class Positions {
             LOG.log(System.Logger.Level.WARNING, "Failed to resolve weather via Open-Meteo API: {0}", e.getMessage());
         }
 
-        return new Current(position, forecast);
+        return new Current(position, forecast, isDay);
     }
 
     private List<ForecastTimeslice> forecastTimeslices(JsonObject response) {
@@ -164,6 +178,7 @@ public class Positions {
         JsonArray codes = this.array(hourly, "weather_code");
         JsonArray uvIndices = this.array(hourly, "uv_index");
         JsonArray precipitationProbabilities = this.array(hourly, "precipitation_probability");
+        JsonArray isDays = this.array(hourly, "is_day");
         int slices = times == null ? 0 : times.size();
         // Open-Meteo's forecast_hours window starts at the current hour; skip that
         // (and anything earlier) so the preview shows only future hours. One extra
@@ -180,7 +195,8 @@ public class Positions {
                     this.floatValue(temperatures, i),
                     this.weatherCode(codes, i),
                     this.floatValue(uvIndices, i),
-                    this.intValue(precipitationProbabilities, i)));
+                    this.intValue(precipitationProbabilities, i),
+                    this.booleanValue(isDays, i)));
         }
         return forecast.stream().limit(this.forecastHours).toList();
     }
@@ -213,6 +229,11 @@ public class Positions {
 
     private Integer intValue(JsonArray array, int index) {
         return array != null && index < array.size() && !array.isNull(index) ? array.getJsonNumber(index).intValue() : null;
+    }
+
+    private Boolean booleanValue(JsonArray array, int index) {
+        Integer value = this.intValue(array, index);
+        return value != null ? value != 0 : null;
     }
 
     private WeatherCode weatherCode(JsonArray array, int index) {

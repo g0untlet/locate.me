@@ -389,7 +389,7 @@ function escapeHtml(str) {
 
 function fillWeather({ icon, temp, weather, uv }, data) {
     if (icon) {
-        icon.innerHTML = getWeatherIconSvg(data.weatherCode);
+        icon.innerHTML = getWeatherIconSvg(data.weatherCode, data.isDay);
         const mainIconSvg = icon.querySelector('svg');
         if (mainIconSvg) mainIconSvg.style.stroke = "#1a5f8c";
     }
@@ -603,7 +603,7 @@ function renderForecast(forecast) {
     cells.push('<span class="forecast-gutter" aria-hidden="true"></span>');
     slices.forEach(s => {
         const label = getWeatherText(s.weatherCode);
-        cells.push(`<span class="forecast-icon" role="img" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">${getWeatherIconSvg(s.weatherCode)}</span>`);
+        cells.push(`<span class="forecast-icon" role="img" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">${getWeatherIconSvg(s.weatherCode, s.isDay)}</span>`);
     });
 
     // Temperature in °C (forecast is approximate, so whole degrees).
