@@ -22,5 +22,6 @@ public interface GeocodingClient {
     JsonObject reverse(
             @QueryParam("lat") double latitude,
             @QueryParam("lon") double longitude,
-            @QueryParam("format") String format);
+            @QueryParam("format") String format,
+            @QueryParam("zoom") int zoom);
 }

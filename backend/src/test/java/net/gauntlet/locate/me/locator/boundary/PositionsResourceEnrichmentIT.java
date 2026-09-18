@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.InjectMock;
 import jakarta.json.Json;
+import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
@@ -18,6 +19,7 @@ import net.gauntlet.locate.me.locator.control.GeocodingClient;
 import net.gauntlet.locate.me.locator.control.WeatherClient;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import jakarta.inject.Inject;
@@ -75,7 +77,7 @@ public class PositionsResourceEnrichmentIT {
                         .build())
                 .build();
         
-        when(geocodingClient.reverse(anyDouble(), anyDouble(), anyString())).thenReturn(nominatimResponse);
+        when(geocodingClient.reverse(anyDouble(), anyDouble(), anyString(), anyInt())).thenReturn(nominatimResponse);
 
         JsonObject weatherResponse = Json.createObjectBuilder()
                 .add("elevation", 520)
@@ -84,9 +86,31 @@ public class PositionsResourceEnrichmentIT {
                         .add("weather_code", 2)
                         .add("uv_index", 6.6)
                         .build())
+                .add("hourly", Json.createObjectBuilder()
+                        .add("time", Json.createArrayBuilder()
+                                .add("2026-09-18T09:00")
+                                .add("2026-09-18T10:00")
+                                .add("2026-09-18T11:00"))
+                        .add("temperature_2m", Json.createArrayBuilder()
+                                .add(17.0)
+                                .add(18.0)
+                                .add(19.1))
+                        .add("weather_code", Json.createArrayBuilder()
+                                .add(3)
+                                .add(3)
+                                .add(3))
+                        .add("uv_index", Json.createArrayBuilder()
+                                .add(2.95)
+                                .add(3.6)
+                                .add(3.75))
+                        .add("precipitation_probability", Json.createArrayBuilder()
+                                .add(0)
+                                .addNull()
+                                .add(10))
+                        .build())
                 .build();
 
-        when(weatherClient.forecast(anyDouble(), anyDouble(), anyString())).thenReturn(weatherResponse);
+        when(weatherClient.forecast(anyDouble(), anyDouble(), anyString(), anyString(), anyInt(), anyString())).thenReturn(weatherResponse);
     }
 
     @Test
@@ -115,6 +139,18 @@ public class PositionsResourceEnrichmentIT {
         assertThat((float) json.getJsonNumber("uvIndex").doubleValue()).isEqualTo(6.6f);
         assertThat(json.getJsonNumber("elevation").doubleValue()).isEqualTo(520);
         assertThat(json.getJsonNumber("weatherCode").intValue()).isEqualTo(2);
+
+        JsonArray forecast = json.getJsonArray("forecast");
+        assertThat(forecast).hasSize(3);
+        JsonObject firstSlice = forecast.getJsonObject(0);
+        assertThat(firstSlice.getString("time")).isEqualTo("2026-09-18T09:00");
+        assertThat((float) firstSlice.getJsonNumber("temperature").doubleValue()).isEqualTo(17.0f);
+        assertThat(firstSlice.getJsonNumber("weatherCode").intValue()).isEqualTo(3);
+        assertThat((float) firstSlice.getJsonNumber("uvIndex").doubleValue()).isEqualTo(2.95f);
+        assertThat(firstSlice.getJsonNumber("precipitationProbability").intValue()).isEqualTo(0);
+        // A null value in a parallel array must simply be omitted, not fail the request
+        assertThat(forecast.getJsonObject(1).containsKey("precipitationProbability")).isFalse();
+        assertThat(forecast.getJsonObject(2).getJsonNumber("precipitationProbability").intValue()).isEqualTo(10);
 
         // And the preview must not be persisted
         Long count = em.createQuery("SELECT COUNT(p) FROM Position p WHERE p.userId = :userId", Long.class)

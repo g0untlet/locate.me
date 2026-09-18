@@ -209,7 +209,7 @@ public class PositionsResource {
             throw new BadRequestException("Validation failed: " + violations.iterator().next().getMessage());
         }
 
-        Position current = this.positions.enrich(position);
+        Positions.Current current = this.positions.enrich(position);
         return Response.ok(URI.create("/positions/current"))
                 .entity(current.toJSON())
                 .build();

@@ -21,5 +21,8 @@ public interface WeatherClient {
     JsonObject forecast(
             @QueryParam("latitude") double latitude,
             @QueryParam("longitude") double longitude,
-            @QueryParam("current") String current);
+            @QueryParam("current") String current,
+            @QueryParam("hourly") String hourly,
+            @QueryParam("forecast_hours") int forecastHours,
+            @QueryParam("timezone") String timezone);
 }
