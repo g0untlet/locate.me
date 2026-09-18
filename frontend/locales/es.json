@@ -68,6 +68,14 @@
     "places.compassLabel": "Brújula apuntando al norte",
     "places.compassTitle": "Norte",
 
+    "forecast.title": "Pronóstico de 3 horas",
+    "forecast.expand": "Mostrar pronóstico de 3 horas",
+    "forecast.collapse": "Ocultar pronóstico de 3 horas",
+    "forecast.uvLabel": "Índice UV",
+    "forecast.uv": "Índice UV {value}",
+    "forecast.chanceOfRainLabel": "Probabilidad de lluvia",
+    "forecast.chanceOfRain": "Probabilidad de lluvia {value}%",
+
     "history.list": "Lista",
     "history.map": "Mapa",
     "history.maps": "Mapa",

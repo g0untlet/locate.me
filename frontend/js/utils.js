@@ -182,6 +182,31 @@ export function getUvLevel(value) {
 }
 
 /* ==========================================================================
+   Forecast: "HH:MM" label from an Open-Meteo ISO timestamp. Open-Meteo returns
+   the location's local time (weather.timezone=auto) without an offset, so the
+   string is sliced directly instead of going through new Date(), which would
+   re-interpret it in the device timezone.
+   ========================================================================== */
+export function formatForecastTime(iso) {
+    if (typeof iso !== 'string') return '-';
+    const match = iso.match(/T(\d{2}:\d{2})/);
+    return match ? match[1] : iso;
+}
+
+/* ==========================================================================
+   Global Helper: Precipitation row icon (chance of rain).
+   Snow codes get a snowflake, everything else a droplet.
+   ========================================================================== */
+export function getPrecipitationIconSvg(weatherCode) {
+    const svgAttrs = `viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`;
+    const code = Number(weatherCode);
+    if ([71, 73, 75, 77, 85, 86].includes(code)) {
+        return `<svg ${svgAttrs}><line x1="12" y1="2" x2="12" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line><line x1="4.93" y1="19.07" x2="19.07" y2="4.93"></line></svg>`;
+    }
+    return `<svg ${svgAttrs}><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>`;
+}
+
+/* ==========================================================================
    Global Helper: Pure, lightweight Inline SVG Location Icon Renderer
    ========================================================================== */
 export function getLocationIconSvg(category, type) {

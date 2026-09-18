@@ -68,6 +68,14 @@
     "places.compassLabel": "Compass pointing north",
     "places.compassTitle": "North",
 
+    "forecast.title": "3-hour forecast",
+    "forecast.expand": "Show 3-hour forecast",
+    "forecast.collapse": "Hide 3-hour forecast",
+    "forecast.uvLabel": "UV index",
+    "forecast.uv": "UV index {value}",
+    "forecast.chanceOfRainLabel": "Chance of rain",
+    "forecast.chanceOfRain": "Chance of rain {value}%",
+
     "history.list": "List",
     "history.map": "Map",
     "history.maps": "Maps",
