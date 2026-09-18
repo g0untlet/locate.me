@@ -129,7 +129,7 @@ public class Positions {
         List<ForecastTimeslice> forecast = List.of();
         try {
             JsonObject response = this.weatherClient.forecast(position.latitude(), position.longitude(),
-                    this.currentFields, this.hourlyFields, this.forecastHours, this.timezone);
+                    this.currentFields, this.hourlyFields, this.forecastHours + 1, this.timezone);
             if (response != null && response.containsKey("current") && !response.isNull("current")) {
                 JsonObject current = response.getJsonObject("current");
                 if (current.containsKey("temperature_2m") && !current.isNull("temperature_2m")) {
@@ -165,16 +165,36 @@ public class Positions {
         JsonArray uvIndices = this.array(hourly, "uv_index");
         JsonArray precipitationProbabilities = this.array(hourly, "precipitation_probability");
         int slices = times == null ? 0 : times.size();
+        // Open-Meteo's forecast_hours window starts at the current hour; skip that
+        // (and anything earlier) so the preview shows only future hours. One extra
+        // hour is requested so exactly weather.forecast-hours future slices remain.
+        String currentHour = this.currentHour(response);
         List<ForecastTimeslice> forecast = new ArrayList<>(slices);
         for (int i = 0; i < slices; i++) {
+            String time = this.stringValue(times, i);
+            if (currentHour != null && time != null && time.compareTo(currentHour) <= 0) {
+                continue;
+            }
             forecast.add(new ForecastTimeslice(
-                    this.stringValue(times, i),
+                    time,
                     this.floatValue(temperatures, i),
                     this.weatherCode(codes, i),
                     this.floatValue(uvIndices, i),
                     this.intValue(precipitationProbabilities, i)));
         }
-        return forecast;
+        return forecast.stream().limit(this.forecastHours).toList();
+    }
+
+    private String currentHour(JsonObject response) {
+        if (response == null || !response.containsKey("current") || response.isNull("current")) {
+            return null;
+        }
+        JsonObject current = response.getJsonObject("current");
+        if (!current.containsKey("time") || current.isNull("time")) {
+            return null;
+        }
+        String time = current.getString("time");
+        return time.length() >= 13 ? time.substring(0, 13) + ":00" : null;
     }
 
     private JsonArray array(JsonObject object, String name) {

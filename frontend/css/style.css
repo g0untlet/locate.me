@@ -1145,14 +1145,13 @@ html.i18n-loading .app-container {
 .forecast-gutter {
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 16px;
+    justify-content: flex-start;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    white-space: nowrap;
     color: var(--text-muted);
-}
-
-.forecast-gutter svg {
-    width: 14px;
-    height: 14px;
 }
 
 @media (prefers-reduced-motion: reduce) {

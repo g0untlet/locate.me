@@ -14,7 +14,6 @@ import {
     formatShortAddress,
     formatRelativeDate,
     formatForecastTime,
-    getPrecipitationIconSvg,
     PREDEFINED_TAGS
 } from '../utils.js';
 
@@ -575,17 +574,6 @@ function selectResolvedAddress() {
    ========================================================================== */
 const FORECAST_SNOW_CODES = [71, 73, 75, 77, 85, 86];
 
-/* Sun icon used as the row label for the UV row (the values carry the aria text). */
-const FORECAST_UV_ICON =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
-    'stroke-linecap="round" stroke-linejoin="round">' +
-    '<circle cx="12" cy="12" r="4"></circle>' +
-    '<line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line>' +
-    '<line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>' +
-    '<line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line>' +
-    '<line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>' +
-    '</svg>';
-
 function isNumeric(value) {
     return value !== undefined && value !== null && !isNaN(parseFloat(value));
 }
@@ -618,24 +606,24 @@ function renderForecast(forecast) {
         cells.push(`<span class="forecast-icon" role="img" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">${getWeatherIconSvg(s.weatherCode)}</span>`);
     });
 
-    // Temperature in °C.
-    cells.push('<span class="forecast-gutter" aria-hidden="true"></span>');
+    // Temperature in °C (forecast is approximate, so whole degrees).
+    cells.push(`<span class="forecast-gutter" aria-hidden="true">${escapeHtml(t('forecast.tempShort'))}</span>`);
     slices.forEach(s => {
-        const value = isNumeric(s.temperature) ? `${parseFloat(s.temperature).toFixed(1)} \u00B0C` : '-';
+        const value = isNumeric(s.temperature) ? `${Math.round(parseFloat(s.temperature))} \u00B0C` : '-';
         cells.push(`<span class="forecast-value forecast-temp">${value}</span>`);
     });
 
-    // UV index (sun icon as row label).
-    cells.push(`<span class="forecast-gutter" aria-hidden="true">${FORECAST_UV_ICON}</span>`);
+    // UV index (short text row label; whole number for the forecast).
+    cells.push(`<span class="forecast-gutter" aria-hidden="true">${escapeHtml(t('forecast.uvShort'))}</span>`);
     slices.forEach(s => {
-        const value = isNumeric(s.uvIndex) ? parseFloat(s.uvIndex).toFixed(1) : '-';
+        const value = isNumeric(s.uvIndex) ? `${Math.round(parseFloat(s.uvIndex))}` : '-';
         const label = (value === '-') ? t('forecast.uvLabel') : t('forecast.uv', { value });
         cells.push(`<span class="forecast-value" aria-label="${escapeHtml(label)}">${value}</span>`);
     });
 
-    // Chance of rain (droplet, or a snowflake when every hour is a snow code).
+    // Chance of precipitation (text label switches to SNOW when every hour is a snow code).
     const allSnow = slices.every(s => FORECAST_SNOW_CODES.includes(Number(s.weatherCode)));
-    cells.push(`<span class="forecast-gutter" aria-hidden="true">${getPrecipitationIconSvg(allSnow ? FORECAST_SNOW_CODES[0] : 0)}</span>`);
+    cells.push(`<span class="forecast-gutter" aria-hidden="true">${escapeHtml(t(allSnow ? 'forecast.snowShort' : 'forecast.rainShort'))}</span>`);
     slices.forEach(s => {
         const value = isNumeric(s.precipitationProbability) ? `${Math.round(parseFloat(s.precipitationProbability))}%` : '-';
         const label = (value === '-') ? t('forecast.chanceOfRainLabel') : t('forecast.chanceOfRain', { value: Math.round(parseFloat(s.precipitationProbability)) });

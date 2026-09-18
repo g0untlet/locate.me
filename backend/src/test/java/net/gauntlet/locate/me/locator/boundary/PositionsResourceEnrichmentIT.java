@@ -82,6 +82,7 @@ public class PositionsResourceEnrichmentIT {
         JsonObject weatherResponse = Json.createObjectBuilder()
                 .add("elevation", 520)
                 .add("current", Json.createObjectBuilder()
+                        .add("time", "2026-09-18T09:45")
                         .add("temperature_2m", 32.3)
                         .add("weather_code", 2)
                         .add("uv_index", 6.6)
@@ -90,23 +91,28 @@ public class PositionsResourceEnrichmentIT {
                         .add("time", Json.createArrayBuilder()
                                 .add("2026-09-18T09:00")
                                 .add("2026-09-18T10:00")
-                                .add("2026-09-18T11:00"))
+                                .add("2026-09-18T11:00")
+                                .add("2026-09-18T12:00"))
                         .add("temperature_2m", Json.createArrayBuilder()
                                 .add(17.0)
                                 .add(18.0)
-                                .add(19.1))
+                                .add(19.1)
+                                .add(20.2))
                         .add("weather_code", Json.createArrayBuilder()
+                                .add(3)
                                 .add(3)
                                 .add(3)
                                 .add(3))
                         .add("uv_index", Json.createArrayBuilder()
                                 .add(2.95)
                                 .add(3.6)
-                                .add(3.75))
+                                .add(3.75)
+                                .add(4.0))
                         .add("precipitation_probability", Json.createArrayBuilder()
                                 .add(0)
                                 .addNull()
-                                .add(10))
+                                .add(10)
+                                .add(25))
                         .build())
                 .build();
 
@@ -142,15 +148,18 @@ public class PositionsResourceEnrichmentIT {
 
         JsonArray forecast = json.getJsonArray("forecast");
         assertThat(forecast).hasSize(3);
+        // The current hour (09:00 for a 09:45 current time) is skipped; the preview
+        // only shows future hours.
         JsonObject firstSlice = forecast.getJsonObject(0);
-        assertThat(firstSlice.getString("time")).isEqualTo("2026-09-18T09:00");
-        assertThat((float) firstSlice.getJsonNumber("temperature").doubleValue()).isEqualTo(17.0f);
+        assertThat(firstSlice.getString("time")).isEqualTo("2026-09-18T10:00");
+        assertThat((float) firstSlice.getJsonNumber("temperature").doubleValue()).isEqualTo(18.0f);
         assertThat(firstSlice.getJsonNumber("weatherCode").intValue()).isEqualTo(3);
-        assertThat((float) firstSlice.getJsonNumber("uvIndex").doubleValue()).isEqualTo(2.95f);
-        assertThat(firstSlice.getJsonNumber("precipitationProbability").intValue()).isEqualTo(0);
+        assertThat((float) firstSlice.getJsonNumber("uvIndex").doubleValue()).isEqualTo(3.6f);
         // A null value in a parallel array must simply be omitted, not fail the request
-        assertThat(forecast.getJsonObject(1).containsKey("precipitationProbability")).isFalse();
-        assertThat(forecast.getJsonObject(2).getJsonNumber("precipitationProbability").intValue()).isEqualTo(10);
+        assertThat(firstSlice.containsKey("precipitationProbability")).isFalse();
+        assertThat(forecast.getJsonObject(1).getJsonNumber("precipitationProbability").intValue()).isEqualTo(10);
+        assertThat(forecast.getJsonObject(2).getString("time")).isEqualTo("2026-09-18T12:00");
+        assertThat(forecast.getJsonObject(2).getJsonNumber("precipitationProbability").intValue()).isEqualTo(25);
 
         // And the preview must not be persisted
         Long count = em.createQuery("SELECT COUNT(p) FROM Position p WHERE p.userId = :userId", Long.class)

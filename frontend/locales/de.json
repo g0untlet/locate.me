@@ -75,6 +75,10 @@
     "forecast.uv": "UV-Index {value}",
     "forecast.chanceOfRainLabel": "Regenwahrscheinlichkeit",
     "forecast.chanceOfRain": "Regenwahrscheinlichkeit {value}%",
+    "forecast.tempShort": "TEMP",
+    "forecast.uvShort": "UV",
+    "forecast.rainShort": "REGEN",
+    "forecast.snowShort": "SCHNEE",
 
     "history.list": "Liste",
     "history.map": "Karte",

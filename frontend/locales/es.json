@@ -75,6 +75,10 @@
     "forecast.uv": "Índice UV {value}",
     "forecast.chanceOfRainLabel": "Probabilidad de lluvia",
     "forecast.chanceOfRain": "Probabilidad de lluvia {value}%",
+    "forecast.tempShort": "TEMP",
+    "forecast.uvShort": "UV",
+    "forecast.rainShort": "LLUVIA",
+    "forecast.snowShort": "NIEVE",
 
     "history.list": "Lista",
     "history.map": "Mapa",
