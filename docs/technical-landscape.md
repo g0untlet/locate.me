@@ -42,7 +42,7 @@ Browser (PWA) --HTTPS--> Caddy2 --/api--> Quarkus REST (Boundary /api)
                                             |      |
                                             |    H2 (file-based)
                                             |
-       Quarkus --REST--> Open-Meteo    (temperature, weather code, UV index, elevation)
+       Quarkus --REST--> Open-Meteo    (temperature, weather code, UV index, is_day, elevation, hourly forecast)
        Quarkus --REST--> Nominatim/OSM (reverse geocoding)
        Quarkus --REST--> Geoapify      (POI places around a coordinate)
        Browser --HTTPS--> OSM tile server (Leaflet map tiles)
@@ -169,11 +169,11 @@ net.gauntlet.locate.me
 
 | Control | Responsibility |
 |----------|----------|
-| `Positions` | Orchestrates enrich (preview: geocoding + weather) and persist-only create, delete, queries and per-user counts; sole `EntityManager` access |
+| `Positions` | Orchestrates enrich (preview: geocoding + current weather + short hourly forecast assembly) and persist-only create, delete, queries and per-user counts; sole `EntityManager` access |
 | `DistanceCalculator` | Haversine distance + walking/biking/driving time estimation (static util) |
 | `SystemInfo` | Application metadata (artifactId, version, startupTime) |
-| `GeocodingClient` | MicroProfile REST client → Nominatim reverse geocoding |
-| `WeatherClient` | MicroProfile REST client → Open-Meteo forecast |
+| `GeocodingClient` | MicroProfile REST client → Nominatim reverse geocoding (`format`, `zoom`, `layer` configurable) |
+| `WeatherClient` | MicroProfile REST client → Open-Meteo forecast (current + `hourly`, `forecast_hours`, `timezone`) |
 | `Places` | Cache-first lookup: geoboxing query (cache hit) or Geoapify fetch + upsert (miss); cache-entry count; sole `EntityManager` access for places |
 | `GeoapifyPlacesClient` | MicroProfile REST client → Geoapify Places API (`/v2/places`) |
 | `Geoboxing` | Bounding-box spans (`deltaLat`/`deltaLon`) + haversine distance (static util) |
@@ -210,7 +210,7 @@ query parameter. Functional purpose of the endpoints is documented in
 |----------|----------|----------|
 | GET | `/api/positions?userId=&lat=&lon=` | 200 list, newest first; optional `lat`/`lon` add response-only `distance` (km), `walkingTimeMinutes`, `bikingTimeMinutes`, `drivingTimeMinutes` |
 | POST | `/api/positions?userId=` | 201 + `Location`; persists client-provided data verbatim (no server-side geocoding/weather resolution) |
-| GET | `/api/positions/current?userId=&lat=&lon=` | 200 preview; geocoding + weather enrichment; not persisted |
+| GET | `/api/positions/current?userId=&lat=&lon=` | 200 preview; geocoding + weather enrichment (current incl. response-only `isDay`, plus a `forecast` array of the next `weather.forecast-hours` future hours — current hour skipped; each slice `time`, `temperature`, `weatherCode`, `uvIndex`, `precipitationProbability`, `isDay`); not persisted |
 | DELETE | `/api/positions/{id}?userId=` | 204 |
 | GET | `/api/positions/stats?adminKey=` | 200 `{"total", "perUser":[{"userId", "locations"}, ...]}` — total stored positions plus per-user counts (`perUser` ordered by `userId`); requires `adminKey` == `admin.key` (env `ADMIN_KEY`), otherwise 401; **not** rate-limited |
 
@@ -378,7 +378,7 @@ sorted ascending and capped at `geoapify.limit` in memory (see `Places.findCache
 
 | Interface | Protocol | Purpose |
 |------------|------------|------------|
-| Open-Meteo | REST/JSON | Current `temperature_2m`, `weather_code`, `uv_index`, `elevation` per position save |
+| Open-Meteo | REST/JSON | Current `temperature_2m`, `weather_code`, `uv_index`, `is_day`, `elevation`; hourly forecast `temperature_2m`, `weather_code`, `uv_index`, `precipitation_probability`, `is_day` (`forecast_hours`, `timezone=auto`) per position preview |
 | Nominatim (OSM) | REST/JSON | Reverse geocoding → display name + address parts |
 | Geoapify | REST/JSON | POI places around a coordinate (categories, radius, limit, `lang`) |
 | OSM tile server | HTTPS | Map tiles (browser-direct, Leaflet) |
@@ -477,8 +477,13 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 | `allowed.user.ids` (+ `%dev`, `%test`) | Authorized users per profile |
 | `admin.key` (+ `%dev`, `%test`) | Single admin key for the stats endpoints: `${ADMIN_KEY:change-me}` (env-var overridable in prod), dev `dev-admin-key`, test `test-admin-key` |
 | `nominatim_uri/mp-rest/url`, `weather_uri/mp-rest/url` | REST client base URLs |
-| `geoapify_uri/mp-rest/url`, `geoapify.categories`, `geoapify.limit`, `geoapify.radius`, `geoapify.format`, `geoapify.api-key` | Geoapify Places client: base URL, category filter (`catering,commercial,healthcare,leisure,entertainment,service`), result limit, fetch radius (m), format, API key (`${GEOAPIFY_API_KEY:}`) |
-| `aroundme.cache-radius` | Cache bounding-box radius (m) for the cache-first lookup |
+| `nominatim.format`, `nominatim.zoom`, `nominatim.layer` | Nominatim reverse params: format (`jsonv2`), address granularity (`18`), layer filter (`address`; accepted `address,poi,railway,natural,manmade`; overridable via env `NOMINATIM_LAYER`) |
+| `weather.current-fields`, `weather.hourly-fields` | Comma-separated Open-Meteo fields for the current values and the hourly forecast (both include `is_day`) |
+| `weather.forecast-hours` | Number of future hourly forecast slices returned (default 4; the current hour is skipped) |
+| `weather.timezone` | Open-Meteo timestamp timezone (`auto` = the coordinates' local timezone, so times match the local wall clock) |
+| `weather_uri/mp-rest/read-timeout`, `weather_uri/mp-rest/connect-timeout` | Open-Meteo client timeouts (ms), mirroring Geoapify |
+| `geoapify_uri/mp-rest/url`, `geoapify.categories`, `geoapify.limit`, `geoapify.radius`, `geoapify.format`, `geoapify.api-key` | Geoapify Places client: base URL, category filter (`catering,commercial,healthcare,leisure,entertainment,service`), result limit, fetch radius (m, 700), format, API key (`${GEOAPIFY_API_KEY:}`) |
+| `aroundme.cache-radius` | Cache bounding-box radius (m, 700) for the cache-first lookup |
 | `aroundme.exclude-categories` | Comma-separated secondary POI categories to exclude (e.g. `playground`); applied on cache hits and fresh fetches |
 | `aroundme.max-places` | Maximum number of places returned for "Places around me" (default 20); `geoapify.limit` still controls the Geoapify fetch / cache size |
 | `aroundme.read-from-cache` | `false` (default) — every request fetches fresh from Geoapify, the H2 cache is still written but never read; `true` restores the cache-first geoboxing lookup (`Places.findNear`) |
@@ -557,6 +562,8 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 
 | Version | Date | Description |
 |---------|---------|---------|
+| 0.4.2 | 2026-09-19 | Forecast enrichment: `GET /api/positions/current` returns a response-only `forecast` array + `isDay` flag. `Positions.enrich` requests `weather.forecast-hours + 1` Open-Meteo `hourly` slices (`temperature_2m`, `weather_code`, `uv_index`, `precipitation_probability`, `is_day`; `timezone=auto`), skips slices at/before the current hour (derived from `current.time`) and limits to `weather.forecast-hours`. New nested records `ForecastTimeslice`/`Current` serialize `isDay`; the `Position` entity and DB schema are unchanged. `WeatherClient.forecast` gains the `hourly`, `forecast_hours` and `timezone` params. Frontend: the Locate weather box is a disclosure with a 4-column forecast grid (TEMP/UV/RAIN or SNOW), whole-number temperature and UV, and day/night icons (moon, cloud+moon) in the tray and the current header. Config: `weather.current-fields`, `weather.hourly-fields` (both incl. `is_day`), `weather.forecast-hours=4`, `weather.timezone=auto`, `weather_uri` timeouts. |
+| 0.4.2 | 2026-09-19 | Geocoding/config: `GeocodingClient.reverse` gains a `layer` query param; `Positions` injects `nominatim.format`/`nominatim.zoom`/`nominatim.layer` (`layer` default `address`, accepted `address,poi,railway,natural,manmade`, env `NOMINATIM_LAYER`). `geoapify.radius` and `aroundme.cache-radius` raised 500 m → 700 m; `PlacesResourceIT.cacheHitExcludesPlacesBeyondRadius` updated for the new radius. |
 | 0.4.1 | 2026-09-13 | Frontend: new PWA install promotion. New module `js/ui/install.js` consumes the browser's `beforeinstallprompt` event and shows a dismissible top-of-screen install banner ("Install" opens the native install dialog). Because Chrome/Brave no longer render a native install banner, the event is captured as early as possible by an inline script in `index.html` `<head>` (stashed on `window.__bipEvent` and re-broadcast as the custom `locateme:installavailable` event) so it is not missed before the ES module loads; `locateme:installed`/`appinstalled` hides and suppresses it. The banner is never shown in standalone display mode or after dismissal (`localStorage`); on iOS Safari (no `beforeinstallprompt`) a one-time "Add to Home Screen" hint is shown instead. `index.html` gains `theme-color`, `mobile-web-app-capable`/`apple-mobile-web-app-*` meta tags and an `apple-touch-icon`. `sw.js` `ASSETS` precaches `/js/ui/install.js`; cache-busters bumped to `0.4.1_10`; app version stays 0.4.1 / 20260913. Locales: `install.*` keys in `en`/`de`/`es`. Also `js/i18n.js`: on a first visit without a stored `lang`, the language is auto-detected from `navigator.languages`/`navigator.language` (primary subtag, English fallback) and not persisted, so an explicit Settings choice always wins. |
 | 0.4.0 | 2026-08-28 | Places cache schema: `V3__create_places_table.sql` (edited in place — 0.4.0 not yet in PROD) now stores the fetch origin on each cache row: `fetch_lat`/`fetch_lon` (DOUBLE, NOT NULL), set in `Places.toPlace` from the request coordinates and excluded from `Place.toJSON()` (no client leak). `Place` gains the `fetchLat`/`fetchLon` accessors. Tests: `PlaceTest` (accessors + JSON exclusion), `PlacesResourceIT.storesFetchOriginAndDoesNotExposeIt` (persisted origin matches the request, response has no fetch keys), `PlacesReadCacheDisabledIT` (origin stored with cache reads disabled). No index yet — deferred until a coverage-aware cache-read algorithm exists. Note: editing V3 changes its Flyway checksum — the DEV `places` table must be recreated (restore a 0.3.0 backup, then V2 + V3 re-apply). |
 | 0.4.0 | 2026-08-28 | Admin DB monitoring extended: `GET /api/positions/stats?adminKey=` now returns the grand total plus the per-user breakdown (`{"total", "perUser":[{"userId","locations"}]}`, total = sum of the per-user counts) and `GET /api/places/stats?adminKey=` now returns the cache entry count plus a per-city breakdown (`{"count", "perCity":[{"city","places"}]}` via `Places.countByCity`, excluding NULL-city rows which still count toward `count`). Tests extended in `PositionsResourceIT` (wrapped shape + empty-DB case) and `PlacesResourceIT` (multi-city + city-less seeding). |
