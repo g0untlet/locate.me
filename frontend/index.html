@@ -10,8 +10,8 @@
     <meta name="apple-mobile-web-app-title" content="locate.me">
     <title>locate.me</title>
     <script>
-        const APP_VERSION = '0.4.1';
-        const APP_BUILD   = '20260913';
+        const APP_VERSION = '0.4.2';
+        const APP_BUILD   = '20260919';
         document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light';
         document.documentElement.lang = localStorage.getItem('lang') || 'en';
         document.documentElement.classList.add('i18n-loading');
@@ -32,7 +32,7 @@
             window.dispatchEvent(new Event('locateme:installed'));
         });
     </script>
-    <link rel="stylesheet" href="css/style.css?v=0.4.1_10">
+    <link rel="stylesheet" href="css/style.css?v=0.4.2_15">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -42,7 +42,7 @@
     <link rel="apple-touch-icon" href="icons/icon_192.png">
 </head>
 <body>
-    <script type="module" src="app.js?v=0.4.1_10"></script>
+    <script type="module" src="app.js?v=0.4.2_15"></script>
 
     <div class="app-container">
         <header class="app-header">
@@ -78,22 +78,32 @@
             <div id="locate-chooser" class="locate-view hidden">
                 <div class="response-card">
                     <div class="flex-rows">
-                        <div class="row-split border-bottom">
-                            <div class="cell">
-                                <span class="label" data-i18n="label.temperature">TEMPERATURE</span>
-                                <div class="temp-display-wrapper">
-                                    <span id="chooser-weather-icon-container"></span>
-                                    <span id="chooser-temp" class="value">-</span>
-                                </div>
-                            </div>
-                            <div class="cell text-right">
-                                <span class="label" data-i18n="label.condition">CONDITION</span>
-                                <span id="chooser-weather" class="value">-</span>
-                            </div>
-                            <div class="cell text-right">
-                                <span class="label" data-i18n="label.uvIndex">UV-INDEX</span>
-                                <span id="chooser-uv" class="value">-</span>
-                            </div>
+                        <div class="weather-disclosure weather-disclosure--static">
+                            <button id="chooser-weather-toggle" type="button" class="weather-toggle" aria-expanded="false" aria-controls="chooser-forecast" aria-label="Show 3-hour forecast" data-i18n-aria-label="forecast.expand">
+                                <span class="row-split">
+                                    <span class="cell">
+                                        <span class="label" data-i18n="label.temperature">TEMPERATURE</span>
+                                        <span class="temp-display-wrapper">
+                                            <span id="chooser-weather-icon-container"></span>
+                                            <span id="chooser-temp" class="value">-</span>
+                                        </span>
+                                    </span>
+                                    <span class="cell text-right">
+                                        <span class="label" data-i18n="label.condition">CONDITION</span>
+                                        <span id="chooser-weather" class="value">-</span>
+                                    </span>
+                                    <span class="cell text-right">
+                                        <span class="label" data-i18n="label.uvIndex">UV-INDEX</span>
+                                        <span id="chooser-uv" class="value">-</span>
+                                    </span>
+                                    <span class="weather-toggle-chevron" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </span>
+                                </span>
+                            </button>
+                            <div id="chooser-forecast" class="forecast-tray" role="group" aria-label="3-hour forecast" data-i18n-aria-label="forecast.title" aria-hidden="true"></div>
                         </div>
                         <button id="res-address-select" type="button" class="locate-select-row locate-select-row--selected">
                             <span class="locate-select-row-main">

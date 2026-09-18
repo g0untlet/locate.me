@@ -13,6 +13,7 @@ import {
     formatPlaceLabel,
     formatShortAddress,
     formatRelativeDate,
+    formatForecastTime,
     PREDEFINED_TAGS
 } from '../utils.js';
 
@@ -388,7 +389,7 @@ function escapeHtml(str) {
 
 function fillWeather({ icon, temp, weather, uv }, data) {
     if (icon) {
-        icon.innerHTML = getWeatherIconSvg(data.weatherCode);
+        icon.innerHTML = getWeatherIconSvg(data.weatherCode, data.isDay);
         const mainIconSvg = icon.querySelector('svg');
         if (mainIconSvg) mainIconSvg.style.stroke = "#1a5f8c";
     }
@@ -566,6 +567,89 @@ function selectResolvedAddress() {
 }
 
 /* ==========================================================================
+   Chooser: expandable 3-hour forecast (progressive disclosure).
+   The weather row is the toggle; the tray holds an aligned metric grid with
+   one column per forecast hour. Forecast data only exists on the live preview,
+   so the row stays a plain, non-tappable summary when the array is absent.
+   ========================================================================== */
+const FORECAST_SNOW_CODES = [71, 73, 75, 77, 85, 86];
+
+function isNumeric(value) {
+    return value !== undefined && value !== null && !isNaN(parseFloat(value));
+}
+
+function renderForecast(forecast) {
+    const disclosure = document.querySelector('.weather-disclosure');
+    const tray = document.getElementById('chooser-forecast');
+    if (!disclosure || !tray) return;
+
+    const slices = Array.isArray(forecast) ? forecast : [];
+    if (slices.length === 0) {
+        disclosure.classList.add('weather-disclosure--static');
+        tray.innerHTML = '';
+        setForecastExpanded(false);
+        return;
+    }
+
+    disclosure.classList.remove('weather-disclosure--static');
+
+    const cells = [];
+
+    // Header row: local time of each forecast hour.
+    cells.push('<span class="forecast-gutter" aria-hidden="true"></span>');
+    slices.forEach(s => cells.push(`<span class="forecast-time">${escapeHtml(formatForecastTime(s.time))}</span>`));
+
+    // Condition icon per hour (aria-label carries the condition text).
+    cells.push('<span class="forecast-gutter" aria-hidden="true"></span>');
+    slices.forEach(s => {
+        const label = getWeatherText(s.weatherCode);
+        cells.push(`<span class="forecast-icon" role="img" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">${getWeatherIconSvg(s.weatherCode, s.isDay)}</span>`);
+    });
+
+    // Temperature in °C (forecast is approximate, so whole degrees).
+    cells.push(`<span class="forecast-gutter" aria-hidden="true">${escapeHtml(t('forecast.tempShort'))}</span>`);
+    slices.forEach(s => {
+        const value = isNumeric(s.temperature) ? `${Math.round(parseFloat(s.temperature))} \u00B0C` : '-';
+        cells.push(`<span class="forecast-value forecast-temp">${value}</span>`);
+    });
+
+    // UV index (short text row label; whole number for the forecast).
+    cells.push(`<span class="forecast-gutter" aria-hidden="true">${escapeHtml(t('forecast.uvShort'))}</span>`);
+    slices.forEach(s => {
+        const value = isNumeric(s.uvIndex) ? `${Math.round(parseFloat(s.uvIndex))}` : '-';
+        const label = (value === '-') ? t('forecast.uvLabel') : t('forecast.uv', { value });
+        cells.push(`<span class="forecast-value" aria-label="${escapeHtml(label)}">${value}</span>`);
+    });
+
+    // Chance of precipitation (text label switches to SNOW when every hour is a snow code).
+    const allSnow = slices.every(s => FORECAST_SNOW_CODES.includes(Number(s.weatherCode)));
+    cells.push(`<span class="forecast-gutter" aria-hidden="true">${escapeHtml(t(allSnow ? 'forecast.snowShort' : 'forecast.rainShort'))}</span>`);
+    slices.forEach(s => {
+        const value = isNumeric(s.precipitationProbability) ? `${Math.round(parseFloat(s.precipitationProbability))}%` : '-';
+        const label = (value === '-') ? t('forecast.chanceOfRainLabel') : t('forecast.chanceOfRain', { value: Math.round(parseFloat(s.precipitationProbability)) });
+        cells.push(`<span class="forecast-value" aria-label="${escapeHtml(label)}">${value}</span>`);
+    });
+
+    tray.style.gridTemplateColumns = `auto repeat(${slices.length}, 1fr)`;
+    tray.innerHTML = cells.join('');
+    setForecastExpanded(false);
+}
+
+function setForecastExpanded(expanded) {
+    const disclosure = document.querySelector('.weather-disclosure');
+    const toggle = document.getElementById('chooser-weather-toggle');
+    const tray = document.getElementById('chooser-forecast');
+    if (!disclosure || !toggle || !tray) return;
+
+    const isStatic = disclosure.classList.contains('weather-disclosure--static');
+    const next = expanded && !isStatic;
+    disclosure.classList.toggle('expanded', next);
+    toggle.setAttribute('aria-expanded', next ? 'true' : 'false');
+    toggle.setAttribute('aria-label', t(next ? 'forecast.collapse' : 'forecast.expand'));
+    tray.setAttribute('aria-hidden', next ? 'false' : 'true');
+}
+
+/* ==========================================================================
    Internal: Chooser renderer – fills weather, address and places after a
    successful preview fetch.
    ========================================================================== */
@@ -575,6 +659,7 @@ function renderChooser(data, places) {
     fillWeather(chooserWeatherIds(), data);
     fillAddress(document.getElementById('chooser-address-container'), data);
     setElevation(document.getElementById('chooser-elevation'), data);
+    renderForecast(data.forecast);
 
     const addressSelect = document.getElementById('res-address-select');
     if (addressSelect) addressSelect.classList.add('locate-select-row--selected');
@@ -1053,6 +1138,16 @@ export function initLocatePage(deps) {
     // --- Chooser: select resolved address ---
     document.getElementById('res-address-select').addEventListener('click', selectResolvedAddress);
 
+    // --- Chooser: expand/collapse the 3-hour forecast ---
+    const weatherToggle = document.getElementById('chooser-weather-toggle');
+    if (weatherToggle) {
+        weatherToggle.addEventListener('click', () => {
+            const disclosure = weatherToggle.closest('.weather-disclosure');
+            if (!disclosure || disclosure.classList.contains('weather-disclosure--static')) return;
+            setForecastExpanded(!disclosure.classList.contains('expanded'));
+        });
+    }
+
     // --- Chooser: CONTINUE to saver view ---
     document.getElementById('btn-locate-continue').addEventListener('click', handleContinue);
 
@@ -1089,6 +1184,9 @@ export function initLocatePage(deps) {
             userId:    deps.getActiveUserId(),
             timestamp: new Date().toISOString()
         };
+
+        // Forecast is display-only; never send/persist it with the position.
+        delete payload.forecast;
 
         const tag = getSelectedTag();
         if (tag) {
@@ -1131,6 +1229,7 @@ export function resetLocatePage() {
     selectedPlace = null;
     lastPreviewLabel = '';
     setCachedLocatePosition(null);
+    renderForecast(null);
     resetSaveOptions();
 
     const statusText = document.getElementById('status');

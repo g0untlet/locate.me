@@ -68,6 +68,18 @@
     "places.compassLabel": "Kompass zeigt nach Norden",
     "places.compassTitle": "Norden",
 
+    "forecast.title": "3-Stunden-Vorhersage",
+    "forecast.expand": "3-Stunden-Vorhersage anzeigen",
+    "forecast.collapse": "3-Stunden-Vorhersage ausblenden",
+    "forecast.uvLabel": "UV-Index",
+    "forecast.uv": "UV-Index {value}",
+    "forecast.chanceOfRainLabel": "Regenwahrscheinlichkeit",
+    "forecast.chanceOfRain": "Regenwahrscheinlichkeit {value}%",
+    "forecast.tempShort": "TEMP",
+    "forecast.uvShort": "UV",
+    "forecast.rainShort": "REGEN",
+    "forecast.snowShort": "SCHNEE",
+
     "history.list": "Liste",
     "history.map": "Karte",
     "history.maps": "Maps",
