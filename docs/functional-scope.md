@@ -27,6 +27,26 @@
 - The forecast is fetched together with the current weather from Open-Meteo and is display-only — it is never saved.
 - This is done by an external API (Open-Meteo).
 
+The condition shown (current and for each forecast hour) is mapped from the WMO weather code — and the day/night flag returned by Open-Meteo — to an icon as follows:
+
+| WMO code(s) | Condition | Day icon | Night icon |
+|-------------|-----------|----------|------------|
+| 0 | Clear sky | sun | moon |
+| 1 | Mainly clear | sun + cloud | cloud + moon |
+| 2 | Partly cloudy | sun + cloud | cloud + moon |
+| 3 | Overcast | cloud | cloud |
+| 45, 48 | Fog | fog lines | fog lines |
+| 51–55 | Drizzle | rain cloud | rain cloud |
+| 56, 57 | Freezing drizzle | rain cloud | rain cloud |
+| 61–65 | Rain | rain cloud | rain cloud |
+| 66, 67 | Freezing rain | rain cloud | rain cloud |
+| 71–75 | Snow fall | snowflake | snowflake |
+| 77 | Snow grains | snowflake | snowflake |
+| 80–82 | Rain showers | rain cloud | rain cloud |
+| 85, 86 | Snow showers | snowflake | snowflake |
+| 95 | Thunderstorm | thunder cloud | thunder cloud |
+| 96, 99 | Thunderstorm with hail | thunder cloud | thunder cloud |
+
 ### 1.5. Elevation Information
 - For a given location, the application fetches and displays the elevation (meters above sea level).
 - The elevation is retrieved from the Open-Meteo API together with the weather data.
@@ -63,7 +83,7 @@ The application is a single-page application (SPA) with three main views:
 - This is the main view of the application.
 - It displays a button to fetch the current location.
 - Fetching runs a GPS accuracy loop; once a fix is found, the view splits into two steps:
-  - **Chooser step:** shows the current weather (temperature, condition, UV-Index), a selectable **Resolved Address** row (with elevation; always reserves two lines so the row height is stable) and a **"Places around me"** list of up to the 20 nearest POIs (configurable via `aroundme.max-places`; category icon + name + distance in m/km). The resolved address is selected by default. The user either keeps it or taps one of the place rows to adopt it as the location label — a chosen place is shown as `Name, <street> <houseNumber>`. A "Continue" button proceeds to the save step. The fetch button now reads "Refresh" and re-runs the GPS + preview fetch from the current coordinates. On small screens the places list scrolls internally; the page itself does not scroll. The weather box is tappable: it expands a compact forecast grid (one column per forecast hour; rows TEMP / UV / RAIN — or SNOW when every hour is a snow code) and collapses again on a second tap; condition icons reflect day/night (sun/moon, cloud/cloud+moon).
+  - **Chooser step:** shows the current weather (temperature, condition, UV-Index), a selectable **Resolved Address** row (with elevation; always reserves two lines so the row height is stable) and a **"Places around me"** list of up to the 20 nearest POIs (configurable via `aroundme.max-places`; category icon + name + distance in m/km). The resolved address is selected by default. The user either keeps it or taps one of the place rows to adopt it as the location label — a chosen place is shown as `Name, <street> <houseNumber>`. A "Continue" button proceeds to the save step. The fetch button now reads "Refresh" and re-runs the GPS + preview fetch from the current coordinates. On small screens the places list scrolls internally; the page itself does not scroll. The weather box is tappable: it expands a compact forecast grid (one column per forecast hour; rows TEMP / UV / RAIN — or SNOW when every hour is a snow code) and collapses again on a second tap; condition icons reflect day/night (sun/moon, sun+cloud, cloud+moon, cloud).
   - The **"Places around me"** header shows a small compass needle that points north while the user turns the device (device orientation). Without sensor data or permission it stays hidden; a one-time watchdog hint is logged to the console in that case.
   - **Save step:** shows the collapsible "Tag & Comment" section, the weather again, a **LOCATION** row with the chosen location (resolved address or adopted place) and the elevation (from the fetched weather data), and an OpenStreetMap snippet of the position that will be saved. "Save Location" persists the position; a "Back" button (same width, left of Save) returns to the chooser step without reloading data from the backend.
   - **Saved step:** after saving, a dedicated read-only confirmation card shows the persisted data in the same style — the tag (pill) and comment (read-only), weather, the **LOCATION** label, elevation and the map — with the fetch button reset to "Fetch Location". A fresh fetch (Refresh) restarts the flow.
@@ -189,6 +209,7 @@ component.
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.4.2 | 2026-09-20 | Weather icons: differentiated the previously collapsed WMO codes — code 1 "Mainly clear" and code 2 "Partly cloudy" now use a new sun+cloud icon (cloud+moon at night, i.e. differentiated from the cloud-only code 3 "Overcast"); added the `weather.partlyCloudy` and `weather.overcast` labels (en/de/es). Fixed the missing icons for freezing drizzle (56, 57) and freezing rain (66, 67), which previously fell back to the generic "unknown" icon — they now use the rain-cloud icon. The condition-to-icon mapping is documented in §1.4. |
 | 0.4.2 | 2026-09-19 | Weather forecast: the Locate chooser's weather box is now a disclosure — tapping expands a short hourly forecast (default 4 future hours, `weather.forecast-hours`; the current hour is skipped) and tapping again collapses it. `GET /positions/current` returns a response-only `forecast` array (`time`, `temperature`, `weatherCode`, `uvIndex`, `precipitationProbability`, `isDay`) plus a header `isDay` flag; Open-Meteo is queried with the `hourly` fields incl. `is_day`, `forecast_hours` and `timezone=auto` (local times). The grid shows TEMP / UV / RAIN (or SNOW when every hour is a snow code) with whole-number temperature and UV, and day/night icons (moon, cloud+moon) in both the forecast and the current-weather header. Forecast data is display-only and never persisted. |
 | 0.4.2 | 2026-09-19 | Geocoding/tuning: the Nominatim reverse request is now configurable via `nominatim.format`, `nominatim.zoom` and `nominatim.layer`; `layer` defaults to `address` (accepted values `address,poi,railway,natural,manmade`, overridable via the `NOMINATIM_LAYER` env var). `geoapify.radius` and `aroundme.cache-radius` raised 500 m → 700 m. |
 | 0.4.1 | 2026-09-13 | Frontend: PWA install promotion. New `frontend/js/ui/install.js` consumes the browser's `beforeinstallprompt` event (captured early in `index.html` and re-broadcast as `locateme:installavailable`) and shows a dismissible install banner at the top of the app; "Install" opens the native install dialog. Shown only when installable, not in standalone mode and not after dismissal/installation (`localStorage`). On iOS Safari (no `beforeinstallprompt`) a one-time "Add to Home Screen" hint is shown. `index.html` gains PWA/iOS meta tags and an `apple-touch-icon`. Also: the application language is auto-detected from the browser (`navigator.languages`/`navigator.language`, reduced to the primary subtag; English fallback) on a first visit without a stored preference and is not persisted — an explicit Settings choice still wins — so the install banner/hint and the UI start in the browser language. |

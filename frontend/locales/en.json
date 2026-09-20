@@ -119,6 +119,8 @@
     "weather.unknown": "Unknown",
     "weather.clearSky": "Clear sky",
     "weather.mainlyClear": "Mainly clear",
+    "weather.partlyCloudy": "Partly cloudy",
+    "weather.overcast": "Overcast",
     "weather.fog": "Fog",
     "weather.drizzle": "Drizzle",
     "weather.freezingDrizzle": "Freezing drizzle",
