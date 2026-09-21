@@ -55,6 +55,7 @@
     "label.appearance": "APPEARANCE",
     "label.userId": "USER ID",
     "label.language": "LANGUAGE",
+    "label.placeDetails": "PLACE DETAILS",
 
     "saveOptions.tagComment": "Tag & Comment",
     "saveOptions.commentPlaceholder": "Add a comment (optional)…",
@@ -67,6 +68,11 @@
     "places.unknownPlace": "Unknown place",
     "places.compassLabel": "Compass pointing north",
     "places.compassTitle": "North",
+
+    "placeInfo.call": "Call {phone}",
+    "placeInfo.website": "Open website",
+    "placeInfo.wheelchairYes": "Wheelchair accessible",
+    "placeInfo.wheelchairNo": "Not wheelchair accessible",
 
     "forecast.title": "3-hour forecast",
     "forecast.expand": "Show 3-hour forecast",

@@ -1031,6 +1031,60 @@ html.i18n-loading .app-container {
     flex-direction: column;
 }
 
+/* --- Saver: place details (phone / website / opening hours / wheelchair) --- */
+.place-info-card {
+    padding: 12px 14px;
+}
+
+.place-info-card .label {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.place-info-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.place-info-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 6px 0;
+}
+
+.place-info-row + .place-info-row {
+    border-top: 1px solid var(--border-color);
+}
+
+.place-info-row svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    stroke: var(--text-muted);
+}
+
+.place-info-content {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.85rem;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--text-color);
+    overflow-wrap: break-word;
+}
+
+.place-info-link {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.place-info-link:hover,
+.place-info-link:active {
+    text-decoration: underline;
+}
+
 /* --- Chooser: expandable 3-hour forecast disclosure --- */
 .weather-disclosure {
     width: 100%;

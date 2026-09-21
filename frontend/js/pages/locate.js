@@ -10,6 +10,7 @@ import {
     formatDistanceMeters,
     getLocationIconSvg,
     getPlaceIconSvg,
+    getPlaceInfoIconSvg,
     formatPlaceLabel,
     formatShortAddress,
     formatRelativeDate,
@@ -362,6 +363,27 @@ function initSaveOptions() {
 }
 
 /* ==========================================================================
+   Internal: Top-level controls (fetch button + status line). They belong to
+   the chooser/saved steps. On the saver (pre-save) step the "Back" button goes
+   back to the chooser where a fresh fetch is available, so the redundant
+   "Refresh" button and the "Preview from …" status are hidden there.
+   ========================================================================== */
+function setFetchButtonVisible(visible) {
+    const btn = document.getElementById('btn-fetch-location');
+    if (btn) btn.classList.toggle('hidden', !visible);
+}
+
+function setStatusVisible(visible) {
+    const container = document.getElementById('locate-status-container');
+    if (container) container.classList.toggle('hidden', !visible);
+}
+
+function setTopControlsVisible(visible) {
+    setFetchButtonVisible(visible);
+    setStatusVisible(visible);
+}
+
+/* ==========================================================================
    Internal: View Switching (chooser <-> saver <-> saved)
    ========================================================================== */
 function showView(view) {
@@ -369,6 +391,7 @@ function showView(view) {
         const el = document.getElementById(id);
         if (el) el.classList.toggle('hidden', id !== `locate-${view}`);
     });
+    setTopControlsVisible(view !== 'saver');
 }
 
 function hideViews() {
@@ -376,6 +399,7 @@ function hideViews() {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
     });
+    setTopControlsVisible(true);
 }
 
 /* ==========================================================================
@@ -696,6 +720,83 @@ function showSavedCard(data) {
     }, data);
     fillAddress(document.getElementById('saved-location-container'), data);
     setElevation(document.getElementById('saved-elevation'), data);
+}
+
+/* ==========================================================================
+   Internal: Place-details renderer (saver step only). An adopted place may
+   carry phone, website, opening hours and/or wheelchair accessibility. The
+   compact box is only shown when at least one of them is available; the phone
+   number is a tel: link (dialer on Android/iOS), the website an external link.
+   ========================================================================== */
+function normalizeWebsite(url) {
+    const raw = String(url || '').trim();
+    if (!raw) return null;
+    const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    try {
+        const parsed = new URL(withScheme);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+        return { href: parsed.href, label: parsed.hostname.replace(/^www\./i, '') };
+    } catch {
+        return null;
+    }
+}
+
+function telHref(phone) {
+    const digits = String(phone || '').replace(/[^+0-9]/g, '');
+    return digits ? `tel:${digits}` : null;
+}
+
+function placeInfoRow(icon, content) {
+    return `<div class="place-info-row">${getPlaceInfoIconSvg(icon)}` +
+        `<span class="place-info-content">${content}</span></div>`;
+}
+
+function renderPlaceInfo(place) {
+    const card = document.getElementById('saver-place-info');
+    const list = document.getElementById('saver-place-info-list');
+    if (!card || !list) return;
+
+    const phone        = place ? String(place.phone        || '').trim() : '';
+    const website      = place ? normalizeWebsite(place.website) : null;
+    const openingHours = place ? String(place.openingHours || '').trim() : '';
+    const wheelchair   = place ? String(place.wheelchair   || '').trim() : '';
+
+    const rows = [];
+
+    const tel = phone ? telHref(phone) : null;
+    if (tel) {
+        const ariaLabel = t('placeInfo.call', { phone });
+        rows.push(placeInfoRow('phone',
+            `<a class="place-info-link" href="${escapeHtml(tel)}" aria-label="${escapeHtml(ariaLabel)}">${escapeHtml(phone)}</a>`));
+    }
+
+    if (website) {
+        rows.push(placeInfoRow('website',
+            `<a class="place-info-link" href="${escapeHtml(website.href)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(t('placeInfo.website'))}">${escapeHtml(website.label)}</a>`));
+    }
+
+    if (openingHours) {
+        rows.push(placeInfoRow('openingHours',
+            `<span class="place-info-text">${escapeHtml(openingHours)}</span>`));
+    }
+
+    if (wheelchair) {
+        let label;
+        if (wheelchair === 'yes')      label = t('placeInfo.wheelchairYes');
+        else if (wheelchair === 'no')  label = t('placeInfo.wheelchairNo');
+        else                           label = wheelchair;
+        rows.push(placeInfoRow('wheelchair',
+            `<span class="place-info-text">${escapeHtml(label)}</span>`));
+    }
+
+    if (rows.length === 0) {
+        card.classList.add('hidden');
+        list.innerHTML = '';
+        return;
+    }
+
+    list.innerHTML = rows.join('');
+    card.classList.remove('hidden');
 }
 
 /* ==========================================================================
@@ -1105,6 +1206,8 @@ function handleContinue() {
         fillAddress(locationContainer, cached);
     }
 
+    renderPlaceInfo(selectedPlace);
+
     showSaveOptions();
     showView('saver');
     // Preview the point that will be saved: the chosen place when one is
@@ -1175,6 +1278,10 @@ export function initLocatePage(deps) {
             return;
         }
 
+        // The saver step hides the top status line; reveal it again for the
+        // save progress and any error feedback.
+        setStatusVisible(true);
+
         const statusText = document.getElementById('status');
         statusText.innerText = t('locate.saving');
         statusText.className = "status-loading";
@@ -1230,6 +1337,7 @@ export function resetLocatePage() {
     lastPreviewLabel = '';
     setCachedLocatePosition(null);
     renderForecast(null);
+    renderPlaceInfo(null);
     resetSaveOptions();
 
     const statusText = document.getElementById('status');

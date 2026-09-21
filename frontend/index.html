@@ -11,7 +11,7 @@
     <title>locate.me</title>
     <script>
         const APP_VERSION = '0.4.2';
-        const APP_BUILD   = '20260920';
+        const APP_BUILD   = '20260921';
         document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light';
         document.documentElement.lang = localStorage.getItem('lang') || 'en';
         document.documentElement.classList.add('i18n-loading');
@@ -32,7 +32,7 @@
             window.dispatchEvent(new Event('locateme:installed'));
         });
     </script>
-    <link rel="stylesheet" href="css/style.css?v=0.4.2_16">
+    <link rel="stylesheet" href="css/style.css?v=0.4.2_17">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -42,7 +42,7 @@
     <link rel="apple-touch-icon" href="icons/icon_192.png">
 </head>
 <body>
-    <script type="module" src="app.js?v=0.4.2_16"></script>
+    <script type="module" src="app.js?v=0.4.2_17"></script>
 
     <div class="app-container">
         <header class="app-header">
@@ -60,7 +60,7 @@
                 </button>
             </div>
 
-            <div class="status-container">
+            <div id="locate-status-container" class="status-container">
                 <div id="status" class="status-ready" data-i18n="locate.ready">Ready</div>
             </div>
 
@@ -203,6 +203,11 @@
                             <div id="locate-map" class="locate-map"></div>
                         </div>
                     </div>
+                </div>
+
+                <div id="saver-place-info" class="response-card place-info-card hidden">
+                    <span class="label" data-i18n="label.placeDetails">PLACE DETAILS</span>
+                    <div id="saver-place-info-list" class="place-info-list"></div>
                 </div>
 
                 <div class="track-btn-row">
