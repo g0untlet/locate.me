@@ -126,7 +126,9 @@ export function getWeatherText(code) {
 
     switch (true) {
         case (code === 0): return t('weather.clearSky');
-        case (code >= 1 && code <= 3): return t('weather.mainlyClear');
+        case (code === 1): return t('weather.mainlyClear');
+        case (code === 2): return t('weather.partlyCloudy');
+        case (code === 3): return t('weather.overcast');
         case (code >= 45 && code <= 48): return t('weather.fog');
         case (code >= 51 && code <= 55): return t('weather.drizzle');
         case (code === 56 || code === 57): return t('weather.freezingDrizzle');
@@ -156,17 +158,20 @@ export function getWeatherIconSvg(code, isDay = true) {
     const moonIcon = `<svg ${svgAttrsStrong}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
     const cloudIcon = `<svg ${svgAttrs}><path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.42-1.03-1.42-2.5-3.5-2.5a4.5 4.5 0 0 0-4.5 4.5c0 .14 0 .27.02.4A4 4 0 0 0 4 17a3.5 3.5 0 0 0 3.5 3.5h10z"></path></svg>`;
     const cloudMoonIcon = `<svg ${svgAttrs}><g transform="translate(6.2 -1.4) scale(0.62)"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></g><g transform="translate(-0.6 2.6) scale(0.9)"><path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.42-1.03-1.42-2.5-3.5-2.5a4.5 4.5 0 0 0-4.5 4.5c0 .14 0 .27.02.4A4 4 0 0 0 4 17a3.5 3.5 0 0 0 3.5 3.5h10z"></path></g></svg>`;
+    const sunCloudIcon = `<svg ${svgAttrs}><g transform="translate(7 -1) scale(0.55)"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></g><g transform="translate(-0.6 2.6) scale(0.9)"><path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.42-1.03-1.42-2.5-3.5-2.5a4.5 4.5 0 0 0-4.5 4.5c0 .14 0 .27.02.4A4 4 0 0 0 4 17a3.5 3.5 0 0 0 3.5 3.5h10z"></path></g></svg>`;
 
     switch (true) {
         case (code === 0):
             return isDay ? sunIcon : moonIcon;
-        case (code >= 1 && code <= 3):
-            // Overcast (3) hides the sky; only 1-2 get a moon at night.
-            if (isDay || code === 3) return cloudIcon;
-            return cloudMoonIcon;
+        case (code === 1 || code === 2):
+            // Mainly clear / partly cloudy: sun or moon behind a cloud.
+            return isDay ? sunCloudIcon : cloudMoonIcon;
+        case (code === 3):
+            // Overcast hides the sky.
+            return cloudIcon;
         case (code >= 45 && code <= 48):
             return `<svg ${svgAttrs}><line x1="5" y1="8" x2="19" y2="8"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="6" y1="16" x2="18" y2="16"></line></svg>`;
-        case ((code >= 51 && code <= 55) || (code >= 61 && code <= 65) || (code >= 80 && code <= 82)):
+        case ((code >= 51 && code <= 57) || (code >= 61 && code <= 67) || (code >= 80 && code <= 82)):
             return `<svg ${svgAttrs}><line x1="16" y1="13" x2="16" y2="21"></line><line x1="8" y1="13" x2="8" y2="21"></line><line x1="12" y1="15" x2="12" y2="23"></line><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path></svg>`;
         case ((code >= 71 && code <= 75) || code === 77 || code === 85 || code === 86):
             return `<svg ${svgAttrs}><line x1="12" y1="2" x2="12" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line><line x1="4.93" y1="19.07" x2="19.07" y2="4.93"></line></svg>`;

@@ -119,6 +119,8 @@
     "weather.unknown": "Unbekannt",
     "weather.clearSky": "Klarer Himmel",
     "weather.mainlyClear": "Überw. klar",
+    "weather.partlyCloudy": "Teilw. bewölkt",
+    "weather.overcast": "Bedeckt",
     "weather.fog": "Nebel",
     "weather.drizzle": "Nieselregen",
     "weather.freezingDrizzle": "Gefr. Nieselregen",

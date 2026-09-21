@@ -119,6 +119,8 @@
     "weather.unknown": "Desconocido",
     "weather.clearSky": "Cielo despejado",
     "weather.mainlyClear": "Semi despejado",
+    "weather.partlyCloudy": "Parc. nublado",
+    "weather.overcast": "Nublado",
     "weather.fog": "Niebla",
     "weather.drizzle": "Llovizna",
     "weather.freezingDrizzle": "Llovizna helada",
