@@ -941,8 +941,9 @@ html.i18n-loading .app-container {
     gap: 10px;
 }
 
-/* Chooser fills the Locate page; only the places list shrinks and scrolls so a
-   small viewport never scrolls the whole page. */
+/* Chooser fills the Locate page: the places card stretches into the remaining
+   space (its list scrolls only when its rows overflow), so the Continue button
+   stays pinned at the bottom and the page itself never scrolls. */
 #locate-chooser {
     flex: 1;
     min-height: 0;
@@ -953,11 +954,45 @@ html.i18n-loading .app-container {
 }
 
 #locate-chooser > #places-card {
-    flex-shrink: 1;
+    flex: 1 1 auto;
     min-height: 0;
     display: flex;
     flex-direction: column;
     width: 100%;
+}
+
+/* Continue stays at the bottom; with no places card the auto margin absorbs the
+   free space, otherwise the stretched card already fills it. */
+#btn-locate-continue {
+    margin-top: auto;
+}
+
+/* Saver fills the page too, but only the content above the action row scrolls
+   (.saver-scroll). This keeps "Back" and "Save Location" visible even with the
+   "Tag & Comment" accordion expanded — mirrors the chooser pattern above. */
+#locate-saver {
+    flex: 1;
+    min-height: 0;
+}
+
+.saver-scroll {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.saver-scroll > * {
+    flex-shrink: 0;
+    width: 100%;
+}
+
+#locate-saver > .track-btn-row {
+    flex-shrink: 0;
 }
 
 /* Kompaktere Zellen auf den Locate-Views, damit alles in den 640px-Rahmen
@@ -1029,6 +1064,60 @@ html.i18n-loading .app-container {
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
+}
+
+/* --- Saver: place details (phone / website / opening hours / wheelchair) --- */
+.place-info-card {
+    padding: 12px 14px;
+}
+
+.place-info-card .label {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.place-info-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.place-info-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 6px 0;
+}
+
+.place-info-row + .place-info-row {
+    border-top: 1px solid var(--border-color);
+}
+
+.place-info-row svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    stroke: var(--text-muted);
+}
+
+.place-info-content {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.85rem;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--text-color);
+    overflow-wrap: break-word;
+}
+
+.place-info-link {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.place-info-link:hover,
+.place-info-link:active {
+    text-decoration: underline;
 }
 
 /* --- Chooser: expandable 3-hour forecast disclosure --- */
@@ -1234,11 +1323,11 @@ html.i18n-loading .app-container {
     display: flex;
     flex-direction: column;
     width: 100%;
-    /* Fits ~10 place rows; flex + overflow-y lets the list shrink and scroll
-       internally on smaller screens instead of scrolling the whole page. */
+    /* Fills the stretched places card; flex + overflow-y lets the list shrink
+       and scroll internally when its rows overflow the available space instead
+       of scrolling the whole page. */
     flex: 1;
     min-height: 0;
-    max-height: 336px;
     overflow-y: auto;
     padding-bottom: 4px;
 }

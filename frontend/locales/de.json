@@ -55,6 +55,7 @@
     "label.appearance": "DARSTELLUNG",
     "label.userId": "BENUTZER-ID",
     "label.language": "SPRACHE",
+    "label.placeDetails": "ORT-DETAILS",
 
     "saveOptions.tagComment": "Tags & Kommentar",
     "saveOptions.commentPlaceholder": "Kommentar hinzufügen (optional)…",
@@ -67,6 +68,11 @@
     "places.unknownPlace": "Unbekannter Ort",
     "places.compassLabel": "Kompass zeigt nach Norden",
     "places.compassTitle": "Norden",
+
+    "placeInfo.call": "{phone} anrufen",
+    "placeInfo.website": "Webseite öffnen",
+    "placeInfo.wheelchairYes": "Rollstuhlgerecht",
+    "placeInfo.wheelchairNo": "Nicht rollstuhlgerecht",
 
     "forecast.title": "3-Stunden-Vorhersage",
     "forecast.expand": "3-Stunden-Vorhersage anzeigen",

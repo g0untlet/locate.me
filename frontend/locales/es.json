@@ -55,6 +55,7 @@
     "label.appearance": "APARIENCIA",
     "label.userId": "ID DE USUARIO",
     "label.language": "IDIOMA",
+    "label.placeDetails": "DETALLES DEL LUGAR",
 
     "saveOptions.tagComment": "Etiquetas y comentario",
     "saveOptions.commentPlaceholder": "Añadir un comentario (opcional)…",
@@ -67,6 +68,11 @@
     "places.unknownPlace": "Lugar desconocido",
     "places.compassLabel": "Brújula apuntando al norte",
     "places.compassTitle": "Norte",
+
+    "placeInfo.call": "Llamar a {phone}",
+    "placeInfo.website": "Abrir sitio web",
+    "placeInfo.wheelchairYes": "Accesible en silla de ruedas",
+    "placeInfo.wheelchairNo": "No accesible en silla de ruedas",
 
     "forecast.title": "Pronóstico de 3 horas",
     "forecast.expand": "Mostrar pronóstico de 3 horas",

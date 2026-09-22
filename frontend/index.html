@@ -11,7 +11,7 @@
     <title>locate.me</title>
     <script>
         const APP_VERSION = '0.4.2';
-        const APP_BUILD   = '20260920';
+        const APP_BUILD   = '20260921';
         document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light';
         document.documentElement.lang = localStorage.getItem('lang') || 'en';
         document.documentElement.classList.add('i18n-loading');
@@ -32,7 +32,7 @@
             window.dispatchEvent(new Event('locateme:installed'));
         });
     </script>
-    <link rel="stylesheet" href="css/style.css?v=0.4.2_16">
+    <link rel="stylesheet" href="css/style.css?v=0.4.2_19">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -42,7 +42,7 @@
     <link rel="apple-touch-icon" href="icons/icon_192.png">
 </head>
 <body>
-    <script type="module" src="app.js?v=0.4.2_16"></script>
+    <script type="module" src="app.js?v=0.4.2_17"></script>
 
     <div class="app-container">
         <header class="app-header">
@@ -60,7 +60,7 @@
                 </button>
             </div>
 
-            <div class="status-container">
+            <div id="locate-status-container" class="status-container">
                 <div id="status" class="status-ready" data-i18n="locate.ready">Ready</div>
             </div>
 
@@ -140,68 +140,75 @@
 
             <!-- ================= VIEW 2: SAVER ================= -->
             <div id="locate-saver" class="locate-view hidden">
-                <div id="save-options" class="save-options hidden">
-                    <button id="save-options-toggle" class="save-options-toggle" type="button" aria-expanded="false">
-                        <svg class="save-options-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"></path>
-                            <line x1="7" y1="7" x2="7.01" y2="7"></line>
-                        </svg>
-                        <span class="save-options-toggle-label" data-i18n="saveOptions.tagComment">Tag &amp; Comment</span>
-                        <span id="save-options-summary" class="save-options-summary hidden"></span>
-                        <svg class="save-options-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                    </button>
-                    <div class="save-options-body">
-                        <div class="save-options-inner">
-                            <div class="save-options-row">
-                                <span class="label" data-i18n="label.tag">TAG</span>
-                                <div id="tag-chips" class="tag-chips"></div>
-                            </div>
-                            <div class="save-options-row">
-                                <span class="label" data-i18n="label.comment">COMMENT</span>
-                                <div class="comment-input-wrapper">
-                                    <input id="comment-input" class="comment-input" type="text"
-                                           maxlength="25" placeholder="Add a comment (optional)…" data-i18n-placeholder="saveOptions.commentPlaceholder" autocomplete="off">
-                                    <span id="comment-counter" class="comment-counter">0/25</span>
+                <div class="saver-scroll">
+                    <div id="save-options" class="save-options hidden">
+                        <button id="save-options-toggle" class="save-options-toggle" type="button" aria-expanded="false">
+                            <svg class="save-options-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"></path>
+                                <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                            </svg>
+                            <span class="save-options-toggle-label" data-i18n="saveOptions.tagComment">Tag &amp; Comment</span>
+                            <span id="save-options-summary" class="save-options-summary hidden"></span>
+                            <svg class="save-options-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
+                        <div class="save-options-body">
+                            <div class="save-options-inner">
+                                <div class="save-options-row">
+                                    <span class="label" data-i18n="label.tag">TAG</span>
+                                    <div id="tag-chips" class="tag-chips"></div>
+                                </div>
+                                <div class="save-options-row">
+                                    <span class="label" data-i18n="label.comment">COMMENT</span>
+                                    <div class="comment-input-wrapper">
+                                        <input id="comment-input" class="comment-input" type="text"
+                                               maxlength="25" placeholder="Add a comment (optional)…" data-i18n-placeholder="saveOptions.commentPlaceholder" autocomplete="off">
+                                        <span id="comment-counter" class="comment-counter">0/25</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="response-card">
-                    <div class="flex-rows">
-                        <div class="row-split border-bottom">
-                            <div class="cell">
-                                <span class="label" data-i18n="label.temperature">TEMPERATURE</span>
-                                <div class="temp-display-wrapper">
-                                    <span id="saver-weather-icon-container"></span>
-                                    <span id="saver-temp" class="value">-</span>
+                    <div class="response-card">
+                        <div class="flex-rows">
+                            <div class="row-split border-bottom">
+                                <div class="cell">
+                                    <span class="label" data-i18n="label.temperature">TEMPERATURE</span>
+                                    <div class="temp-display-wrapper">
+                                        <span id="saver-weather-icon-container"></span>
+                                        <span id="saver-temp" class="value">-</span>
+                                    </div>
+                                </div>
+                                <div class="cell text-right">
+                                    <span class="label" data-i18n="label.condition">CONDITION</span>
+                                    <span id="saver-weather" class="value">-</span>
+                                </div>
+                                <div class="cell text-right">
+                                    <span class="label" data-i18n="label.uvIndex">UV-INDEX</span>
+                                    <span id="saver-uv" class="value">-</span>
                                 </div>
                             </div>
-                            <div class="cell text-right">
-                                <span class="label" data-i18n="label.condition">CONDITION</span>
-                                <span id="saver-weather" class="value">-</span>
+                            <div class="row-split">
+                                <div class="cell address-cell">
+                                    <span class="label" data-i18n="label.location">LOCATION</span>
+                                    <div id="saver-location-container" class="value address-container">-</div>
+                                </div>
+                                <div class="cell text-right elevation-cell">
+                                    <span class="label" data-i18n="label.elevation">ELEVATION</span>
+                                    <span id="saver-elevation" class="value">-</span>
+                                </div>
                             </div>
-                            <div class="cell text-right">
-                                <span class="label" data-i18n="label.uvIndex">UV-INDEX</span>
-                                <span id="saver-uv" class="value">-</span>
-                            </div>
-                        </div>
-                        <div class="row-split">
-                            <div class="cell address-cell">
-                                <span class="label" data-i18n="label.location">LOCATION</span>
-                                <div id="saver-location-container" class="value address-container">-</div>
-                            </div>
-                            <div class="cell text-right elevation-cell">
-                                <span class="label" data-i18n="label.elevation">ELEVATION</span>
-                                <span id="saver-elevation" class="value">-</span>
+                            <div class="row-full">
+                                <div id="locate-map" class="locate-map"></div>
                             </div>
                         </div>
-                        <div class="row-full">
-                            <div id="locate-map" class="locate-map"></div>
-                        </div>
+                    </div>
+
+                    <div id="saver-place-info" class="response-card place-info-card hidden">
+                        <span class="label" data-i18n="label.placeDetails">PLACE DETAILS</span>
+                        <div id="saver-place-info-list" class="place-info-list"></div>
                     </div>
                 </div>
 
