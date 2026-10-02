@@ -97,6 +97,97 @@ export function formatTravelTime(minutes, compact = false) {
 }
 
 /* ==========================================================================
+   Compass: bearing -> 8-point cardinal direction, localized
+   Client-side port of the backend's Geoboxing.bearingDegrees/compassPoint, so
+   the History view can derive a direction from two coordinate pairs without an
+   extra request. The Places API keeps sending the English abbreviation
+   (`direction`); directionShort()/directionName() map it to the user's
+   language via the `direction.*` locale keys.
+   ========================================================================== */
+const COMPASS_POINTS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+const DEG_TO_RAD = Math.PI / 180;
+
+/* Initial great-circle bearing in degrees, clockwise from north, 0..360.
+   NaN when a coordinate is missing or not a number. */
+export function bearingDegrees(lat1, lon1, lat2, lon2) {
+    if (![lat1, lon1, lat2, lon2].every(v => typeof v === 'number' && !isNaN(v))) return NaN;
+
+    const phi1 = lat1 * DEG_TO_RAD;
+    const phi2 = lat2 * DEG_TO_RAD;
+    const dLon = (lon2 - lon1) * DEG_TO_RAD;
+    const y = Math.sin(dLon) * Math.cos(phi2);
+    const x = Math.cos(phi1) * Math.sin(phi2)
+            - Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLon);
+
+    return (Math.atan2(y, x) / DEG_TO_RAD + 360) % 360;
+}
+
+/* 8-point compass direction for a bearing, or '' when the bearing is not a
+   number. Same 45° bucketing as the backend. A bearing of 0 (identical
+   points) maps to 'N'; callers suppress it via the distance check. */
+export function compassPoint(bearing) {
+    if (typeof bearing !== 'number' || isNaN(bearing)) return '';
+    return COMPASS_POINTS[Math.round(bearing / 45) % 8];
+}
+
+/* Localized short direction letters ('NO' in German) for inline use. */
+export function directionShort(abbr) {
+    const key = String(abbr || '').trim().toUpperCase();
+    if (!key) return '';
+    return COMPASS_POINTS.includes(key) ? t(`direction.${key.toLowerCase()}`) : key;
+}
+
+/* Localized full direction name ('Nordosten') for tooltips / aria-labels. */
+export function directionName(abbr) {
+    const key = String(abbr || '').trim().toUpperCase();
+    if (!key) return '';
+    return COMPASS_POINTS.includes(key) ? t(`direction.${key.toLowerCase()}Name`) : key;
+}
+
+/* Screen-Rotation eines Richtungspfeils: wo liegt das Ziel relativ zu dem, was
+   auf dem Display oben ist? `heading` ist der von js/ui/compass.js emittierte
+   NADEL-Winkel (die Rotation, die eine nach Norden zeigende Nadel braucht, also
+   -Blickrichtung), `bearing` die Nord-Peilung zum Ziel. Der Pfeil zeigt nach
+   Norden, wenn heading = 0; ein Ziel mit Peilung bearing liegt dann um bearing
+   weiter im Uhrzeigersinn, also screen = bearing + heading.
+   Ohne heading (0) bleibt der Pfeil bei der Nord-Peilung stehen – das ist der
+   graceful Fallback, wenn die Sensor-Permission fehlt. */
+export function arrowRotation(bearing, heading) {
+    if (typeof bearing !== 'number' || isNaN(bearing)) return NaN;
+    const h = typeof heading === 'number' && !isNaN(heading) ? heading : 0;
+    return ((bearing + h) % 360 + 360) % 360;
+}
+
+/* Kürzester Weg von prev nach target: liefert prev + delta, damit eine CSS-
+   Transition beim 359°->0°-Wrap nicht rückwärts durch die ganze Skala dreht.
+   prev === null (erster Wert) ergibt den normalisierten target. */
+export function shortestPathRotation(prev, target) {
+    const norm = (target % 360 + 360) % 360;
+    if (prev === null || prev === undefined || isNaN(prev)) return norm;
+    let delta = norm - (((prev % 360) + 360) % 360);
+    if (delta > 180)  delta -= 360;
+    if (delta < -180) delta += 360;
+    return prev + delta;
+}
+
+/* Haversine-Distanz in Metern zwischen zwei Koordinaten (R = 6 371 000 m).
+   Frontend-Pendant zu DistanceCalculator.haversine (liefert dort km) – wird
+   benutzt, um Fixes auf echte Bewegung zu prüfen, bevor die Richtungspfeile
+   neu berechnet werden. NaN bei unbrauchbaren Koordinaten. */
+export function distanceMeters(lat1, lon1, lat2, lon2) {
+    if (![lat1, lon1, lat2, lon2].every(v => typeof v === 'number' && !isNaN(v))) return NaN;
+
+    const R = 6371000;
+    const phi1 = lat1 * DEG_TO_RAD;
+    const phi2 = lat2 * DEG_TO_RAD;
+    const dPhi = (lat2 - lat1) * DEG_TO_RAD;
+    const dLambda = (lon2 - lon1) * DEG_TO_RAD;
+    const a = Math.sin(dPhi / 2) ** 2
+            + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLambda / 2) ** 2;
+    return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+/* ==========================================================================
    Global Helper: Inline SVG Travel Mode Icon Renderer (walk / bike / drive)
    ========================================================================== */
 export function getTravelIconSvg(mode) {
