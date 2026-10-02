@@ -502,6 +502,8 @@ html.i18n-loading .app-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    row-gap: 4px;
     font-size: 0.75rem;
     color: var(--text-muted);
     border-bottom: 1px dashed var(--border-color);
@@ -614,6 +616,49 @@ html.i18n-loading .app-container {
 .log-accuracy-icon {
     width: 12px;
     height: 12px;
+}
+
+/* History header: direction badge + accuracy badge, right-aligned as one group.
+   Wraps to a second line on very narrow screens instead of clipping. */
+.log-card-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.log-card-direction {
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background-color: var(--surface-subtle);
+    color: var(--text-muted);
+}
+
+/* The rotation angle is set per card from JS (rotate(<deg>deg)): the target is
+   the bearing to the entry MINUS the current device heading, so the arrow
+   points at the entry relative to where the phone faces. fill-box + center are
+   required: an SVG child would otherwise rotate around the viewBox origin
+   instead of the arrow's middle. The transition smooths the sensor stream and
+   makes a 359°->0° wrap take the short way round (JS feeds unwrapped angles). */
+.log-direction-arrow {
+    width: 12px;
+    height: 12px;
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: transform 0.15s ease-out;
+}
+
+/* will-change only while the History page actually drives the arrows: the class
+   is toggled with the live watch, so an idle or hidden list is never promoted
+   to its own compositor layer (a long history list would cost real memory). */
+#history-list.is-live-directions .log-direction-arrow {
+    will-change: transform;
 }
 
 .log-card-body { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }

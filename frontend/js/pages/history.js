@@ -3,11 +3,19 @@ import { setHistoryMapData, getCurrentHistoryView, getHistoryFilter, setHistoryF
 import { t } from '../i18n.js';
 import { renderMapMarkers } from '../ui/map.js';
 import { updateHistoryBadge } from '../ui/badge.js';
+import { subscribeHeading, getHeading, requestHeadingPermission } from '../ui/compass.js';
 import {
     getWeatherIconSvg,
     getUvLevel,
     getLocationIconSvg,
     getTravelIconSvg,
+    bearingDegrees,
+    compassPoint,
+    directionShort,
+    directionName,
+    arrowRotation,
+    shortestPathRotation,
+    distanceMeters,
     formatShortAddress,
     formatRelativeDate,
     formatTravelTime,
@@ -36,9 +44,269 @@ function handleShare(lat, lon, address) {
 }
 
 /* ==========================================================================
-   Internal: Einzelne Log-Card bauen + Listener binden
+   Live Direction Arrows (heading-relative)
+
+   Each card's arrow is rotated to where the entry lies RELATIVE TO WHERE THE
+   PHONE IS POINTING: rotation = bearing + heading, with `heading` being the
+   needle screen angle from the shared sensor source (js/ui/compass.js). This is
+   the same feel as the Locate-page needle: turn the phone and the arrows sweep.
+   (bearing alone is the true compass direction, shown as the letter.)
+
+   Two independent inputs feed the arrows:
+   - heading  (js/ui/compass.js)  -> changes `rotation` on every sensor event
+   - origin   (gated GPS watcher) -> changes `bearing` when the user moved
+
+   Battery notes:
+   - The heading callback does no work while this page is hidden (the rotation
+     pass is gated on the DOM visibility of #page-history), and the GPS watcher
+     is stopped entirely on tab switch and on visibilitychange.
+   - The GPS watcher only runs while the History tab is visible and rejects
+     fixes that are inaccurate or do not represent real movement, so standing
+     still never wakes the radio more than once.
+   - Accepted fixes recompute the arrows LOCALLY from the data already loaded
+     into this page - no backend request, no re-render.
+   - Writes are coalesced into one requestAnimationFrame and skipped below a
+     1 degree deadband, so a steady phone produces no DOM writes at all.
    ========================================================================== */
-function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBackendStatus }) {
+
+/* Gate for the GPS watcher: ignore fixes that are too fuzzy or too close to the
+   origin we already used. Chosen so normal walking still refreshes the bearing
+   (the letter/direction) without jittering while standing still. */
+const LIVE_MIN_MOVE_M = 5;
+const LIVE_MAX_ACCURACY_M = 100;
+const LIVE_WATCH_OPTIONS = { enableHighAccuracy: false, maximumAge: 5000, timeout: 30000 };
+
+/* Deadband for arrow rotations: below 1 degree the change is invisible, and
+   skipping it keeps a still phone at zero style writes. */
+const ARROW_DEADBAND_DEG = 1;
+
+/* Within this radius the 8-point compass letter is meaningless and the arrow is
+   dominated by GPS jitter, so the direction badge is hidden. Re-evaluated live
+   from the movement-gated fix, so it appears again once the user walks away. */
+const DIRECTION_MIN_DISTANCE_M = 50;
+
+/* One record per rendered arrow. `rotation` is the accumulated (unwrapped)
+   angle fed to the CSS transition, `bearing` the north-referenced direction. */
+let directionArrows = [];
+let headingUnsubscribe = null;
+let liveWatchId = null;
+let liveOrigin = null;
+let arrowFrame = 0;
+let visibilityHooked = false;
+let liveInitialized = false;
+
+/* The page's own visibility is read straight from the DOM instead of from a
+   flag set by app.js: a missed or reordered lifecycle call then cannot freeze
+   the arrows. */
+function isHistoryPageVisible() {
+    const page = document.getElementById('page-history');
+    return !!page && !page.classList.contains('hidden');
+}
+
+/* rAF-coalesced write pass. Both the heading stream (fast) and the GPS gate
+   (rare) end up here, so at most one style pass per animation frame happens. */
+function scheduleArrowUpdate() {
+    if (arrowFrame) return;
+    arrowFrame = requestAnimationFrame(() => {
+        arrowFrame = 0;
+        applyArrowRotations();
+    });
+}
+
+function applyArrowRotations() {
+    // Hidden page: the elements still exist in the DOM, so without this guard a
+    // 60 Hz sensor stream would keep writing transforms nobody can see.
+    if (!isHistoryPageVisible() || directionArrows.length === 0) return;
+    const heading = getHeading();
+
+    for (const record of directionArrows) {
+        if (record.hidden) continue;
+        const target = arrowRotation(record.bearing, heading);
+        if (isNaN(target)) continue;
+        const next = shortestPathRotation(record.rotation, target);
+        // Skip invisible changes, but always paint the very first value.
+        if (record.rotation !== null && Math.abs(next - record.rotation) < ARROW_DEADBAND_DEG) continue;
+        record.rotation = next;
+        record.el.style.transform = `rotate(${next.toFixed(1)}deg)`;
+    }
+}
+
+/* Registers the arrow of a freshly rendered card. `pos` is the stored entry,
+   `bearing` the direction from the origin the card was rendered with.
+   Deliberately O(1): the list render calls this once per card, so sweeping all
+   arrows here would be quadratic on a long history. */
+function registerDirectionArrow(card, pos, bearing) {
+    const arrow = card.querySelector('.log-direction-arrow');
+    if (!arrow || isNaN(bearing)) return;
+
+    // A freshly created element has no computed transform yet, so this first
+    // write cannot animate - no transition juggling needed.
+    const rotation = shortestPathRotation(null, arrowRotation(bearing, getHeading()));
+    arrow.style.transform = `rotate(${rotation.toFixed(1)}deg)`;
+    const badge = arrow.closest('.log-card-direction');
+    directionArrows.push({
+        el: arrow,
+        bearing,
+        rotation,
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        hidden: !!(badge && badge.classList.contains('hidden'))
+    });
+}
+
+/* Drops the arrow references of a previous render (the list is about to be
+   replaced). Deliberately does NOT touch the GPS watcher: the watcher's
+   lifecycle belongs to onHistoryPageShown/onHistoryPageHidden, and pull-to-refresh
+   re-renders while the watcher must keep running. */
+function clearDirectionArrows() {
+    directionArrows = [];
+}
+
+/* A new origin: recompute every bearing locally. The letters stay absolute but
+   must still match the arrow, so they are re-derived here as well. The badge is
+   hidden while the entry is within DIRECTION_MIN_DISTANCE_M and shown again once
+   the user walks away, all from the same local fix (no backend request). */
+function applyOrigin(latitude, longitude) {
+    liveOrigin = { latitude, longitude };
+
+    for (const record of directionArrows) {
+        const bearing = bearingDegrees(latitude, longitude, record.latitude, record.longitude);
+        if (isNaN(bearing)) continue;
+        record.bearing = bearing;
+
+        const badge = record.el.closest('.log-card-direction');
+        if (!badge) continue;
+
+        const distM = distanceMeters(latitude, longitude, record.latitude, record.longitude);
+        record.hidden = !isNaN(distM) && distM < DIRECTION_MIN_DISTANCE_M;
+        badge.classList.toggle('hidden', record.hidden);
+
+        const compass = compassPoint(bearing);
+        const label = compass ? t('history.directionTitle', { direction: directionName(compass) }) : '';
+        const letters = badge.querySelector('span');
+        if (letters) letters.textContent = directionShort(compass);
+        if (label) {
+            badge.setAttribute('title', label);
+            badge.setAttribute('aria-label', label);
+        }
+    }
+    scheduleArrowUpdate();
+}
+
+function shouldAcceptFix(latitude, longitude, accuracy) {
+    if (typeof accuracy === 'number' && accuracy > LIVE_MAX_ACCURACY_M) return false;
+    if (!liveOrigin) return true;
+    return distanceMeters(liveOrigin.latitude, liveOrigin.longitude, latitude, longitude) >= LIVE_MIN_MOVE_M;
+}
+
+function onLiveFix(pos) {
+    const { latitude, longitude, accuracy } = pos.coords;
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') return;
+    if (!shouldAcceptFix(latitude, longitude, accuracy)) return;
+    applyOrigin(latitude, longitude);
+}
+
+function startLiveWatch() {
+    const list = document.getElementById('history-list');
+    if (list) list.classList.add('is-live-directions');
+    if (liveWatchId !== null || !navigator.geolocation) return;
+    try {
+        liveWatchId = navigator.geolocation.watchPosition(onLiveFix, () => {}, LIVE_WATCH_OPTIONS);
+    } catch {
+        liveWatchId = null;
+    }
+}
+
+/* The is-live-directions class only exists while this page is the active,
+   visible view — it gates `will-change: transform`, so it must be released
+   together with the watcher (also on the early return, e.g. when geolocation
+   is unavailable and no watch was ever started). */
+function stopLiveWatch() {
+    const list = document.getElementById('history-list');
+    if (list) list.classList.remove('is-live-directions');
+    if (liveWatchId === null) return;
+    navigator.geolocation.clearWatch(liveWatchId);
+    liveWatchId = null;
+}
+
+/* Hooked once: backgrounding the app must release the GPS radio, resuming must
+   restore it (only while the History tab is the visible one). */
+function hookVisibility() {
+    if (visibilityHooked) return;
+    visibilityHooked = true;
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            stopLiveWatch();
+        } else if (isHistoryPageVisible()) {
+            startLiveWatch();
+        }
+    });
+}
+
+/* The heading subscription is created once and kept for the app lifetime: the
+   callback is a no-op while the History page is hidden (see applyArrowRotations),
+   so returning to the tab is instant. */
+function ensureHeadingSubscription() {
+    if (!headingUnsubscribe) headingUnsubscribe = subscribeHeading(scheduleArrowUpdate);
+}
+
+/* Re-aim the arrows at the current heading, e.g. after returning to the tab. A
+   frame scheduled before the tab was frozen can never fire while rAF is
+   suspended, so drop it instead of letting it block all later updates. */
+function catchUpArrows() {
+    if (arrowFrame) {
+        cancelAnimationFrame(arrowFrame);
+        arrowFrame = 0;
+    }
+    scheduleArrowUpdate();
+}
+
+/* Called from app.js (and by our own nav hook) when the History tab is active. */
+export function onHistoryPageShown() {
+    hookVisibility();
+    ensureHeadingSubscription();
+    catchUpArrows();
+    startLiveWatch();
+}
+
+export function onHistoryPageHidden() {
+    stopLiveWatch();
+}
+
+/* Self-contained wiring: the History feature must not depend on app.js calling
+   onHistoryPageShown() for it to work. Subscribe to the shared heading source at
+   init and mirror the nav click to start/stop the GPS watcher. Everything here is
+   idempotent with app.js's own lifecycle calls. */
+function initHistoryLive() {
+    if (liveInitialized) return;
+    liveInitialized = true;
+    hookVisibility();
+    ensureHeadingSubscription();
+    document.querySelectorAll('.nav-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.getAttribute('data-target') === 'page-history') {
+                // iOS: die Bewegungssensor-Permission muss synchron in der
+                // User-Geste angefragt werden (No-op sonst; doppelte Anfragen
+                // fängt compass.js ab).
+                requestHeadingPermission();
+                onHistoryPageShown();
+            } else {
+                onHistoryPageHidden();
+            }
+        });
+    });
+    if (isHistoryPageVisible()) {
+        catchUpArrows();
+        startLiveWatch();
+    }
+}
+
+/* ==========================================================================
+   Internal: Einzelne Log-Card bauen + Listener binden
+   deps = { checkBackendStatus, origin } – origin = { latitude, longitude } of
+   the current GPS fix (null without one) and basis for the direction badge.
+   ========================================================================== */
+function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBackendStatus, origin }) {
     const card = document.createElement('div');
     card.className = 'log-card';
     card.id = `log-card-${pos.id}`;
@@ -132,6 +400,32 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
     const badgeTextColor   = isLowAccuracy ? '#b45309' : 'var(--text-muted)';
     const roundedAccuracy  = pos.accuracy ? Math.round(pos.accuracy) : '?';
 
+    // --- Direction from the current position ---
+    // Origin is the same GPS fix the backend used for `distance`/travel times,
+    // so arrow, letters and distance chip all describe one and the same move.
+    // Omitted entirely when there is no fix (GPS denied/unavailable). Within
+    // DIRECTION_MIN_DISTANCE_M the badge is rendered but hidden (the 8-point
+    // letter is meaningless there); applyOrigin() re-evaluates that live as the
+    // user moves, so it reappears once they walk away.
+    // The arrow carries NO inline rotation: registerDirectionArrow() paints it
+    // from bearing + needle heading so it keeps tracking while the page is open.
+    // The letters stay absolute (true compass direction) by design.
+    const bearing = origin ? bearingDegrees(origin.latitude, origin.longitude, pos.latitude, pos.longitude) : NaN;
+    const compass = compassPoint(bearing);
+    const originDistanceM = origin
+        ? distanceMeters(origin.latitude, origin.longitude, pos.latitude, pos.longitude)
+        : NaN;
+    const near = !isNaN(originDistanceM) && originDistanceM < DIRECTION_MIN_DISTANCE_M;
+    const directionLabel = compass ? t('history.directionTitle', { direction: directionName(compass) }) : '';
+    const directionHtml = compass
+        ? `<span class="log-card-direction${near ? ' hidden' : ''}" title="${directionLabel}" aria-label="${directionLabel}">
+            <svg class="log-direction-arrow" style="stroke: var(--text-muted);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 20 21 12 17 4 21"></polygon>
+            </svg>
+            <span>${directionShort(compass)}</span>
+        </span>`
+        : '';
+
     const tagHtml = pos.tag
         ? `<span class="log-card-tag" title="${t('history.tagTitle', { tag: pos.tag })}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -158,16 +452,19 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
                     <span class="log-card-id">#${index + 1}</span>
                     <span style="margin-left: 6px;">${dateFormatted}</span>${tagHtml}
                 </div>
-                <span class="log-card-accuracy-badge" style="background-color: ${badgeBgColor}; color: ${badgeTextColor};">
-                    <svg class="log-accuracy-icon" style="stroke: ${badgeTextColor};" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="7"></circle>
-                        <line x1="12" y1="1" x2="12" y2="4"></line>
-                        <line x1="12" y1="20" x2="12" y2="23"></line>
-                        <line x1="1" y1="12" x2="4" y2="12"></line>
-                        <line x1="20" y1="12" x2="23" y2="12"></line>
-                    </svg>
-                    <span>±${roundedAccuracy}m</span>
-                </span>
+                <div class="log-card-meta">
+                    ${directionHtml}
+                    <span class="log-card-accuracy-badge" style="background-color: ${badgeBgColor}; color: ${badgeTextColor};">
+                        <svg class="log-accuracy-icon" style="stroke: ${badgeTextColor};" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="7"></circle>
+                            <line x1="12" y1="1" x2="12" y2="4"></line>
+                            <line x1="12" y1="20" x2="12" y2="23"></line>
+                            <line x1="1" y1="12" x2="4" y2="12"></line>
+                            <line x1="20" y1="12" x2="23" y2="12"></line>
+                        </svg>
+                        <span>±${roundedAccuracy}m</span>
+                    </span>
+                </div>
             </div>
             <div class="log-card-body">
                 <div style="flex: 1; min-width: 0;">
@@ -289,6 +586,9 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
                 checkBackendStatus();
             });
     });
+
+    // Hand the arrow to the live-rotation engine (no-op without an origin).
+    if (directionHtml) registerDirectionArrow(card, pos, bearing);
 
     return card;
 }
@@ -629,10 +929,17 @@ export function fetchAndRenderHistory(deps) {
 
     const fetchWithCoords = (lat, lon) => {
         ensureOfflineBanner();
+        // The fix doubles as the reference point for the direction badge, so it
+        // is kept alongside the request (null when the fetch runs without one).
+        const origin = lat !== null && lon !== null ? { latitude: lat, longitude: lon } : null;
         apiGetPositionsWithMeta(activeUserId, lat, lon)
             .then(({ data, fromCache }) => {
                 setOfflineBanner(fromCache);
                 listContainer.innerHTML = "";
+                // The cards are about to be replaced: drop the arrow references
+                // of the previous render so the heading stream cannot touch
+                // detached elements.
+                clearDirectionArrows();
 
                 if (!data || !Array.isArray(data) || data.length === 0) {
                     listContainer.innerHTML = `<div style="text-align:center; width:100%; color:var(--text-muted); font-size:0.9rem; padding:20px 0;">${t('history.noLocations', { userId: activeUserId })}</div>`;
@@ -651,7 +958,7 @@ export function fetchAndRenderHistory(deps) {
                 data.forEach((pos, index) => {
                     try {
                         if (!pos || pos.id === undefined) return;
-                        const card = buildHistoryCard(pos, index, activeUserId, listContainer, { checkBackendStatus });
+                        const card = buildHistoryCard(pos, index, activeUserId, listContainer, { checkBackendStatus, origin });
                         listContainer.appendChild(card);
                     } catch (itemError) {
                         console.error("Skipped rendering corrupted log item:", pos, itemError);
@@ -661,6 +968,10 @@ export function fetchAndRenderHistory(deps) {
                 // Suchfeld einmalig anlegen, Term nach Reload zurücksetzen
                 ensureSearchBar();
                 resetSearchBar();
+
+                // Seed the live origin with the fix this render used, so the
+                // movement gate can measure real displacement from here on.
+                if (origin) liveOrigin = origin;
 
                 checkBackendStatus();
             })
@@ -703,3 +1014,7 @@ export function invalidateHistoryI18n() {
     document.getElementById('history-search-bar')?.remove();
     document.getElementById(OFFLINE_BANNER_ID)?.remove();
 }
+
+/* Self-contained live-arrow bootstrap (module scripts run after the DOM is
+   parsed, so the nav items and #page-history exist here). */
+initHistoryLive();

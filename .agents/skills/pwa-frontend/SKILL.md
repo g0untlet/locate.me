@@ -42,9 +42,13 @@ frontend/
 ├── css/style.css
 └── js/
     ├── config.js           – API_BASE_URL, API_PATH
+    ├── i18n.js             – t(), setLanguage(), translation dictionaries
     ├── utils.js            – formatRelativeDate, formatShortAddress,
     │                          formatWalkingTime, getWeatherText,
-    │                          getWeatherIconSvg, getLocationIconSvg
+    │                          getWeatherIconSvg, getLocationIconSvg,
+    │                          bearingDegrees, compassPoint, directionShort,
+    │                          directionName, arrowRotation,
+    │                          shortestPathRotation, distanceMeters
     ├── api.js              – apiGetSystemInfo, apiGetPositions,
     │                          apiGetPositionsWithMeta, apiGetCurrentPosition,
     │                          apiPostPosition, apiDeletePosition
@@ -54,13 +58,18 @@ frontend/
     │   ├── toast.js        – showStatusToast
     │   ├── badge.js        – updateHistoryBadge, silentBadgeSync
     │   ├── status.js       – checkBackendStatus, renderBackendInfo, showError
+    │   ├── install.js      – PWA install banner, iOS install hint
+    │   ├── compass.js      – subscribeHeading, getHeading, hasHeading,
+    │   │                     requestHeadingPermission (iOS sensor gate)
     │   └── map.js          – setHistoryView, renderMapMarkers,
     │                          showLocateMap, initMapListeners
     └── pages/
         ├── settings.js     – Dark mode toggle, userId, attribution block
-        ├── locate.js       – GPS fetch, save position
+        ├── locate.js       – GPS fetch, save position, compass needle
         └── history.js      – PTR, skeleton loader, filter/search,
-                               fetchAndRenderHistory, showHistorySkeleton
+                               fetchAndRenderHistory, showHistorySkeleton,
+                               live direction arrows (onHistoryPageShown,
+                               onHistoryPageHidden)
 ```
 
 ---
@@ -185,3 +194,42 @@ properties in Chrome Android.
 - **History-Map-Pins:** nummerierte `L.divIcon`-Marker
   (`.history-pin`-Badge, Nummer = Position im vollen Datensatz +1, identisch
   zur List-View; Popup zeigt weiterhin `#n`).
+
+### Compass / Live Direction Arrows (compass.js)
+- **Single source of truth:** `js/ui/compass.js` owns `deviceorientation`
+  (+ `deviceorientationabsolute`) and emits a **screen-frame angle** that
+  rotates a north-pointing needle. `locate.js` (needle) and `history.js`
+  (arrows) are both consumers — do **not** re-add sensor listeners to a page.
+- **iOS user-gesture rule:** `requestHeadingPermission()` calls
+  `DeviceOrientationEvent.requestPermission()` synchronously. It must be called
+  without an `await` before it (from the History/Locate nav/button click), else
+  iOS rejects the request. Outcome is remembered and a synchronous
+  `permissionPending` guard prevents two requests in one gesture — only a
+  dismissed prompt (`prompt`) may be re-asked, never `granted`/`denied`.
+- **Absolute vs relative:** the needle/arrow angle is *heading-relative*
+  (`arrowRotation(bearing, heading) === bearing + heading`, because `heading` is
+  the needle screen angle, not the facing direction). Compass
+  **letters and the accessible name stay absolute** — only the graphic rotates.
+- **Wrap-around:** feed *unwrapped* angles to CSS (`shortestPathRotation`,
+  ±180 wrap) so 359° → 1° renders as 361°, not −2°; a CSS `transition` then
+  animates the short way instead of spinning backwards.
+- **Battery:** heading writes are rAF-coalesced with a 1° deadband; GPS fixes
+  are gated (`accuracy ≤ 100 m` **and** `distanceMeters ≥ 5 m`) and never
+  trigger a backend call. The rotation pass is gated on the DOM visibility of
+  `#page-history` and the watcher stops on tab switch / `visibilitychange`.
+- **Near-range suppression:** the direction badge is rendered hidden while the
+  entry is within `DIRECTION_MIN_DISTANCE_M = 50`, because the 8-point letter is
+  meaningless and the arrow would only show GPS jitter. `applyOrigin()` toggles
+  `record.hidden` + the badge's `.hidden` class from the same live fix (so it
+  reappears once the user walks away), and `applyArrowRotations()` skips hidden
+  records. The distance/travel-time chips are independent backend values and are
+  intentionally **not** touched by this.
+- **Self-contained wiring:** `history.js` subscribes to the heading source at
+  module load, reads visibility from `#page-history`, and starts/stops the
+  watcher from its own nav-click listener — it must not depend on `app.js`
+  calling `onHistoryPageShown()`. Keep those exports working (they are thin
+  idempotent wrappers) so `app.js` can still drive the lifecycle.
+- **Degradation:** no permission / no sensor / no heading → arrows keep their
+  initial absolute rotation; the badge and all other list data stay intact.
+- `will-change: transform` only under `#history-list.is-live-directions`
+  (set by `startLiveWatch`) so an idle list is never promoted to its own layer.

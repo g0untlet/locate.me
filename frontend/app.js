@@ -7,9 +7,16 @@ import { checkBackendStatus } from './js/ui/status.js';
 import { silentBadgeSync } from './js/ui/badge.js';
 import { setHistoryView, initMapListeners } from './js/ui/map.js';
 import { initInstallPrompt } from './js/ui/install.js';
+import { requestHeadingPermission } from './js/ui/compass.js';
 import { initSettingsPage } from './js/pages/settings.js';
 import { initLocatePage, resetLocatePage } from './js/pages/locate.js';
-import { fetchAndRenderHistory, showHistorySkeleton, invalidateHistoryI18n } from './js/pages/history.js';
+import {
+    fetchAndRenderHistory,
+    showHistorySkeleton,
+    invalidateHistoryI18n,
+    onHistoryPageShown,
+    onHistoryPageHidden
+} from './js/pages/history.js';
 
 /* ==========================================================================
    Global Helper: Aktive User-ID aus LocalStorage lesen
@@ -36,6 +43,16 @@ function updateDemoModeNote() {
 function initNavigation() {
     document.querySelectorAll('.nav-item').forEach(button => {
         button.addEventListener('click', () => {
+            const targetPageId = button.getAttribute('data-target');
+
+            // iOS only grants the motion sensors inside a user gesture, and the
+            // tab tap is that gesture. Must stay the FIRST statement here: an
+            // await before it would void the gesture and the arrows would stay
+            // static. No-op on Android/Brave/Desktop and once already granted.
+            if (targetPageId === 'page-history') {
+                requestHeadingPermission();
+            }
+
             document.querySelectorAll('.nav-item').forEach(btn => {
                 btn.classList.remove('active');
                 btn.removeAttribute('aria-current');
@@ -43,15 +60,18 @@ function initNavigation() {
             button.classList.add('active');
             button.setAttribute('aria-current', 'page');
 
-            const targetPageId = button.getAttribute('data-target');
             document.querySelectorAll('.app-page').forEach(page => page.classList.add('hidden'));
             document.getElementById(targetPageId).classList.remove('hidden');
 
             if (targetPageId === 'page-history') {
+                // Live direction arrows: subscribe to the heading source and
+                // start the movement-gated GPS watcher for this page only.
+                onHistoryPageShown();
                 showHistorySkeleton();
                 fetchAndRenderHistory({ getActiveUserId, checkBackendStatus });
             } else {
                 // Leaving history page: reset to list view so next visit starts fresh
+                onHistoryPageHidden();
                 setHistoryView('list');
             }
         });
