@@ -90,22 +90,31 @@
                         <li>Betriebssystem</li>
                     </ul>
                     <p>Diese Daten dienen ausschlie&szlig;lich der technischen Bereitstellung, der Stabilit&auml;t, der Sicherheit und der Fehleranalyse der Anwendung. Die Verarbeitung erfolgt auf Grundlage von Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einem sicheren und funktionierenden Betrieb der Website).</p>
+                    <p>Die Server-Logdateien werden rotierend gef&uuml;hrt und sp&auml;testens nach 7 Tagen gel&ouml;scht; zus&auml;tzlich werden h&ouml;chstens 3 rotierte Sicherungen vorgehalten.</p>
                     <p>Eine Zusammenf&uuml;hrung dieser Daten mit anderen Datenquellen erfolgt nicht.</p>
 
                     <h3 class="legal-sec"><span class="legal-num">4.</span> Verarbeitung von Nutzerdaten und Standortdaten</h3>
-                    <p>F&uuml;r die Nutzung der App wird eine technische Benutzerkennung (UserID) erzeugt und gespeichert. Diese UserID dient ausschlie&szlig;lich dem technischen Betrieb und der Zuordnung der App-Funktionen.</p>
-                    <p>Soweit f&uuml;r die Funktionsweise der App erforderlich, werden Standortdaten in Form von geografischen Koordinaten (Breiten- und L&auml;ngengrad / Latitude und Longitude) verarbeitet. Der Zugriff auf den Standort Ihres Endger&auml;ts erfolgt nur nach Ihrer expliziten Freigabe im Browser (Art. 6 Abs. 1 lit. a DSGVO).</p>
+                    <p>F&uuml;r die Nutzung der App wird eine technische Benutzerkennung (UserID) erzeugt und in Ihrem Browser gespeichert. Diese UserID dient der Zuordnung der von Ihnen gespeicherten Standorte und der Bereitstellung der Kernfunktionen (Speichern, Anzeigen und L&ouml;schen von Standorten). Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Bereitstellung der von Ihnen angeforderten App-Funktionen).</p>
+                    <p>Soweit f&uuml;r die Funktionsweise der App erforderlich, werden Standortdaten in Form von geografischen Koordinaten (Breiten- und L&auml;ngengrad / Latitude und Longitude) verarbeitet. Der Zugriff auf den Standort Ihres Endger&auml;ts erfolgt ausschlie&szlig;lich nach Ihrer Freigabe im Browser. Diese Browser-Freigabe ist selbst keine datenschutzrechtliche Einwilligung; sie steuert nur den technischen Zugriff.</p>
+                    <p>Die Anreicherung von Standorten mit Wetter-, Adress- und Ortsinformationen (siehe &sect; 5) ist eine optionale Komfortfunktion. Sie beruht auf Ihrer Einwilligung (Art. 6 Abs. 1 lit. a DSGVO), die Sie jederzeit mit Wirkung f&uuml;r die Zukunft widerrufen k&ouml;nnen (Art. 7 Abs. 3 DSGVO). Die Kernfunktionen der App sind auch ohne diese Anreicherung nutzbar.</p>
 
-                    <h3 class="legal-sec"><span class="legal-num">5.</span> Nutzung externer Kartendienste und Geocoding (OpenStreetMap &amp; Geoapify)</h3>
-                    <p>Zur Darstellung von Kartenmaterial sowie zur Aufl&ouml;sung von Koordinaten in Adressdaten (Reverse Geocoding) nutzt diese Anwendung im Backend Server-Dienste der folgenden Anbieter:</p>
+                    <h3 class="legal-sec"><span class="legal-num">5.</span> Nutzung externer Dienste</h3>
+                    <p><strong>5.1 Serverseitige Abfragen (über meinen Server)</strong></p>
+                    <p>Zur Anreicherung von Standorten ruft das Backend folgende Dienste auf. Dabei werden ausschlie&szlig;lich die geografischen Koordinaten (Breiten- und L&auml;ngengrad) &uuml;bermittelt; Namen, E-Mail-Adressen, UserIDs oder andere direkte Personenkennungen werden nicht weitergegeben. Da die Anfragen von meinem Server ausgehen, erhalten die Anbieter nur die IP-Adresse meines Servers &ndash; nicht Ihre eigene IP-Adresse:</p>
                     <ul>
-                        <li>OpenStreetMap (OpenStreetMap Foundation, St John&rsquo;s Innovation Centre, Cowley Road, Cambridge, CB4 0WS, United Kingdom)</li>
-                        <li>Geoapify (Geoapify GmbH, Germany)</li>
+                        <li>Open-Meteo (Open-Meteo, Schweiz) &ndash; Wetter, UV-Index, H&ouml;he und Stundenprognose; &Uuml;bermittlung auf Grundlage des EU-Angemessenheitsbeschlusses f&uuml;r die Schweiz</li>
+                        <li>OpenStreetMap/Nominatim (OpenStreetMap Foundation, St John&rsquo;s Innovation Centre, Cowley Road, Cambridge, CB4 0WS, United Kingdom) &ndash; Reverse-Geocoding (Adressaufl&ouml;sung); &Uuml;bermittlung auf Grundlage des EU-Angemessenheitsbeschlusses f&uuml;r das Vereinigte K&ouml;nigreich</li>
+                        <li>Geoapify (Geoapify GmbH, Deutschland) &ndash; Orte in der Umgebung; Verarbeitung innerhalb der EU</li>
                     </ul>
-                    <p>Anfragen an diese Dienste werden ausschlie&szlig;lich <strong>serverseitig &uuml;ber unseren eigenen Server</strong> abgewickelt.</p>
-                    <p><strong>Vollst&auml;ndige Anonymit&auml;t der Anfragen:</strong></p>
-                    <p>Die Schnittstellenabfragen enthalten lediglich die geografischen Koordinaten (Breiten- und L&auml;ngengrad). Es werden <strong>keinerlei Personenbez&uuml;ge, Namen, E-Mail-Adressen oder UserIDs</strong> an OpenStreetMap oder Geoapify &uuml;bermittelt. Da die Anfragen von unserem Server ausgehen, sehen die externen Anbieter ausschlie&szlig;lich die IP-Adresse unseres Servers &ndash; Ihre eigene IP-Adresse oder Daten Ihres Endger&auml;ts werden zu keinem Zeitpunkt an OpenStreetMap oder Geoapify weitergeleitet.</p>
-                    <p>Die Nutzung dieser Dienste erfolgt im Interesse einer ansprechenden Darstellung unseres Online-Angebots und einer leichten Auffindbarkeit von Orten (Art. 6 Abs. 1 lit. f DSGVO).</p>
+                    <p>Eine vollst&auml;ndige Anonymit&auml;t der Abfragen sage ich nicht zu; die &uuml;bermittelten Koordinaten weisen jedoch keinen unmittelbaren Personenbezug auf, da sie nicht mit Ihrer UserID oder anderen Personendaten verkn&uuml;pft &uuml;bermittelt werden.</p>
+                    <p><strong>5.2 Browserdirekte Dienste</strong></p>
+                    <p>Bestimmte Ressourcen l&auml;dt Ihr Browser direkt von Drittanbietern. Dabei &uuml;bermittelt Ihr Ger&auml;t technisch bedingt Ihre IP-Adresse:</p>
+                    <ul>
+                        <li>OpenStreetMap-Kachelserver (OpenStreetMap Foundation, United Kingdom) &ndash; Kartenkacheln; aus den angefragten Kacheln ergeben sich zudem n&auml;herungsweise die dargestellten Kartenausschnitte</li>
+                        <li>Cloudflare (cdnjs.cloudflare.com) &ndash; JavaScript- und CSS-Bibliothek Leaflet</li>
+                        <li>Google (storage.googleapis.com) &ndash; Service-Worker-Bibliothek Workbox</li>
+                    </ul>
+                    <p>Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Darstellung von Karten und der Funktionsf&auml;higkeit der App als Progressive Web App). F&uuml;r die &Uuml;bermittlung in die USA (Cloudflare, Google) st&uuml;tze ich mich auf den EU-US Data Privacy Framework bzw. Standardvertragsklauseln.</p>
 
                     <h3 class="legal-sec"><span class="legal-num">6.</span> Kein Bewegungsprofil</h3>
                     <p>Nach dem derzeitigen Funktionsumfang der Anwendung werden keine Bewegungsprofile erstellt. Es erfolgt keine Verarbeitung der Standortdaten zum Zweck der &Uuml;berwachung oder Analyse von Bewegungsverl&auml;ufen. Die Standortdaten werden ausschlie&szlig;lich f&uuml;r die Bereitstellung der vorgesehenen Funktionen der App verwendet.</p>
@@ -113,8 +122,9 @@
                     <h3 class="legal-sec"><span class="legal-num">7.</span> Kontaktaufnahme per E-Mail</h3>
                     <p>Wenn Sie per E-Mail Kontakt aufnehmen, werden die von Ihnen &uuml;bermittelten Angaben einschlie&szlig;lich der Kontaktdaten zum Zweck der Bearbeitung Ihrer Anfrage verarbeitet (Art. 6 Abs. 1 lit. b bzw. lit. f DSGVO). Die Daten werden nicht an Dritte weitergegeben.</p>
 
-                    <h3 class="legal-sec"><span class="legal-num">8.</span> Cookies &amp; Lokaler Speicher</h3>
-                    <p>Diese Website und die zugeh&ouml;rige App verwenden keine Cookies. Zur Speicherung technischer Einstellungen (z.&nbsp;B. f&uuml;r die Funktionalit&auml;t als Progressive Web App / PWA) k&ouml;nnen lokale Speichertechnologien Ihres Browsers (LocalStorage / IndexedDB) genutzt werden.</p>
+                    <h3 class="legal-sec"><span class="legal-num">8.</span> Cookies, lokaler Speicher und Ger&auml;tezugriffe</h3>
+                    <p>Diese Website und die zugeh&ouml;rige App verwenden keine Cookies. Zur Speicherung technischer Einstellungen (UserID, Theme, Sprache) wird der LocalStorage Ihres Browsers genutzt; der Service Worker h&auml;lt zur Offline-Funktionalit&auml;t einen Cache vor.</p>
+                    <p>Diese Zugriffe auf Ihr Endger&auml;t sind f&uuml;r die Bereitstellung ausdr&uuml;cklich gew&uuml;nschter Funktionen technisch erforderlich und daher nach &sect; 25 Abs. 2 Nr. 2 TDDDG einwilligungsfrei. Der Zugriff auf den Standort erfolgt ausschlie&szlig;lich nach Ihrer Freigabe im Browser (&sect; 25 Abs. 1 TDDDG).</p>
 
                     <h3 class="legal-sec"><span class="legal-num">9.</span> Analyse- und Trackingdienste</h3>
                     <p>Es werden keine Analyse-, Tracking- oder Marketingdienste eingesetzt. Insbesondere werden keine Dienste wie beispielsweise:</p>
@@ -126,16 +136,20 @@
                     </ul>
                     <p>verwendet.</p>
 
-                    <h3 class="legal-sec"><span class="legal-num">10.</span> Weitergabe von Daten an Dritte</h3>
+                    <h3 class="legal-sec"><span class="legal-num">10.</span> Empf&auml;nger und Weitergabe von Daten</h3>
                     <p>Eine Weitergabe personenbezogener Daten an Dritte erfolgt grunds&auml;tzlich nicht, es sei denn:</p>
                     <ul>
                         <li>Sie haben ausdr&uuml;cklich eingewilligt (Art. 6 Abs. 1 lit. a DSGVO),</li>
                         <li>eine gesetzliche Verpflichtung besteht (Art. 6 Abs. 1 lit. c DSGVO) oder</li>
                         <li>die Weitergabe ist zur Durchsetzung rechtlicher Anspr&uuml;che erforderlich (Art. 6 Abs. 1 lit. f DSGVO).</li>
                     </ul>
+                    <p><strong>Zugriff innerhalb der Anwendung:</strong> Ihre Standorte sind Ihrer UserID zugeordnet. Verwenden mehrere Personen dieselbe UserID (zum Beispiel den gemeinsamen Demo-Benutzer user123), k&ouml;nnen diese Personen die unter dieser Kennung gespeicherten Standorte einsehen. Ein automatisches Teilen Ihrer Standorte mit anderen Nutzern findet nicht statt.</p>
+                    <p><strong>Manuelles Teilen:</strong> Nutzen Sie die Teilen-Funktion, erzeugt die App einen Google-Maps-Link zu der betreffenden Position und &uuml;bergibt ihn an die von Ihnen gew&auml;hlten Empf&auml;nger. Beim &Ouml;ffnen des Links erh&auml;lt Google die Position; Empf&auml;nger und Google verarbeiten diese Daten in eigener Verantwortung.</p>
 
                     <h3 class="legal-sec"><span class="legal-num">11.</span> Speicherdauer</h3>
-                    <p>Personenbezogene Daten werden nur so lange gespeichert, wie dies f&uuml;r den Betrieb der App und die Erf&uuml;llung des jeweiligen Zwecks erforderlich ist. Sobald eine Speicherung nicht mehr erforderlich ist, werden die Daten gel&ouml;scht, sofern keine gesetzlichen Aufbewahrungspflichten entgegenstehen.</p>
+                    <p>Gespeicherte Standorte werden bis zu Ihrer L&ouml;schung aufbewahrt &ndash; Sie k&ouml;nnen sie jederzeit in der App l&ouml;schen oder die L&ouml;schung bei mir anfragen. Eine automatische L&ouml;schung nach Ablauf einer festen Frist erfolgt nicht.</p>
+                    <p>Der serverseitige Cache f&uuml;r Orte in der Umgebung speichert die von Ihnen angefragten Koordinaten als Herkunft der Abfrage; er wird bei einer erneuten Abfrage aktualisiert.</p>
+                    <p>Server-Logdateien werden gem&auml;&szlig; &sect; 3 gespeichert und sp&auml;testens nach 7 Tagen gel&ouml;scht.</p>
 
                     <h3 class="legal-sec"><span class="legal-num">12.</span> Rechte der betroffenen Personen</h3>
                     <p>Sie haben im Rahmen der gesetzlichen Bestimmungen (DSGVO) das Recht auf:</p>
@@ -146,13 +160,18 @@
                         <li>Einschr&auml;nkung der Verarbeitung (Art. 18 DSGVO)</li>
                         <li>Widerspruch gegen die Verarbeitung (Art. 21 DSGVO)</li>
                         <li>Daten&uuml;bertragbarkeit (Art. 20 DSGVO)</li>
+                        <li>Widerruf einer erteilten Einwilligung (Art. 7 Abs. 3 DSGVO)</li>
                     </ul>
                     <p>Zur Aus&uuml;bung Ihrer Rechte k&ouml;nnen Sie sich jederzeit an die oben genannte Kontaktadresse wenden.</p>
 
                     <h3 class="legal-sec"><span class="legal-num">13.</span> Beschwerderecht bei einer Aufsichtsbeh&ouml;rde</h3>
                     <p>Sie haben gem&auml;&szlig; Art. 77 DSGVO das Recht, sich bei einer Datenschutzaufsichtsbeh&ouml;rde &uuml;ber die Verarbeitung Ihrer personenbezogenen Daten zu beschweren. Die zust&auml;ndige Beh&ouml;rde richtet sich in der Regel nach Ihrem Wohnsitz oder dem Sitz des Verantwortlichen.</p>
 
-                    <h3 class="legal-sec"><span class="legal-num">14.</span> &Auml;nderungen dieser Datenschutzerkl&auml;rung</h3>
+                    <h3 class="legal-sec"><span class="legal-num">14.</span> Pflicht zur Bereitstellung und automatisierte Entscheidungen</h3>
+                    <p>Die Bereitstellung Ihrer Daten ist weder gesetzlich noch vertraglich vorgeschrieben. Ohne die Freigabe des Standorts k&ouml;nnen die Standortfunktionen der App jedoch nicht genutzt werden.</p>
+                    <p>Eine automatisierte Entscheidungsfindung einschlie&szlig;lich Profiling im Sinne des Art. 22 DSGVO findet nicht statt.</p>
+
+                    <h3 class="legal-sec"><span class="legal-num">15.</span> &Auml;nderungen dieser Datenschutzerkl&auml;rung</h3>
                     <p>Ich behalte mir vor, diese Datenschutzerkl&auml;rung anzupassen, sofern rechtliche, technische oder organisatorische &Auml;nderungen dies erforderlich machen. Es gilt jeweils die auf dieser Website ver&ouml;ffentlichte aktuelle Version.</p>
                 </article>
 
@@ -193,31 +212,41 @@
                         <li>Operating system</li>
                     </ul>
                     <p>This data is used exclusively for technical provision, stability, security, and error analysis of the application. The processing is based on Art. 6(1)(f) GDPR (legitimate interest in the secure and proper operation of the website).</p>
+                    <p>The server log files are rotated and deleted after no more than 7 days; at most 3 rotated backups are retained.</p>
                     <p>This data is not merged with other data sources.</p>
 
                     <h3 class="legal-sec"><span class="legal-num">4.</span> Processing of User Data and Location Data</h3>
-                    <p>To use the app, a technical user ID (UserID) is generated and stored. This UserID serves exclusively for technical operation and the provision of app features.</p>
-                    <p>Insofar as necessary for the functionality of the app, location data in the form of geographic coordinates (latitude and longitude) is processed. Access to your device's location only occurs after your explicit permission in the browser (Art. 6(1)(a) GDPR).</p>
+                    <p>To use the app, a technical user ID (UserID) is generated and stored in your browser. It is used to associate the locations you save and to provide the core features (saving, viewing and deleting locations). The legal basis is Art. 6(1)(b) GDPR (provision of the app features you request).</p>
+                    <p>Insofar as necessary for the functionality of the app, location data in the form of geographic coordinates (latitude and longitude) is processed. Access to your device's location only occurs after your permission in the browser. That browser permission is not itself a data protection consent; it merely controls technical access.</p>
+                    <p>Enriching locations with weather, address and place information (see &sect; 5) is an optional convenience feature. It is based on your consent (Art. 6(1)(a) GDPR), which you may withdraw at any time with effect for the future (Art. 7(3) GDPR). The app's core features remain usable without this enrichment.</p>
 
-                    <h3 class="legal-sec"><span class="legal-num">5.</span> Use of External Map Services and Geocoding (OpenStreetMap &amp; Geoapify)</h3>
-                    <p>To display map material and resolve coordinates into address data (reverse geocoding), this application uses backend server services provided by:</p>
+                    <h3 class="legal-sec"><span class="legal-num">5.</span> Use of External Services</h3>
+                    <p><strong>5.1 Server-side Requests (via my server)</strong></p>
+                    <p>To enrich locations, the backend calls the following services. Only the geographic coordinates (latitude and longitude) are transmitted; names, email addresses, UserIDs or other direct identifiers are not passed on. Because the requests originate from my server, the providers only receive my server's IP address &ndash; not your own IP address:</p>
                     <ul>
-                        <li>OpenStreetMap (OpenStreetMap Foundation, St John&rsquo;s Innovation Centre, Cowley Road, Cambridge, CB4 0WS, United Kingdom)</li>
-                        <li>Geoapify (Geoapify GmbH, Germany)</li>
+                        <li>Open-Meteo (Open-Meteo, Switzerland) &ndash; weather, UV index, elevation and hourly forecast; transfer based on the EU adequacy decision for Switzerland</li>
+                        <li>OpenStreetMap/Nominatim (OpenStreetMap Foundation, St John&rsquo;s Innovation Centre, Cowley Road, Cambridge, CB4 0WS, United Kingdom) &ndash; reverse geocoding (address resolution); transfer based on the EU adequacy decision for the United Kingdom</li>
+                        <li>Geoapify (Geoapify GmbH, Germany) &ndash; places around a coordinate; processing within the EU</li>
                     </ul>
-                    <p>Requests to these services are routed exclusively <strong>server-side via our own server</strong>.</p>
-                    <p><strong>Complete Anonymity of Requests:</strong></p>
-                    <p>Interface requests contain only the geographic coordinates (latitude and longitude). <strong>No personal identifiers, names, email addresses, or UserIDs</strong> are transmitted to OpenStreetMap or Geoapify. Because the requests originate from our server, external providers only see our server's IP address &mdash; your individual IP address and device data are never forwarded to OpenStreetMap or Geoapify.</p>
-                    <p>The use of these services is in the interest of an appealing presentation of our online offering and easy location searchability (Art. 6(1)(f) GDPR).</p>
+                    <p>I do not guarantee complete anonymity of the requests; the transmitted coordinates, however, have no direct personal reference, as they are not transmitted linked to your UserID or other personal data.</p>
+                    <p><strong>5.2 Browser-direct Services</strong></p>
+                    <p>Certain resources are loaded by your browser directly from third parties. Your device transmits its IP address for technical reasons:</p>
+                    <ul>
+                        <li>OpenStreetMap tile server (OpenStreetMap Foundation, United Kingdom) &ndash; map tiles; the requested tiles also reveal approximately which map areas are displayed</li>
+                        <li>Cloudflare (cdnjs.cloudflare.com) &ndash; Leaflet JavaScript and CSS library</li>
+                        <li>Google (storage.googleapis.com) &ndash; Workbox service worker library</li>
+                    </ul>
+                    <p>The legal basis is Art. 6(1)(f) GDPR (legitimate interest in displaying maps and in the app's operation as a Progressive Web App). For transfers to the USA (Cloudflare, Google) I rely on the EU-US Data Privacy Framework or standard contractual clauses.</p>
 
                     <h3 class="legal-sec"><span class="legal-num">6.</span> No Movement Profiles</h3>
                     <p>Based on the current functional scope of the application, no movement profiles are created. Location data is not processed for monitoring or analyzing movement paths. Location data is used exclusively to provide the intended features of the app.</p>
 
                     <h3 class="legal-sec"><span class="legal-num">7.</span> Contact via Email</h3>
-                    <p>If you contact us via email, the information you provide, including your contact details, will be processed for the purpose of handling your inquiry (Art. 6(1)(b) or (f) GDPR). This data will not be shared with third parties.</p>
+                    <p>If you contact me via email, the information you provide, including your contact details, will be processed for the purpose of handling your inquiry (Art. 6(1)(b) or (f) GDPR). This data will not be shared with third parties.</p>
 
-                    <h3 class="legal-sec"><span class="legal-num">8.</span> Cookies &amp; Local Storage</h3>
-                    <p>This website and the associated app do not use cookies. To store technical settings (e.g., for Progressive Web App / PWA functionality), local browser storage technologies (LocalStorage / IndexedDB) may be used.</p>
+                    <h3 class="legal-sec"><span class="legal-num">8.</span> Cookies, Local Storage and Device Access</h3>
+                    <p>This website and the associated app do not use cookies. To store technical settings (UserID, theme, language), your browser's LocalStorage is used; the service worker keeps a cache for offline functionality.</p>
+                    <p>These accesses to your device are technically necessary to provide features you have expressly requested and are therefore exempt from consent under &sect; 25(2)(2) TDDDG. Access to your location only occurs after your permission in the browser (&sect; 25(1) TDDDG).</p>
 
                     <h3 class="legal-sec"><span class="legal-num">9.</span> Analytics and Tracking Services</h3>
                     <p>No analytics, tracking, or marketing services are used. In particular, no services such as:</p>
@@ -229,16 +258,20 @@
                     </ul>
                     <p>are utilized.</p>
 
-                    <h3 class="legal-sec"><span class="legal-num">10.</span> Transfer of Data to Third Parties</h3>
+                    <h3 class="legal-sec"><span class="legal-num">10.</span> Recipients and Transfer of Data</h3>
                     <p>Personal data is generally not transferred to third parties unless:</p>
                     <ul>
                         <li>You have given your explicit consent (Art. 6(1)(a) GDPR),</li>
                         <li>A legal obligation exists (Art. 6(1)(c) GDPR), or</li>
                         <li>The transfer is necessary for the enforcement of legal claims (Art. 6(1)(f) GDPR).</li>
                     </ul>
+                    <p><strong>Access within the application:</strong> Your locations are associated with your UserID. If several people use the same UserID (for example the shared demo user user123), those people can see the locations stored under that ID. Your locations are not automatically shared with other users.</p>
+                    <p><strong>Manual sharing:</strong> If you use the share function, the app creates a Google Maps link to the relevant position and passes it to the recipients you select. When the link is opened, Google receives the position; recipients and Google process this data under their own responsibility.</p>
 
                     <h3 class="legal-sec"><span class="legal-num">11.</span> Storage Duration</h3>
-                    <p>Personal data is stored only for as long as necessary for the operation of the app and the fulfillment of the respective purpose. As soon as storage is no longer required, the data will be erased, provided no statutory retention obligations apply.</p>
+                    <p>Saved locations are retained until you delete them &ndash; you can delete them in the app at any time or request deletion from me. There is no automatic deletion after a fixed period.</p>
+                    <p>The server-side cache for nearby places stores the coordinates you requested as the origin of the request; it is updated on a repeat request.</p>
+                    <p>Server log files are stored as described in &sect; 3 and deleted after no more than 7 days.</p>
 
                     <h3 class="legal-sec"><span class="legal-num">12.</span> Rights of Data Subjects</h3>
                     <p>Under applicable law (GDPR), you have the following rights:</p>
@@ -249,14 +282,19 @@
                         <li>Right to restriction of processing (Art. 18 GDPR)</li>
                         <li>Right to object to processing (Art. 21 GDPR)</li>
                         <li>Right to data portability (Art. 20 GDPR)</li>
+                        <li>Right to withdraw a consent given (Art. 7(3) GDPR)</li>
                     </ul>
-                    <p>To exercise your rights, you can contact us at any time using the contact details provided above.</p>
+                    <p>To exercise your rights, you can contact me at any time using the contact details provided above.</p>
 
                     <h3 class="legal-sec"><span class="legal-num">13.</span> Right to Lodge a Complaint with a Supervisory Authority</h3>
                     <p>Pursuant to Art. 77 GDPR, you have the right to lodge a complaint with a data protection supervisory authority regarding the processing of your personal data. The competent authority is usually determined by your place of residence or the location of the controller.</p>
 
-                    <h3 class="legal-sec"><span class="legal-num">14.</span> Changes to this Privacy Policy</h3>
-                    <p>We reserve the right to amend this Privacy Policy to reflect legal, technical, or organizational changes. The current version published on this website always applies.</p>
+                    <h3 class="legal-sec"><span class="legal-num">14.</span> Provision of Data and Automated Decisions</h3>
+                    <p>Providing your data is neither legally nor contractually required. Without location permission, however, the app's location features cannot be used.</p>
+                    <p>No automated decision-making, including profiling, within the meaning of Art. 22 GDPR takes place.</p>
+
+                    <h3 class="legal-sec"><span class="legal-num">15.</span> Changes to this Privacy Policy</h3>
+                    <p>I reserve the right to amend this Privacy Policy to reflect legal, technical, or organizational changes. The current version published on this website always applies.</p>
                 </article>
 
             </div>
