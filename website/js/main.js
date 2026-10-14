@@ -66,6 +66,24 @@
         emailLinks[i].setAttribute('href', 'mailto:' + emailUser + '@' + emailDomain);
     }
 
+    /* Legal pages (Impressum / Imprint / Aviso Legal): fill contact details from
+       split fragments so the raw source contains no plain-text PII. */
+    var legalData = {
+        name: 'Det' + 'lef ' + 'Fol' + 'ger',
+        street: 'Burg' + 'auer' + 'strasse ' + '15' + '6',
+        zip: '819' + '29',
+        city: 'M' + '\u00fc' + 'nchen',
+        phone: '+49 ' + '(' + '0) ' + '156' + '78 ' + '631' + '969',
+        email: emailUser + '@' + emailDomain
+    };
+    var legalFields = document.querySelectorAll('[data-legal]');
+    for (var k = 0; k < legalFields.length; k++) {
+        var legalKey = legalFields[k].getAttribute('data-legal');
+        if (Object.prototype.hasOwnProperty.call(legalData, legalKey)) {
+            legalFields[k].textContent = legalData[legalKey];
+        }
+    }
+
     var statusDot = document.querySelector('.status-dot');
     var statusLabel = document.querySelector('.footer-status .status-label');
     if (statusDot) {

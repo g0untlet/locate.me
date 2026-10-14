@@ -645,6 +645,10 @@ a.app-url:hover {
     color: var(--primary-dark);
 }
 
+.footer-legal a + a {
+    margin-left: 8px;
+}
+
 .footer-status {
     display: inline-flex;
     align-items: center;

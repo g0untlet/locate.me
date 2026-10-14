@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Impressum / Imprint / Aviso Legal &ndash; locate.me</title>
+    <meta name="description" content="Legal notice for locate.me &mdash; Impressum (Deutsch), Imprint (English) and Aviso Legal (Espa&ntilde;ol) in one document.">
+    <script>
+        try {
+            var t = localStorage.getItem('theme');
+            document.documentElement.dataset.theme = (t === 'dark' || t === 'light') ? t : 'light';
+        } catch (e) {
+            document.documentElement.dataset.theme = 'light';
+        }
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="container header-inner">
+            <a class="logo" href=".">
+                <svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true">
+                    <rect width="64" height="64" rx="14" fill="#1a5f8c"/>
+                    <path d="M32 12c-9.4 0-17 7.6-17 17 0 12.7 17 25.5 17 25.5S49 41.7 49 29c0-9.4-7.6-17-17-17z" fill="#ffffff"/>
+                    <circle cx="32" cy="29" r="6.5" fill="#72b2dc"/>
+                </svg>
+                <span>locate<span class="title-accent">.me</span></span>
+            </a>
+            <div class="header-actions">
+                <nav class="site-nav" aria-label="Main">
+                    <a class="nav-link" href="index.html">Home</a>
+                    <a class="nav-link" href="release-notes.html">Release Notes</a>
+                </nav>
+                <button id="theme-toggle" class="toggle-switch" role="switch" aria-checked="false" aria-label="Toggle dark mode">
+                    <span class="toggle-knob"></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero hero--page">
+            <div class="container">
+                <h1 class="hero-title">Impressum &middot; Imprint &middot; Aviso Legal</h1>
+                <p class="hero-subtitle">
+                    This document contains the legal notice in three languages &mdash; German, English and Spanish.
+                    <br>Dieses Dokument enth&auml;lt das Impressum in drei Sprachen &mdash; Deutsch, Englisch und Spanisch.
+                </p>
+                <div class="lang-jump">
+                    <a class="lang-jump-link" href="#deutsch">Deutsch &mdash; Impressum</a>
+                    <a class="lang-jump-link" href="#english">English &mdash; Imprint</a>
+                    <a class="lang-jump-link" href="#espanol">Espa&ntilde;ol &mdash; Aviso Legal</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="container legal">
+
+                <article class="legal-card" id="deutsch" lang="de">
+                    <header class="legal-head">
+                        <span class="legal-badge">Deutsch</span>
+                    </header>
+                    <h2 class="legal-title">Impressum</h2>
+
+                    <h3 class="legal-sec">Angaben gem&auml;&szlig; &sect; 5 DDG</h3>
+                    <p class="legal-address">
+                        <span data-legal="name"></span><br>
+                        <span data-legal="street"></span><br>
+                        <span data-legal="zip"></span> <span data-legal="city"></span><br>
+                        Deutschland
+                    </p>
+
+                    <h3 class="legal-sec">Kontakt</h3>
+                    <p class="legal-address">
+                        Telefon: <span data-legal="phone"></span><br>
+                        E-Mail: <span data-legal="email"></span>
+                    </p>
+
+                    <h3 class="legal-sec">Redaktionell verantwortlich (gem&auml;&szlig; &sect; 18 Abs. 2 MStV)</h3>
+                    <p class="legal-address">
+                        <span data-legal="name"></span><br>
+                        <span data-legal="street"></span><br>
+                        <span data-legal="zip"></span> <span data-legal="city"></span>
+                    </p>
+                    <p><em>Hinweis: Dies ist ein privates, nicht kommerzielles Softwareprojekt zu Demonstrationszwecken. Es werden keine Einnahmen erzielt.</em></p>
+                </article>
+
+                <div class="lang-jump legal-jump">
+                    <a class="lang-jump-link" href="#english">English &mdash; Imprint</a>
+                    <a class="lang-jump-link" href="#espanol">Espa&ntilde;ol &mdash; Aviso Legal</a>
+                </div>
+
+                <article class="legal-card" id="english" lang="en">
+                    <header class="legal-head">
+                        <span class="legal-badge">English</span>
+                    </header>
+                    <h2 class="legal-title">Imprint</h2>
+
+                    <h3 class="legal-sec">Information pursuant to &sect; 5 DDG (German Digital Services Act)</h3>
+                    <p class="legal-address">
+                        <span data-legal="name"></span><br>
+                        <span data-legal="street"></span><br>
+                        <span data-legal="zip"></span> <span data-legal="city"></span><br>
+                        Germany
+                    </p>
+
+                    <h3 class="legal-sec">Contact</h3>
+                    <p class="legal-address">
+                        Phone: <span data-legal="phone"></span><br>
+                        E-Mail: <span data-legal="email"></span>
+                    </p>
+
+                    <h3 class="legal-sec">Responsible for content (pursuant to &sect; 18 MStV)</h3>
+                    <p class="legal-address">
+                        <span data-legal="name"></span><br>
+                        <span data-legal="street"></span><br>
+                        <span data-legal="zip"></span> <span data-legal="city"></span>
+                    </p>
+                    <p><em>Note: This is a private, non-commercial software project for demonstration purposes only. No revenue is generated.</em></p>
+                </article>
+
+                <div class="lang-jump legal-jump">
+                    <a class="lang-jump-link" href="#deutsch">Deutsch &mdash; Impressum</a>
+                    <a class="lang-jump-link" href="#espanol">Espa&ntilde;ol &mdash; Aviso Legal</a>
+                </div>
+
+                <article class="legal-card" id="espanol" lang="es">
+                    <header class="legal-head">
+                        <span class="legal-badge">Espa&ntilde;ol</span>
+                    </header>
+                    <h2 class="legal-title">Aviso Legal</h2>
+
+                    <h3 class="legal-sec">Informaci&oacute;n conforme al &sect; 5 DDG (Ley alemana de servicios digitales)</h3>
+                    <p class="legal-address">
+                        <span data-legal="name"></span><br>
+                        <span data-legal="street"></span><br>
+                        <span data-legal="zip"></span> <span data-legal="city"></span><br>
+                        Alemania
+                    </p>
+
+                    <h3 class="legal-sec">Contacto</h3>
+                    <p class="legal-address">
+                        Tel&eacute;fono: <span data-legal="phone"></span><br>
+                        Correo electr&oacute;nico: <span data-legal="email"></span>
+                    </p>
+
+                    <h3 class="legal-sec">Responsable del contenido (seg&uacute;n el &sect; 18 MStV)</h3>
+                    <p class="legal-address">
+                        <span data-legal="name"></span><br>
+                        <span data-legal="street"></span><br>
+                        <span data-legal="zip"></span> <span data-legal="city"></span>
+                    </p>
+                    <p><em>Nota: Este es un proyecto de software privado y no comercial con fines de demostraci&oacute;n. No se generan ingresos.</em></p>
+                </article>
+
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p class="footer-brand">locate<span class="title-accent">.me</span> <span class="footer-status">is currently <span class="status-label"></span><span class="status-dot" role="status"></span></span></p>
+            <nav class="attribution" aria-label="Powered by">
+                Built with <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>
+                <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>
+                <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>
+                <a href="https://www.geoapify.com/" target="_blank" rel="noopener">Geoapify</a>
+            </nav>
+            <p class="footer-open-source">Open source &mdash; <a href="https://github.com/g0untlet/locate.me" target="_blank" rel="noopener">view the code on GitHub</a>.</p>
+            <p class="footer-legal"><a href="imprint.html">Imprint</a> &middot; <a href="privacy-policy.html">Privacy Policy</a></p>
+            <p class="footer-updated">Website last update: October 4, 2026</p>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
