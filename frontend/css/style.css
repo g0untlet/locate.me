@@ -96,7 +96,7 @@ html.i18n-loading .app-container {
    ========================================================================== */
 .app-container {
     background-color: var(--card-bg);
-    padding: calc(env(safe-area-inset-top, 20px) + 15px) 20px calc(env(safe-area-inset-bottom, 0px) + 85px) 20px;
+    padding: calc(env(safe-area-inset-top, 20px) + 15px) 20px calc(env(safe-area-inset-bottom, 0px) + 95px) 20px;
     box-shadow: var(--shadow);
     width: 100%;
     position: relative;
@@ -117,7 +117,7 @@ html.i18n-loading .app-container {
         max-width: 380px;
         height: 640px;
         border-radius: var(--border-radius);
-        padding: 30px 20px 90px 20px;
+        padding: 30px 20px 100px 20px;
     }
 }
 
@@ -647,8 +647,8 @@ html.i18n-loading .app-container {
    instead of the arrow's middle. The transition smooths the sensor stream and
    makes a 359°->0° wrap take the short way round (JS feeds unwrapped angles). */
 .log-direction-arrow {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     transform-box: fill-box;
     transform-origin: center;
     transition: transform 0.15s ease-out;
@@ -886,62 +886,66 @@ html.i18n-loading .app-container {
 }
 
 /* ==========================================================================
-   Bottom Navigation Bar
+   Bottom Navigation Bar – a floating, rounded dock with a content-hugging
+   active pill. The bar hovers within the bottom gutter reserved by
+   .app-container (clear of the page content and the iOS safe area).
    ========================================================================== */
 .bottom-nav {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    padding-bottom: env(safe-area-inset-bottom, 5px);
-    height: calc(70px + env(safe-area-inset-bottom, 0px));
+    left: 12px;
+    right: 12px;
+    bottom: calc(env(safe-area-inset-bottom, 5px) + 10px);
+    height: auto;
+    padding: 8px;
     background-color: var(--surface-subtle);
-    border-top: 1px solid var(--border-color);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
     display: flex;
     justify-content: space-around;
     align-items: center;
 }
 
-@media (min-width: 480px) {
-    .bottom-nav {
-        border-bottom-left-radius: var(--border-radius);
-        border-bottom-right-radius: var(--border-radius);
-        padding-bottom: 5px;
-        height: 70px;
-    }
-}
-
 .nav-item {
     background: none;
     border: none;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--text-muted);
+    cursor: pointer;
+    width: 33.33%;
+    transition: var(--transition);
+}
+
+/* Sizes the active pill to its own content (icon + label) instead of the full
+   one-third slot, so the highlight only overlaps slightly on the sides. */
+.nav-item-inner {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: var(--text-muted);
-    cursor: pointer;
-    width: 33.33%;
-    height: 100%;
+    padding: 8px 8px;
+    border-radius: 16px;
     transition: var(--transition);
 }
 
 .nav-icon {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     margin-bottom: 4px;
     transition: var(--transition);
 }
 
 .nav-item.active {
     color: var(--primary-dark);
+}
+.nav-item.active .nav-item-inner {
     background-color: var(--primary-tint);
-    border-radius: 14px;
-    height: auto;
-    margin: 6px 0;
-    padding: 10px 8px 5px;
 }
 .nav-item.active .nav-icon { transform: translateY(-2px); stroke: var(--primary-dark); }
-.nav-label { font-size: 0.75rem; font-weight: 500; }
+.nav-label { font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
 
 .hidden { display: none !important; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }

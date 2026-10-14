@@ -10,13 +10,14 @@
    ========================================================================== */
 
 const DEFAULT_LANGUAGE = 'en';
-const SUPPORTED_LANGUAGES = ['en', 'de', 'es'];
+const SUPPORTED_LANGUAGES = ['en', 'de', 'es', 'fr'];
 
 /* BCP-47 tags for Intl/toLocaleString date & number formatting. */
 const LOCALE_TAGS = {
     en: 'en-GB',
     de: 'de-DE',
-    es: 'es-ES'
+    es: 'es-ES',
+    fr: 'fr-FR'
 };
 
 let currentLanguage = DEFAULT_LANGUAGE;

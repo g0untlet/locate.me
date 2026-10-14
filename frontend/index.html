@@ -10,8 +10,8 @@
     <meta name="apple-mobile-web-app-title" content="locate.me">
     <title>locate.me</title>
     <script>
-        const APP_VERSION = '0.4.3';
-        const APP_BUILD   = '20261002';
+        const APP_VERSION = '0.4.4';
+        const APP_BUILD   = '20261016';
         document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light';
         document.documentElement.lang = localStorage.getItem('lang') || 'en';
         document.documentElement.classList.add('i18n-loading');
@@ -32,7 +32,7 @@
             window.dispatchEvent(new Event('locateme:installed'));
         });
     </script>
-    <link rel="stylesheet" href="css/style.css?v=0.4.3_2">
+    <link rel="stylesheet" href="css/style.css?v=0.4.4_4">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -42,7 +42,7 @@
     <link rel="apple-touch-icon" href="icons/icon_192.png">
 </head>
 <body>
-    <script type="module" src="app.js?v=0.4.3_2"></script>
+    <script type="module" src="app.js?v=0.4.4_1"></script>
 
     <div class="app-container">
         <header class="app-header">
@@ -308,6 +308,7 @@
                         <option value="en">English</option>
                         <option value="de">Deutsch</option>
                         <option value="es">Español</option>
+                        <option value="fr">Français</option>
                     </select>
                 </div>
 
@@ -372,30 +373,36 @@
 
         <nav class="bottom-nav">
             <button class="nav-item active" data-target="page-locate" aria-current="page">
-                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                    <circle cx="12" cy="10" r="3"></circle>
-                </svg>
-                <span class="nav-label" data-i18n="nav.locate">Locate</span>
+                <span class="nav-item-inner">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    <span class="nav-label" data-i18n="nav.locate">Locate</span>
+                </span>
             </button>
             
             <button class="nav-item" data-target="page-history">
-                <div class="nav-icon-wrapper">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <polyline points="12 6 12 12 16 14"></polyline>
-                    </svg>
-                    <span id="history-badge" class="nav-badge" style="display: none;">0</span>
-                </div>
-                <span class="nav-label" data-i18n="nav.history">History</span>
+                <span class="nav-item-inner">
+                    <span class="nav-icon-wrapper">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <span id="history-badge" class="nav-badge" style="display: none;">0</span>
+                    </span>
+                    <span class="nav-label" data-i18n="nav.history">History</span>
+                </span>
             </button>
             
             <button class="nav-item" data-target="page-settings">
-                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                </svg>
-                <span class="nav-label" data-i18n="nav.settings">Settings</span>
+                <span class="nav-item-inner">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    <span class="nav-label" data-i18n="nav.settings">Settings</span>
+                </span>
             </button>
         </nav>
     </div>
