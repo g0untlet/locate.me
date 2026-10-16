@@ -340,7 +340,7 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
         const uvLevel = getUvLevel(uvVal);
         uvHtml = `
             <div class="uv-display uv-${uvLevel}" title="${t('history.uvTitle', { value: uvVal.toFixed(1) })}">
-                <span>UV</span>
+                <span class="uv-display-label">UV</span>
                 <span>${uvVal.toFixed(1)}</span>
             </div>
         `;
@@ -396,8 +396,6 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
     const elevationFormatted = formatElevation(pos.elevation);
 
     const isLowAccuracy    = pos.accuracy && parseFloat(pos.accuracy) > 30;
-    const badgeBgColor     = isLowAccuracy ? '#fef3c7' : '#f1f5f9';
-    const badgeTextColor   = isLowAccuracy ? '#b45309' : 'var(--text-muted)';
     const roundedAccuracy  = pos.accuracy ? Math.round(pos.accuracy) : '?';
 
     // --- Direction from the current position ---
@@ -445,6 +443,32 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
         </div>`
         : '';
 
+    // Elevation: muted pill in the header meta row (it takes the slot the GPS
+    // accuracy badge used to occupy). Solid triangle disambiguates "m" from the
+    // distance chip in the travel row.
+    const elevationHtml = elevationFormatted
+        ? `<span class="log-card-elevation-chip">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <polygon points="12 4 21 20 3 20"></polygon>
+            </svg>
+            ${elevationFormatted}
+        </span>`
+        : '';
+
+    // Coordinates: muted GPS line in the accordion details (satellite glyph +
+    // raw lat/lon at 4 decimals ≈ 11 m), alongside the accuracy pill.
+    const coordsHtml = (typeof pos.latitude === 'number' && typeof pos.longitude === 'number')
+        ? `<span class="log-card-coords">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="6" height="6" rx="1.5"></rect>
+                <path d="M4 12h5"></path>
+                <path d="M15 12h5"></path>
+                <path d="M12 4v5"></path>
+            </svg>
+            ${pos.latitude.toFixed(4)}, ${pos.longitude.toFixed(4)}
+        </span>`
+        : '';
+
     card.innerHTML = `
         <div class="log-card-clickable-area">
             <div class="log-card-header">
@@ -454,8 +478,31 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
                 </div>
                 <div class="log-card-meta">
                     ${directionHtml}
-                    <span class="log-card-accuracy-badge" style="background-color: ${badgeBgColor}; color: ${badgeTextColor};">
-                        <svg class="log-accuracy-icon" style="stroke: ${badgeTextColor};" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    ${elevationHtml}
+                </div>
+            </div>
+            <div class="log-card-body">
+                <div class="log-card-address address-container" title="${fullAddressForTitle}">
+                    ${locationIcon}
+                    <span>${shortAddress}</span>
+                </div>
+                ${commentHtml}
+            </div>
+            ${travelRowHtml}
+        </div>
+        <div class="log-card-action-tray">
+            <div class="log-card-details">
+                <div class="log-card-details-metrics">
+                    <div class="log-card-temp ${tempClass}">
+                        ${weatherIconSvg}
+                        <span>${tempFormatted}</span>
+                    </div>
+                    ${uvHtml}
+                </div>
+                <div class="log-card-details-gps">
+                    ${coordsHtml}
+                    <span class="log-card-accuracy-badge${isLowAccuracy ? ' log-card-accuracy-badge--low' : ''}">
+                        <svg class="log-accuracy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="12" r="7"></circle>
                             <line x1="12" y1="1" x2="12" y2="4"></line>
                             <line x1="12" y1="20" x2="12" y2="23"></line>
@@ -466,55 +513,38 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
                     </span>
                 </div>
             </div>
-            <div class="log-card-body">
-                <div style="flex: 1; min-width: 0;">
-                    <div class="log-card-address address-container" title="${fullAddressForTitle}">
-                        ${locationIcon}
-                        <span>${shortAddress}${elevationFormatted ? ` <span class="log-card-elevation">(${elevationFormatted})</span>` : ''}</span>
-                    </div>
-                    ${commentHtml}
-                </div>
-                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
-                    <div class="log-card-temp ${tempClass}">
-                        ${weatherIconSvg}
-                        <span>${tempFormatted}</span>
-                    </div>
-                    ${uvHtml}
-                </div>
+            <div class="log-card-tray-actions">
+                <a href="https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}"
+                   target="_blank"
+                   rel="noopener"
+                   class="tray-action-btn btn-action-maps">
+                    <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    ${t('history.maps')}
+                </a>
+                <button class="tray-action-btn btn-action-share"
+                        data-lat="${pos.latitude}"
+                        data-lon="${pos.longitude}"
+                        data-address="${shortAddress.replace(/"/g, '&quot;')}">
+                    <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="18" cy="5" r="3"></circle>
+                        <circle cx="6" cy="12" r="3"></circle>
+                        <circle cx="18" cy="19" r="3"></circle>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                    </svg>
+                    ${t('history.share')}
+                </button>
+                <button class="tray-action-btn btn-action-delete" data-id="${pos.id}">
+                    <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                    ${t('history.delete')}
+                </button>
             </div>
-            ${travelRowHtml}
-        </div>
-        <div class="log-card-action-tray">
-            <a href="https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}"
-               target="_blank"
-               rel="noopener"
-               class="tray-action-btn btn-action-maps">
-                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                    <circle cx="12" cy="10" r="3"></circle>
-                </svg>
-                ${t('history.maps')}
-            </a>
-            <button class="tray-action-btn btn-action-share"
-                    data-lat="${pos.latitude}"
-                    data-lon="${pos.longitude}"
-                    data-address="${shortAddress.replace(/"/g, '&quot;')}">
-                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="18" cy="5" r="3"></circle>
-                    <circle cx="6" cy="12" r="3"></circle>
-                    <circle cx="18" cy="19" r="3"></circle>
-                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                </svg>
-                ${t('history.share')}
-            </button>
-            <button class="tray-action-btn btn-action-delete" data-id="${pos.id}">
-                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>
-                ${t('history.delete')}
-            </button>
         </div>
     `;
 
@@ -749,18 +779,28 @@ function ensureSearchBar() {
     bar.id = 'history-search-bar';
     bar.className = 'history-search-bar save-options';
     bar.innerHTML = `
-        <button id="history-filter-toggle" class="save-options-toggle" type="button" aria-expanded="false">
-            <svg class="save-options-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-            </svg>
-            <span class="save-options-toggle-label">${t('history.filter')}</span>
-            <span id="history-filter-summary" class="save-options-summary hidden"></span>
-            <svg class="save-options-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-        </button>
+        <div class="history-filter-header">
+            <button id="history-filter-toggle" class="save-options-toggle" type="button" aria-expanded="false">
+                <svg class="save-options-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+                <span class="save-options-toggle-label">${t('history.filter')}</span>
+                <svg class="save-options-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </button>
+            <button id="history-filter-clear" class="history-filter-clear hidden" type="button"
+                    aria-label="${t('history.clearFilters')}">
+                <span id="history-filter-summary" class="history-filter-clear-text"></span>
+                <svg class="history-filter-clear-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
         <div class="save-options-body">
             <div class="save-options-inner">
                 <div class="save-options-row">
@@ -794,11 +834,12 @@ function ensureSearchBar() {
     const list = document.getElementById('history-list');
     list.parentNode.insertBefore(bar, list);
 
-    const toggle   = bar.querySelector('#history-filter-toggle');
-    const input    = bar.querySelector('#history-search-input');
-    const clearBtn = bar.querySelector('#history-search-clear');
-    const tagsEl   = bar.querySelector('#history-filter-tags');
-    const summary  = bar.querySelector('#history-filter-summary');
+    const toggle      = bar.querySelector('#history-filter-toggle');
+    const input       = bar.querySelector('#history-search-input');
+    const clearBtn    = bar.querySelector('#history-search-clear');
+    const tagsEl      = bar.querySelector('#history-filter-tags');
+    const clearAll    = bar.querySelector('#history-filter-clear');
+    const summaryText = bar.querySelector('#history-filter-summary');
 
     // Disclosure: auf-/zuklappen (gleiche Logik wie Locate save-options)
     toggle.addEventListener('click', () => {
@@ -830,8 +871,22 @@ function ensureSearchBar() {
         const parts = [];
         if (tag) parts.push(tag);
         if (text) parts.push(text);
-        summary.textContent = parts.join(' \u00B7 ');
-        summary.classList.toggle('hidden', parts.length === 0);
+        const active = parts.join(' \u00B7 ');
+        summaryText.textContent = active;
+        // Der eingeklappte Header zeigt den aktiven Filter selbst als Reset-Chip:
+        // nur sichtbar, wenn überhaupt etwas gefiltert wird.
+        clearAll.classList.toggle('hidden', parts.length === 0);
+        if (parts.length > 0) clearAll.setAttribute('title', active);
+        else clearAll.removeAttribute('title');
+    };
+
+    // Tag UND Text in einem Schritt entfernen (Reset-Chip im Header). Der
+    // Auf-/Zuklapp-Zustand des Disclosures bleibt dabei unangetastet.
+    const clearAllFilters = () => {
+        tagsEl.querySelectorAll('.tag-chip--selected').forEach(c => c.classList.remove('tag-chip--selected'));
+        input.value = '';
+        clearBtn.classList.add('hidden');
+        syncFromControls();
     };
 
     tagsEl.addEventListener('click', (e) => {
@@ -851,6 +906,8 @@ function ensureSearchBar() {
         syncFromControls();
         input.focus();
     });
+
+    clearAll.addEventListener('click', clearAllFilters);
 }
 
 function resetSearchBar() {
@@ -859,6 +916,7 @@ function resetSearchBar() {
     const clearBtn  = document.getElementById('history-search-clear');
     const tagsEl    = document.getElementById('history-filter-tags');
     const noResults = document.getElementById('history-no-results');
+    const clearAll  = document.getElementById('history-filter-clear');
     const summary   = document.getElementById('history-filter-summary');
     if (input)    { input.value = ''; }
     if (clearBtn) { clearBtn.classList.add('hidden'); }
@@ -866,7 +924,8 @@ function resetSearchBar() {
         tagsEl.querySelectorAll('.tag-chip--selected').forEach(c => c.classList.remove('tag-chip--selected'));
     }
     if (noResults) { noResults.classList.add('hidden'); }
-    if (summary)  { summary.textContent = ''; summary.classList.add('hidden'); }
+    if (summary)   { summary.textContent = ''; }
+    if (clearAll)  { clearAll.classList.add('hidden'); clearAll.removeAttribute('title'); }
     setHistoryFilter({ tag: '', text: '' });
 }
 

@@ -5,7 +5,13 @@
     --bg-color: #f8fafc;
     --bg-outer: #cbd5e1;
     --card-bg: #ffffff;
-    --card-tile-bg: #f1f5f9;
+    --card-tile-bg: #ffffff;
+    --card-border: rgba(15, 23, 42, 0.08);
+    --card-divider: rgba(15, 23, 42, 0.06);
+    --card-radius: 16px;
+    --card-elevation: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.05);
+    --card-elevation-hover: 0 8px 22px rgba(15, 23, 42, 0.10);
+    --chip-bg: #e2e8f0;
     --surface-subtle: #f8fafc;
     --primary-color: #72b2dc;
     --primary-hover: #5fa3cf;
@@ -15,7 +21,6 @@
     --text-strong: #000000;
     --text-muted: #64748b;
     --border-color: #e2e8f0;
-    --card-border: #cbd5e1;
     --border-radius: 24px;
     --shadow: 0 20px 40px rgba(0, 0, 0, 0.03);
     --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -34,6 +39,12 @@
     --bg-outer: #020617;
     --card-bg: #1e293b;
     --card-tile-bg: #2c3b4a;
+    --card-border: rgba(148, 163, 184, 0.18);
+    --card-divider: rgba(148, 163, 184, 0.14);
+    --card-radius: 16px;
+    --card-elevation: 0 2px 6px rgba(0, 0, 0, 0.35), 0 6px 18px rgba(0, 0, 0, 0.28);
+    --card-elevation-hover: 0 10px 26px rgba(0, 0, 0, 0.40);
+    --chip-bg: #2c3b4a;
     --surface-subtle: #0f172a;
     --primary-color: #72b2dc;
     --primary-hover: #5fa3cf;
@@ -43,7 +54,6 @@
     --text-strong: #f8fafc;
     --text-muted: #94a3b8;
     --border-color: #334155;
-    --card-border: #475569;
     --shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
     --compass-north: #fb7185;
     --compass-south: #94a3b8;
@@ -96,7 +106,7 @@ html.i18n-loading .app-container {
    ========================================================================== */
 .app-container {
     background-color: var(--card-bg);
-    padding: calc(env(safe-area-inset-top, 20px) + 15px) 20px calc(env(safe-area-inset-bottom, 0px) + 85px) 20px;
+    padding: calc(env(safe-area-inset-top, 20px) + 15px) 20px calc(env(safe-area-inset-bottom, 0px) + 95px) 20px;
     box-shadow: var(--shadow);
     width: 100%;
     position: relative;
@@ -117,7 +127,7 @@ html.i18n-loading .app-container {
         max-width: 380px;
         height: 640px;
         border-radius: var(--border-radius);
-        padding: 30px 20px 90px 20px;
+        padding: 30px 20px 100px 20px;
     }
 }
 
@@ -434,8 +444,27 @@ html.i18n-loading .app-container {
     margin-top: 1px;
 }
 
-.log-card-elevation {
+/* Elevation: quiet muted micro-item in the card's right measurement column,
+   subordinate to the temperature/UV pills (no colored background on purpose). */
+.log-card-elevation-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background-color: var(--surface-subtle);
     color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.log-card-elevation-chip svg {
+    width: 13px;
+    height: 13px;
+    fill: currentColor;
+    stroke: none;
+    flex-shrink: 0;
 }
 
 .temp-display-wrapper {
@@ -471,8 +500,9 @@ html.i18n-loading .app-container {
 
 .log-card {
     background-color: var(--card-tile-bg);
-    border: 1.5px solid var(--card-border);
-    border-radius: 12px;
+    border: 1px solid var(--card-border);
+    border-radius: var(--card-radius);
+    box-shadow: var(--card-elevation);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -481,13 +511,19 @@ html.i18n-loading .app-container {
     flex-shrink: 0;
 }
 
-.log-card:hover {
-    border-color: var(--primary-color);
+/* Hover only where a pointer really hovers: on touch devices iOS keeps :hover
+   applied after a tap, which would leave the tapped card lifted and shadowed. */
+@media (hover: hover) {
+    .log-card:hover {
+        border-color: var(--primary-color);
+        box-shadow: var(--card-elevation-hover);
+        transform: translateY(-1px);
+    }
 }
 
 .log-card.expanded {
     border-color: var(--primary-color);
-    box-shadow: 0 4px 12px rgba(114, 178, 220, 0.08);
+    box-shadow: var(--card-elevation);
 }
 
 .log-card-clickable-area {
@@ -506,7 +542,7 @@ html.i18n-loading .app-container {
     row-gap: 4px;
     font-size: 0.75rem;
     color: var(--text-muted);
-    border-bottom: 1px dashed var(--border-color);
+    border-bottom: 1px solid var(--card-divider);
     padding-bottom: 6px;
 }
 
@@ -524,7 +560,6 @@ html.i18n-loading .app-container {
     text-transform: uppercase;
     color: var(--primary-dark);
     background-color: var(--primary-tint);
-    border: 1px solid var(--border-color);
     vertical-align: middle;
 }
 
@@ -541,7 +576,7 @@ html.i18n-loading .app-container {
     gap: 6px;
     margin-top: 6px;
     padding-top: 6px;
-    border-top: 1px dashed var(--border-color);
+    border-top: 1px solid var(--card-divider);
     font-size: 0.78rem;
     color: var(--text-muted);
     line-height: 1.4;
@@ -606,16 +641,25 @@ html.i18n-loading .app-container {
     padding: 2px 7px; 
     border-radius: 6px; 
     font-weight: 600;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    background-color: var(--chip-bg);
+    color: var(--text-muted);
     transition: var(--transition);
+}
+
+/* Low-accuracy warning (accuracy > 30 m): amber, via theme tokens. */
+.log-card-accuracy-badge--low {
+    background-color: var(--warning-bg);
+    color: var(--warning-color);
 }
 
 .log-accuracy-icon {
     width: 12px;
     height: 12px;
+    stroke: currentColor;
 }
 
 /* History header: direction badge + accuracy badge, right-aligned as one group.
@@ -647,8 +691,8 @@ html.i18n-loading .app-container {
    instead of the arrow's middle. The transition smooths the sensor stream and
    makes a 359°->0° wrap take the short way round (JS feeds unwrapped angles). */
 .log-direction-arrow {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     transform-box: fill-box;
     transform-origin: center;
     transition: transform 0.15s ease-out;
@@ -661,18 +705,18 @@ html.i18n-loading .app-container {
     will-change: transform;
 }
 
-.log-card-body { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.log-card-body { display: block; }
 .log-card-address { font-size: 0.85rem; line-height: 1.4; color: var(--text-color); flex-grow: 1; word-break: break-word; }
 
 .log-card-temp {
-    font-size: 0.85rem;
+    font-size: 0.72rem;
     font-weight: 700;
-    padding: 4px 8px;
+    padding: 2px 6px;
     border-radius: 6px;
     white-space: nowrap;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
 }
 
 .log-card-temp .embedded-weather-icon {
@@ -683,23 +727,71 @@ html.i18n-loading .app-container {
 .log-card-action-tray {
     max-height: 0;
     opacity: 0;
+    overflow: hidden;
     background-color: var(--surface-subtle);
     border-top: 1px solid transparent;
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 12px;
     padding: 0 14px;
-    transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
-                opacity 0.2s linear, 
+    transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.2s linear,
                 padding 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .log-card.expanded .log-card-action-tray {
-    max-height: 60px;
+    max-height: 170px;
     opacity: 1;
     padding: 10px 14px;
-    border-top-color: var(--border-color);
+    border-top-color: var(--card-divider);
+}
+
+/* Accordion details: weather / UV / GPS-accuracy pills on the first line, raw
+   coordinates on a muted second line. Only visible while the tile is expanded. */
+.log-card-details {
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--card-divider);
+}
+
+.log-card-details-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.log-card-details-gps {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.log-card-coords {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background-color: var(--chip-bg);
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.log-card-coords svg {
+    width: 13px;
+    height: 13px;
+    stroke: currentColor;
+    flex-shrink: 0;
+}
+
+.log-card-tray-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-top: 10px;
 }
 
 .tray-action-btn {
@@ -779,19 +871,26 @@ html.i18n-loading .app-container {
 .temp-none .embedded-weather-icon { stroke: var(--text-muted); }
 
 /* ==========================================================================
-   UV Index Display (Locate + History)
+   UV Index Display (History)
    ========================================================================== */
 .uv-display {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 8px;
+    gap: 4px;
+    padding: 2px 6px;
     border-radius: 6px;
-    font-size: 0.85rem;
+    font-size: 0.72rem;
     font-weight: 700;
     white-space: nowrap;
     color: var(--text-muted);
     background-color: #f1f5f9;
+}
+
+/* Small caption so the UV value leads the pill. */
+.uv-display-label {
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
 }
 
 .uv-low { color: #16a34a; background-color: #d1fae5; }
@@ -886,62 +985,66 @@ html.i18n-loading .app-container {
 }
 
 /* ==========================================================================
-   Bottom Navigation Bar
+   Bottom Navigation Bar – a floating, rounded dock with a content-hugging
+   active pill. The bar hovers within the bottom gutter reserved by
+   .app-container (clear of the page content and the iOS safe area).
    ========================================================================== */
 .bottom-nav {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    padding-bottom: env(safe-area-inset-bottom, 5px);
-    height: calc(70px + env(safe-area-inset-bottom, 0px));
+    left: 12px;
+    right: 12px;
+    bottom: calc(env(safe-area-inset-bottom, 5px) + 10px);
+    height: auto;
+    padding: 8px;
     background-color: var(--surface-subtle);
-    border-top: 1px solid var(--border-color);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
     display: flex;
     justify-content: space-around;
     align-items: center;
 }
 
-@media (min-width: 480px) {
-    .bottom-nav {
-        border-bottom-left-radius: var(--border-radius);
-        border-bottom-right-radius: var(--border-radius);
-        padding-bottom: 5px;
-        height: 70px;
-    }
-}
-
 .nav-item {
     background: none;
     border: none;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--text-muted);
+    cursor: pointer;
+    width: 33.33%;
+    transition: var(--transition);
+}
+
+/* Sizes the active pill to its own content (icon + label) instead of the full
+   one-third slot, so the highlight only overlaps slightly on the sides. */
+.nav-item-inner {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: var(--text-muted);
-    cursor: pointer;
-    width: 33.33%;
-    height: 100%;
+    padding: 8px 8px;
+    border-radius: 16px;
     transition: var(--transition);
 }
 
 .nav-icon {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     margin-bottom: 4px;
     transition: var(--transition);
 }
 
 .nav-item.active {
     color: var(--primary-dark);
+}
+.nav-item.active .nav-item-inner {
     background-color: var(--primary-tint);
-    border-radius: 14px;
-    height: auto;
-    margin: 6px 0;
-    padding: 10px 8px 5px;
 }
 .nav-item.active .nav-icon { transform: translateY(-2px); stroke: var(--primary-dark); }
-.nav-label { font-size: 0.75rem; font-weight: 500; }
+.nav-label { font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
 
 .hidden { display: none !important; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
@@ -2181,6 +2284,60 @@ html.i18n-loading .app-container {
     width: 100%;
     margin-bottom: 10px;
     flex-shrink: 0;
+}
+
+/* Header-Zeile des Filters: Anker für den darüber positionierten Reset-Chip.
+   Toggle und Chip sind Geschwister (kein Button-in-Button), der Chip liegt
+   absolut über dem Toggle in der freien Fläche zwischen Label und Chevron. */
+.history-filter-header {
+    position: relative;
+}
+
+/* Die Summary sitzt nicht mehr im Toggle – der Chevron muss daher selbst an
+   den rechten Rand rücken (nur im History-Filter, Locate bleibt unberührt). */
+.history-search-bar .save-options-chevron {
+    margin-left: auto;
+}
+
+/* Reset-Chip: zeigt den aktiven Filter im eingeklappten Header und leert mit
+   einem Tipp Tag UND Text. Nur sichtbar, wenn tatsächlich gefiltert wird. */
+.history-filter-clear {
+    position: absolute;
+    top: 50%;
+    right: 38px;
+    transform: translateY(-50%);
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 50%;
+    padding: 3px 7px;
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    background-color: var(--primary-tint);
+    color: var(--primary-dark);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.25px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.history-filter-clear:hover {
+    border-color: var(--primary-color);
+}
+
+.history-filter-clear-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.history-filter-clear-icon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    stroke: currentColor;
 }
 
 /* Suchfeld ausblenden wenn Map-View aktiv (history-map nicht hidden) */
