@@ -267,24 +267,40 @@ function initSaveOptions() {
 }
 
 /* ==========================================================================
-   Internal: Top-level controls (fetch button + status line). They belong to
-   the chooser/saved steps. On the saver (pre-save) step the "Back" button goes
-   back to the chooser where a fresh fetch is available, so the redundant
-   "Refresh" button and the "Preview from …" status are hidden there.
+   Internal: Top-level status line. It stays pinned at the top of the page and
+   is hidden on the saver (pre-save) step, where its "Back" button returns to
+   the chooser and no fresh-fetch feedback is needed.
    ========================================================================== */
-function setFetchButtonVisible(visible) {
-    const btn = document.getElementById('btn-fetch-location');
-    if (btn) btn.classList.toggle('hidden', !visible);
-}
-
 function setStatusVisible(visible) {
     const container = document.getElementById('locate-status-container');
     if (container) container.classList.toggle('hidden', !visible);
 }
 
-function setTopControlsVisible(visible) {
-    setFetchButtonVisible(visible);
-    setStatusVisible(visible);
+/* Empty-state outline: shown whenever no view is active, so the page never
+   looks blank during idle, a GPS search or an error. */
+function setIdleVisible(visible) {
+    const el = document.getElementById('locate-idle');
+    if (el) el.classList.toggle('hidden', !visible);
+}
+
+/* The single fetch/refresh button is re-parented per step instead of being
+   duplicated: idle (bottom of the empty state), chooser (left of Continue),
+   saved (right of Back). The saver keeps it parked in the (hidden) idle slot.
+   Moving the node preserves its click listener, label and disabled state. */
+function placeFetchButton(where) {
+    const btn = document.getElementById('btn-fetch-location');
+    if (!btn) return;
+
+    if (where === 'chooser') {
+        const row = document.getElementById('locate-chooser-actions');
+        const cont = document.getElementById('btn-locate-continue');
+        if (row && cont) { row.insertBefore(btn, cont); return; }
+    }
+    if (where === 'saved') {
+        const row = document.getElementById('locate-saved-actions');
+        if (row) { row.appendChild(btn); return; }
+    }
+    document.getElementById('locate-idle-actions')?.appendChild(btn);
 }
 
 /* ==========================================================================
@@ -295,7 +311,9 @@ function showView(view) {
         const el = document.getElementById(id);
         if (el) el.classList.toggle('hidden', id !== `locate-${view}`);
     });
-    setTopControlsVisible(view !== 'saver');
+    setStatusVisible(view !== 'saver');
+    setIdleVisible(false);
+    placeFetchButton(view === 'chooser' ? 'chooser' : view === 'saved' ? 'saved' : 'idle');
 }
 
 function hideViews() {
@@ -303,7 +321,9 @@ function hideViews() {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
     });
-    setTopControlsVisible(true);
+    setStatusVisible(true);
+    setIdleVisible(true);
+    placeFetchButton('idle');
 }
 
 /* ==========================================================================
