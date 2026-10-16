@@ -340,7 +340,7 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
         const uvLevel = getUvLevel(uvVal);
         uvHtml = `
             <div class="uv-display uv-${uvLevel}" title="${t('history.uvTitle', { value: uvVal.toFixed(1) })}">
-                <span>UV</span>
+                <span class="uv-display-label">UV</span>
                 <span>${uvVal.toFixed(1)}</span>
             </div>
         `;
@@ -445,6 +445,17 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
         </div>`
         : '';
 
+    // Elevation as its own quiet item in the right column (no parentheses glued
+    // to the address). Mountain glyph disambiguates "m" from the distance chip.
+    const elevationHtml = elevationFormatted
+        ? `<span class="log-card-elevation-chip">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <polygon points="12 4 21 20 3 20"></polygon>
+            </svg>
+            ${elevationFormatted}
+        </span>`
+        : '';
+
     card.innerHTML = `
         <div class="log-card-clickable-area">
             <div class="log-card-header">
@@ -470,7 +481,7 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
                 <div style="flex: 1; min-width: 0;">
                     <div class="log-card-address address-container" title="${fullAddressForTitle}">
                         ${locationIcon}
-                        <span>${shortAddress}${elevationFormatted ? ` <span class="log-card-elevation">(${elevationFormatted})</span>` : ''}</span>
+                        <span>${shortAddress}</span>
                     </div>
                     ${commentHtml}
                 </div>
@@ -480,6 +491,7 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
                         <span>${tempFormatted}</span>
                     </div>
                     ${uvHtml}
+                    ${elevationHtml}
                 </div>
             </div>
             ${travelRowHtml}
@@ -749,18 +761,28 @@ function ensureSearchBar() {
     bar.id = 'history-search-bar';
     bar.className = 'history-search-bar save-options';
     bar.innerHTML = `
-        <button id="history-filter-toggle" class="save-options-toggle" type="button" aria-expanded="false">
-            <svg class="save-options-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-            </svg>
-            <span class="save-options-toggle-label">${t('history.filter')}</span>
-            <span id="history-filter-summary" class="save-options-summary hidden"></span>
-            <svg class="save-options-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-        </button>
+        <div class="history-filter-header">
+            <button id="history-filter-toggle" class="save-options-toggle" type="button" aria-expanded="false">
+                <svg class="save-options-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+                <span class="save-options-toggle-label">${t('history.filter')}</span>
+                <svg class="save-options-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </button>
+            <button id="history-filter-clear" class="history-filter-clear hidden" type="button"
+                    aria-label="${t('history.clearFilters')}">
+                <span id="history-filter-summary" class="history-filter-clear-text"></span>
+                <svg class="history-filter-clear-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
         <div class="save-options-body">
             <div class="save-options-inner">
                 <div class="save-options-row">
@@ -794,11 +816,12 @@ function ensureSearchBar() {
     const list = document.getElementById('history-list');
     list.parentNode.insertBefore(bar, list);
 
-    const toggle   = bar.querySelector('#history-filter-toggle');
-    const input    = bar.querySelector('#history-search-input');
-    const clearBtn = bar.querySelector('#history-search-clear');
-    const tagsEl   = bar.querySelector('#history-filter-tags');
-    const summary  = bar.querySelector('#history-filter-summary');
+    const toggle      = bar.querySelector('#history-filter-toggle');
+    const input       = bar.querySelector('#history-search-input');
+    const clearBtn    = bar.querySelector('#history-search-clear');
+    const tagsEl      = bar.querySelector('#history-filter-tags');
+    const clearAll    = bar.querySelector('#history-filter-clear');
+    const summaryText = bar.querySelector('#history-filter-summary');
 
     // Disclosure: auf-/zuklappen (gleiche Logik wie Locate save-options)
     toggle.addEventListener('click', () => {
@@ -830,8 +853,22 @@ function ensureSearchBar() {
         const parts = [];
         if (tag) parts.push(tag);
         if (text) parts.push(text);
-        summary.textContent = parts.join(' \u00B7 ');
-        summary.classList.toggle('hidden', parts.length === 0);
+        const active = parts.join(' \u00B7 ');
+        summaryText.textContent = active;
+        // Der eingeklappte Header zeigt den aktiven Filter selbst als Reset-Chip:
+        // nur sichtbar, wenn überhaupt etwas gefiltert wird.
+        clearAll.classList.toggle('hidden', parts.length === 0);
+        if (parts.length > 0) clearAll.setAttribute('title', active);
+        else clearAll.removeAttribute('title');
+    };
+
+    // Tag UND Text in einem Schritt entfernen (Reset-Chip im Header). Der
+    // Auf-/Zuklapp-Zustand des Disclosures bleibt dabei unangetastet.
+    const clearAllFilters = () => {
+        tagsEl.querySelectorAll('.tag-chip--selected').forEach(c => c.classList.remove('tag-chip--selected'));
+        input.value = '';
+        clearBtn.classList.add('hidden');
+        syncFromControls();
     };
 
     tagsEl.addEventListener('click', (e) => {
@@ -851,6 +888,8 @@ function ensureSearchBar() {
         syncFromControls();
         input.focus();
     });
+
+    clearAll.addEventListener('click', clearAllFilters);
 }
 
 function resetSearchBar() {
@@ -859,6 +898,7 @@ function resetSearchBar() {
     const clearBtn  = document.getElementById('history-search-clear');
     const tagsEl    = document.getElementById('history-filter-tags');
     const noResults = document.getElementById('history-no-results');
+    const clearAll  = document.getElementById('history-filter-clear');
     const summary   = document.getElementById('history-filter-summary');
     if (input)    { input.value = ''; }
     if (clearBtn) { clearBtn.classList.add('hidden'); }
@@ -866,7 +906,8 @@ function resetSearchBar() {
         tagsEl.querySelectorAll('.tag-chip--selected').forEach(c => c.classList.remove('tag-chip--selected'));
     }
     if (noResults) { noResults.classList.add('hidden'); }
-    if (summary)  { summary.textContent = ''; summary.classList.add('hidden'); }
+    if (summary)   { summary.textContent = ''; }
+    if (clearAll)  { clearAll.classList.add('hidden'); clearAll.removeAttribute('title'); }
     setHistoryFilter({ tag: '', text: '' });
 }
 

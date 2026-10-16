@@ -118,6 +118,7 @@
     "history.addressComment": "ADRESSE / KOMMENTAR",
     "history.filterPlaceholder": "Adresse oder Kommentar filtern…",
     "history.clearFilter": "Filter zurücksetzen",
+    "history.clearFilters": "Alle Filter zurücksetzen",
     "history.noMatches": "Keine Treffer gefunden.",
     "history.tagTitle": "Tag {tag}",
     "history.uvTitle": "UV-Index {value}",

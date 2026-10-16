@@ -118,6 +118,7 @@
     "history.addressComment": "ADRESSE / COMMENTAIRE",
     "history.filterPlaceholder": "Filtrer par adresse ou commentaire…",
     "history.clearFilter": "Effacer le filtre",
+    "history.clearFilters": "Effacer tous les filtres",
     "history.noMatches": "Aucun résultat.",
     "history.tagTitle": "Étiquette {tag}",
     "history.uvTitle": "Indice UV {value}",
