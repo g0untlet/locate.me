@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -82,6 +83,10 @@ public class Places {
     @ConfigProperty(name = "geoapify.api-key")
     Optional<String> apiKey;
 
+    // "|"-separated category groups from geoapify.categories; each group is
+    // fetched with its own Geoapify request. Lazily parsed once per Places instance.
+    List<String> configuredCategoryGroups;
+
     // Top-level categories from geoapify.categories that may be used as a place's
     // primary/secondary category. Lazily parsed once per Places instance.
     Set<String> allowedTopLevelCategories;
@@ -110,15 +115,16 @@ public class Places {
             List<Place> cached = findCached(lat, lon);
             if (!cached.isEmpty()) {
                 LOG.log(System.Logger.Level.DEBUG, "Cache hit: returning {0} place(s) from the H2 cache", cached.size());
-                return cached.stream().limit(this.maxPlaces).toList();
+                return cached.stream().limit(resultLimit()).toList();
             }
         } else {
             LOG.log(System.Logger.Level.INFO, "Cache read disabled (aroundme.read-from-cache=false) – skipping the places cache");
         }
 
-        // The client only displays aroundme.max-places entries; cache storage is
-        // not affected (geoapify.limit still governs how many are persisted).
-        return fetchAndStore(lat, lon, acceptLanguage).stream().limit(this.maxPlaces).toList();
+        // aroundme.max-places is a per-category-group cap: the response may contain
+        // up to max-places × category-group entries. Cache storage is not affected
+        // (geoapify.limit still governs how many are fetched per group).
+        return fetchAndStore(lat, lon, acceptLanguage).stream().limit(resultLimit()).toList();
     }
 
     private List<Place> findCached(double lat, double lon) {
@@ -142,7 +148,7 @@ public class Places {
                 .filter(np -> np.distance() <= this.cacheRadius)
                 .filter(np -> !isExcluded(np.place()))
                 .sorted(Comparator.comparingDouble(NearPlace::distance).thenComparing(np -> np.place().placeId()))
-                .limit(this.limit)
+                .limit(resultLimit())
                 .map(NearPlace::place)
                 .toList();
     }
@@ -152,47 +158,68 @@ public class Places {
         String lang = ClientLanguage.fromAcceptLanguage(acceptLanguage);
         String filter = "circle:" + lon + "," + lat + "," + this.radius;
         String bias = "proximity:" + lon + "," + lat;
+        List<String> groups = categoryGroups();
 
-        JsonObject response;
-        try {
-            response = this.geoapifyPlacesClient.places(this.categories, filter, bias, this.limit, this.format, this.apiKey.orElse(""), lang);
-        } catch (Exception e) {
-            LOG.log(System.Logger.Level.WARNING, "Geoapify places request failed: {0}", e.getMessage());
+        int successfulCalls = 0;
+        Set<String> seenPlaceIds = new HashSet<>();
+        List<Place> places = new ArrayList<>();
+
+        for (String group : groups) {
+            JsonObject response;
+            try {
+                response = this.geoapifyPlacesClient.places(group, filter, bias, this.limit, this.format, this.apiKey.orElse(""), lang);
+                successfulCalls++;
+            } catch (Exception e) {
+                // Best effort: one failing category group must not discard the
+                // results of the remaining groups.
+                LOG.log(System.Logger.Level.WARNING,
+                        "Geoapify places request for categories {0} failed: {1}", group, e.getMessage());
+                continue;
+            }
+
+            JsonArray features = null;
+            if (response != null && response.containsKey("features") && !response.isNull("features")) {
+                features = response.getJsonArray("features");
+            }
+
+            // Surface an empty/unexpected Geoapify response instead of silently
+            // storing nothing – helps to spot e.g. a rejected request (bad API key).
+            if (features == null || features.isEmpty()) {
+                LOG.log(System.Logger.Level.WARNING,
+                        "Geoapify returned no places near ({0}, {1}) for categories {2}: {3}",
+                        lat, lon, group, response);
+                continue;
+            }
+
+            for (int i = 0; i < features.size(); i++) {
+                Place place = toPlace(features.getJsonObject(i), lat, lon);
+                // The same POI can match more than one category group; merge it
+                // only once so the combined result and the cache stay deduplicated.
+                if (!isExcluded(place) && seenPlaceIds.add(place.placeId())) {
+                    places.add(this.em.merge(place));
+                }
+            }
+        }
+
+        // Keep the existing failure semantics when no group could be fetched at
+        // all; partial results are returned when at least one group succeeded.
+        if (!groups.isEmpty() && successfulCalls == 0) {
             throw new WebApplicationException(Response.status(Response.Status.SERVICE_UNAVAILABLE)
                     .entity(Json.createObjectBuilder().add("error", "Failed to fetch places from Geoapify").build())
                     .type(MediaType.APPLICATION_JSON)
                     .build());
         }
 
-        JsonArray features = null;
-        if (response != null && response.containsKey("features") && !response.isNull("features")) {
-            features = response.getJsonArray("features");
-        }
-
-        // Surface an empty/unexpected Geoapify response instead of silently
-        // storing nothing – helps to spot e.g. a rejected request (bad API key).
-        if (features == null || features.isEmpty()) {
-            LOG.log(System.Logger.Level.WARNING, "Geoapify returned no places near ({0}, {1}): {2}", lat, lon, response);
-        }
-
-        List<Place> places = new ArrayList<>();
-        if (features != null) {
-            for (int i = 0; i < features.size(); i++) {
-                Place place = toPlace(features.getJsonObject(i), lat, lon);
-                if (!isExcluded(place)) {
-                    places.add(this.em.merge(place));
-                }
-            }
-        }
-
         List<Place> stored = places.stream()
                 .map(p -> new NearPlace(p, Geoboxing.distanceMeters(lat, lon, p.latitude(), p.longitude())))
                 .sorted(Comparator.comparingDouble(NearPlace::distance).thenComparing(np -> np.place().placeId()))
-                .limit(this.limit)
+                .limit(resultLimit())
                 .map(NearPlace::place)
                 .toList();
 
-        LOG.log(System.Logger.Level.DEBUG, "Stored {0} place(s) in the H2 places cache", places.size());
+        LOG.log(System.Logger.Level.DEBUG,
+                "Stored {0} place(s) in the H2 places cache from {1} category group(s) ({2} successful call(s))",
+                places.size(), groups.size(), successfulCalls);
         return stored;
     }
 
@@ -250,11 +277,31 @@ public class Places {
         return null;
     }
 
-    private Set<String> allowedCategories() {
+    List<String> categoryGroups() {
+        if (this.configuredCategoryGroups == null) {
+            this.configuredCategoryGroups = Arrays.stream(this.categories.split("\\|"))
+                    .map(this::normalizeGroup)
+                    .filter(group -> !group.isEmpty())
+                    .toList();
+        }
+        return this.configuredCategoryGroups;
+    }
+
+    private String normalizeGroup(String group) {
+        return Arrays.stream(group.split(","))
+                .map(String::trim)
+                .filter(category -> !category.isEmpty())
+                .collect(Collectors.joining(","));
+    }
+
+    int resultLimit() {
+        return this.maxPlaces * categoryGroups().size();
+    }
+
+    Set<String> allowedCategories() {
         if (this.allowedTopLevelCategories == null) {
-            this.allowedTopLevelCategories = Arrays.stream(this.categories.split(","))
-                    .map(String::trim)
-                    .filter(entry -> !entry.isEmpty())
+            this.allowedTopLevelCategories = categoryGroups().stream()
+                    .flatMap(group -> Arrays.stream(group.split(",")))
                     .map(this::topLevel)
                     .collect(Collectors.toSet());
         }

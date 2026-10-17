@@ -292,8 +292,9 @@ public class PlacesResourceIT {
         when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection(features));
 
-        // The backend returns at most aroundme.max-places (20) places; here
-        // Geoapify delivered 25, so the response is truncated to 20.
+        // The backend returns at most aroundme.max-places (20) places per
+        // category group; with the test suite pinned to one group, Geoapify
+        // delivered 25 and the response is truncated to 20.
         given()
                 .when()
                 .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")

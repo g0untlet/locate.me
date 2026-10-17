@@ -147,7 +147,7 @@ net.gauntlet.locate.me
 | Module | Purpose |
 |---------|---------|
 | `locator` | Position lifecycle (create/read/delete), geocoding + weather enrichment, distance/travel-time (walking, biking, driving) |
-| `aroundme` | Places around a coordinate: Geoapify fetch + H2 cache (cache-first geoboxing lookup, deduplicated by place_id), distance-sorted responses |
+| `aroundme` | Places around a coordinate: one Geoapify fetch per category group + H2 cache (cache-first geoboxing lookup, deduplicated by place_id), combined distance-sorted responses |
 | `system` | Application info endpoint and startup timestamp |
 | `security` | Cross-cutting infrastructure: Bucket4j rate limiting (`UserIdIdentityResolver` segments buckets per `userId` query param, `TooManyRequestsMapper` custom 429 JSON body + `Retry-After` + INFO log) and `AdminKeyVerifier` (constant-time check of the `adminKey` query param against `admin.key` for the admin stats endpoints) |
 
@@ -174,7 +174,7 @@ net.gauntlet.locate.me
 | `SystemInfo` | Application metadata (artifactId, version, startupTime) |
 | `GeocodingClient` | MicroProfile REST client → Nominatim reverse geocoding (`format`, `zoom`, `layer` configurable) |
 | `WeatherClient` | MicroProfile REST client → Open-Meteo forecast (current + `hourly`, `forecast_hours`, `timezone`) |
-| `Places` | Cache-first lookup: geoboxing query (cache hit) or Geoapify fetch + upsert (miss); cache-entry count; sole `EntityManager` access for places |
+| `Places` | Cache-first lookup: geoboxing query (cache hit) or one Geoapify fetch per `\|`-separated category group + combined upsert (miss); deduplicates by place ID and sorts by distance; cache-entry count; sole `EntityManager` access for places |
 | `GeoapifyPlacesClient` | MicroProfile REST client → Geoapify Places API (`/v2/places`) |
 | `Geoboxing` | Bounding-box spans (`deltaLat`/`deltaLon`) + haversine distance (static util) |
 | `ClientLanguage` | `Accept-Language` → lowercased 2-letter ISO-639-1 code (static util) |
@@ -187,7 +187,7 @@ net.gauntlet.locate.me
 | `PositionsResource` | REST `/positions`: create, delete, list, current, stats (admin); validation + userId authorization; adminKey check via `AdminKeyVerifier` |
 | `SystemBoundary` | REST `/system` → `/info` |
 | `DatabaseHealthCheck` | SmallRye readiness check (`SELECT 1`) |
-| `PlacesResource` | REST `/places`: GET list (cache-first) and stats (admin); validation + userId authorization; adminKey check via `AdminKeyVerifier`; adds response-only `distance` |
+| `PlacesResource` | REST `/places`: GET list (cache-first or grouped Geoapify fetch) and stats (admin); validation + userId authorization; adminKey check via `AdminKeyVerifier`; adds response-only `distance` |
 
 ### Rules
 
@@ -224,10 +224,10 @@ Common errors: 400 invalid/missing `userId` or body; 401 userId not in allow-lis
 
 | Method | Endpoint | Notes |
 |----------|----------|----------|
-| GET | `/api/places?userId=&lat=&lon=` | 200 places cached around the coordinate, served nearest-first; the `Accept-Language` header (optional) selects the Geoapify `lang`; cache-first lookup via a geoboxing box (`aroundme.cache-radius`), Geoapify fetch + upsert on cache miss; each place includes a response-only `distance` (meters) and `direction` (8-point compass `N/NE/E/SE/S/SW/W/NW`, empty when distance < 1 m) |
+| GET | `/api/places?userId=&lat=&lon=` | 200 places cached around the coordinate, served nearest-first; the `Accept-Language` header (optional) selects the Geoapify `lang`; cache-first lookup via a geoboxing box (`aroundme.cache-radius`), one Geoapify request per category group + combined upsert on cache miss; each place includes a response-only `distance` (meters) and `direction` (8-point compass `N/NE/E/SE/S/SW/W/NW`, empty when distance < 1 m) |
 | GET | `/api/places/stats?adminKey=` | 200 `{"count", "perCity":[{"city", "places"}, ...]}` — places-cache entry count plus per-city breakdown (`perCity` ordered by `city`; places without a city count toward `count` but are omitted from `perCity`); requires `adminKey` == `admin.key` (env `ADMIN_KEY`), otherwise 401; **not** rate-limited |
 
-Common errors: 400 invalid/missing `userId` or `lat`/`lon`; 401 userId not in allow-list (or invalid/missing `adminKey` on `/stats`); 429 per-user rate limit exceeded (`pwa-standard`: reads) — `Retry-After` header + JSON body `{"error":"TOO_MANY_REQUESTS","status":429}`; 503 Geoapify unavailable.
+Common errors: 400 invalid/missing `userId` or `lat`/`lon`; 401 userId not in allow-list (or invalid/missing `adminKey` on `/stats`); 429 per-user rate limit exceeded (`pwa-standard`: reads) — `Retry-After` header + JSON body `{"error":"TOO_MANY_REQUESTS","status":429}`; 503 Geoapify unavailable (all category-group requests failed).
 
 ## Health & Tooling
 
@@ -361,7 +361,8 @@ built by string concatenation. The history query `findByUserId`
 The places cache is queried with a geoboxing range query
 (`latitude`/`longitude` BETWEEN, served by `idx_places_coords`); the candidates
 are then verified against the exact haversine distance (≤ `aroundme.cache-radius`),
-sorted ascending and capped at `geoapify.limit` in memory (see `Places.findCached`).
+sorted ascending and capped at `aroundme.max-places × number of category groups`
+in memory (see `Places.findCached`).
 
 ---
 
@@ -380,7 +381,7 @@ sorted ascending and capped at `geoapify.limit` in memory (see `Places.findCache
 |------------|------------|------------|
 | Open-Meteo | REST/JSON | Current `temperature_2m`, `weather_code`, `uv_index`, `is_day`, `elevation`; hourly forecast `temperature_2m`, `weather_code`, `uv_index`, `precipitation_probability`, `is_day` (`forecast_hours`, `timezone=auto`) per position preview |
 | Nominatim (OSM) | REST/JSON | Reverse geocoding → display name + address parts |
-| Geoapify | REST/JSON | POI places around a coordinate (categories, radius, limit, `lang`) |
+| Geoapify | REST/JSON | POI places around a coordinate (category groups, radius, limit, `lang`); one request per `\|`-separated category group |
 | OSM tile server | HTTPS | Map tiles (browser-direct, Leaflet) |
 | Google Maps | HTTPS | Share link from map popups (native share) |
 
@@ -482,10 +483,10 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 | `weather.forecast-hours` | Number of future hourly forecast slices returned (default 4; the current hour is skipped) |
 | `weather.timezone` | Open-Meteo timestamp timezone (`auto` = the coordinates' local timezone, so times match the local wall clock) |
 | `weather_uri/mp-rest/read-timeout`, `weather_uri/mp-rest/connect-timeout` | Open-Meteo client timeouts (ms), mirroring Geoapify |
-| `geoapify_uri/mp-rest/url`, `geoapify.categories`, `geoapify.limit`, `geoapify.radius`, `geoapify.format`, `geoapify.api-key` | Geoapify Places client: base URL, category filter (`catering,commercial,healthcare,leisure,entertainment,service`), result limit, fetch radius (m, 700), format, API key (`${GEOAPIFY_API_KEY:}`) |
+| `geoapify_uri/mp-rest/url`, `geoapify.categories`, `geoapify.limit`, `geoapify.radius`, `geoapify.format`, `geoapify.api-key` | Geoapify Places client: base URL, category groups (`catering,commercial,healthcare,leisure,entertainment\|tourism.attraction`; `\|` separates groups, each fetched with its own request), result limit per group, fetch radius (m, 700), format, API key (`${GEOAPIFY_API_KEY:}`) |
 | `aroundme.cache-radius` | Cache bounding-box radius (m, 700) for the cache-first lookup |
 | `aroundme.exclude-categories` | Comma-separated secondary POI categories to exclude (e.g. `playground`); applied on cache hits and fresh fetches |
-| `aroundme.max-places` | Maximum number of places returned for "Places around me" (default 20); `geoapify.limit` still controls the Geoapify fetch / cache size |
+| `aroundme.max-places` | Maximum number of places returned per category group (default 20); total response cap = value × number of groups. `geoapify.limit` still controls the Geoapify fetch / cache size per group |
 | `aroundme.read-from-cache` | `false` (default) — every request fetches fresh from Geoapify, the H2 cache is still written but never read; `true` restores the cache-first geoboxing lookup (`Places.findNear`) |
 | `quarkus.rate-limiter.buckets.pwa-standard.*` | Read bucket: `limits[0].permitted-uses=10`, `limits[0].period=30s`, `identity-resolver` (`security.UserIdIdentityResolver`), `shared=true` |
 | `quarkus.rate-limiter.buckets.pwa-critical.*` | Write/delete bucket: `limits[0].permitted-uses=5`, `limits[0].period=30s`, `identity-resolver` (same), `shared=true` |
