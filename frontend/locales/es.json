@@ -16,6 +16,7 @@
     "locate.fetchLocation": "Obtener ubicación",
     "locate.refresh": "Actualizar",
     "locate.ready": "Listo",
+    "locate.idleHint": "Obtén tu ubicación para ver el tiempo, la dirección y los lugares cercanos.",
     "locate.useLastLocation": "Usar última ubicación",
     "locate.retryGps": "Reintentar GPS",
     "locate.cancel": "Cancelar",

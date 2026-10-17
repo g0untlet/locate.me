@@ -106,7 +106,7 @@ html.i18n-loading .app-container {
    ========================================================================== */
 .app-container {
     background-color: var(--card-bg);
-    padding: calc(env(safe-area-inset-top, 20px) + 15px) 20px calc(env(safe-area-inset-bottom, 0px) + 95px) 20px;
+    padding: calc(env(safe-area-inset-top, 20px) + 15px) 20px calc(env(safe-area-inset-bottom, 0px) + 88px) 20px;
     box-shadow: var(--shadow);
     width: 100%;
     position: relative;
@@ -127,7 +127,7 @@ html.i18n-loading .app-container {
         max-width: 380px;
         height: 640px;
         border-radius: var(--border-radius);
-        padding: 30px 20px 100px 20px;
+        padding: 30px 20px 93px 20px;
     }
 }
 
@@ -228,7 +228,7 @@ html.i18n-loading .app-container {
 .track-btn {
     width: 100%;
     max-width: 280px;
-    padding: 10px 0;
+    padding: 12px 0;
     font-size: 0.9rem;
     font-weight: 600;
     letter-spacing: 0.5px;
@@ -263,13 +263,22 @@ html.i18n-loading .app-container {
     gap: 10px;
     width: 100%;
     max-width: 280px;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .track-btn-row .track-btn {
     flex: 1;
     max-width: none;
     margin-bottom: 0;
+}
+
+/* Locate action rows may use the full content width so the longest labels
+   (DE/ES/FR, e.g. "Obtenir la position") fit on one line. Scoped to the Locate
+   views — the GPS-fallback card row keeps its 280px cap. */
+#locate-chooser .track-btn-row,
+#locate-saver   .track-btn-row,
+#locate-saved   .track-btn-row {
+    max-width: 100%;
 }
 
 .settings-input {
@@ -1079,6 +1088,81 @@ html.i18n-loading .app-container {
 }
 
 /* ==========================================================================
+   Locate Page: Empty State (inert outline of the chooser)
+   Shown while no view is active (idle / GPS search / error). Purely a
+   placeholder: non-interactive and aria-hidden, so it never mimics real data.
+   ========================================================================== */
+.locate-idle {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.locate-idle > .idle-hint,
+.locate-idle > .idle-actions { flex-shrink: 0; }
+
+/* The inert outline. aria-hidden + pointer-events:none so it never reads as
+   real data; the fetch button lives outside it (see .idle-actions). */
+.idle-ghost {
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.idle-ghost > .response-card:not(.idle-places) { flex-shrink: 0; }
+
+.idle-actions {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Match the tightened bottom spacing of the paired action rows. */
+.idle-actions .track-btn { margin-bottom: 8px; }
+
+.idle-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-align: center;
+    max-width: 280px;
+    margin-bottom: 4px;
+}
+
+/* Static placeholder bars – deliberately NO shimmer: this is an idle outline,
+   not a loading state. Sizes mirror .place-row / the skeleton geometry. */
+.idle-bar {
+    display: block;
+    background-color: var(--border-color);
+    border-radius: 4px;
+}
+
+.idle-bar--value   { width: 46px; height: 14px; margin-top: 6px; }
+.idle-bar--address { width: 72%;  height: 14px; margin-top: 6px; }
+.idle-bar--icon    { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; }
+.idle-bar--name    { flex: 1; min-width: 0; height: 12px; }
+.idle-bar--dist    { width: 56px; height: 12px; flex-shrink: 0; }
+
+.idle-places {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.idle-places .places-list { overflow: hidden; }
+
+/* ==========================================================================
    Locate Page: Chooser & Saver Views
    ========================================================================== */
 .locate-view {
@@ -1110,9 +1194,11 @@ html.i18n-loading .app-container {
 }
 
 /* Continue stays at the bottom; with no places card the auto margin absorbs the
-   free space, otherwise the stretched card already fills it. */
-#btn-locate-continue {
+   free space, otherwise the stretched card already fills it. The pin lives on
+   the action row now (the fetch/refresh button is re-parented into it). */
+#locate-chooser-actions {
     margin-top: auto;
+    flex-shrink: 0;
 }
 
 /* Saver fills the page too, but only the content above the action row scrolls
@@ -1140,6 +1226,18 @@ html.i18n-loading .app-container {
 }
 
 #locate-saver > .track-btn-row {
+    flex-shrink: 0;
+}
+
+/* Saved view fills the page too, so its action row pins to the bottom (top of
+   the nav) like the chooser/saver instead of trailing the map. flex:1 without
+   min-height:0 lets it grow if content ever exceeds the page -> .app-page scrolls. */
+#locate-saved {
+    flex: 1;
+}
+
+#locate-saved-actions {
+    margin-top: auto;
     flex-shrink: 0;
 }
 

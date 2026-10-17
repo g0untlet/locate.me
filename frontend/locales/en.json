@@ -16,6 +16,7 @@
     "locate.fetchLocation": "Fetch Location",
     "locate.refresh": "Refresh",
     "locate.ready": "Ready",
+    "locate.idleHint": "Fetch your location to see weather, address and places around you.",
     "locate.useLastLocation": "Use last location",
     "locate.retryGps": "Retry GPS",
     "locate.cancel": "Cancel",

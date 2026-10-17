@@ -55,9 +55,6 @@
         <section id="page-locate" class="app-page">
             <div class="locate-action-group">
                 <div id="demo-mode-note" class="demo-mode-note hidden"><span data-i18n="locate.demoMode">Demo mode.</span><br><span data-i18n="locate.demoModeHint">Request your own user id in Settings.</span></div>
-                <button id="btn-fetch-location" class="track-btn" data-i18n="locate.fetchLocation">
-                    Fetch Location
-                </button>
             </div>
 
             <div id="locate-status-container" class="status-container">
@@ -71,6 +68,73 @@
                 <div class="track-btn-row">
                     <button id="gps-fallback-retry" class="track-btn" type="button" data-i18n="locate.retryGps">Retry GPS</button>
                     <button id="gps-fallback-cancel" class="track-btn" type="button" data-i18n="locate.cancel">Cancel</button>
+                </div>
+            </div>
+
+            <!-- Empty state: muted, inert outline of the chooser, shown until a
+                 real view is displayed (idle, GPS search, or error). The ghost
+                 itself is aria-hidden + pointer-events:none; the fetch button
+                 below it stays interactive and accessible. -->
+            <div id="locate-idle" class="locate-idle">
+                <p class="idle-hint" data-i18n="locate.idleHint">Fetch your location to see weather, address and places around you.</p>
+
+                <div class="idle-ghost" aria-hidden="true">
+                    <div class="response-card">
+                        <div class="flex-rows">
+                            <div class="row-split border-bottom">
+                                <div class="cell">
+                                    <span class="label" data-i18n="label.temperature">TEMPERATURE</span>
+                                    <span class="idle-bar idle-bar--value"></span>
+                                </div>
+                                <div class="cell text-right">
+                                    <span class="label" data-i18n="label.condition">CONDITION</span>
+                                    <span class="idle-bar idle-bar--value"></span>
+                                </div>
+                                <div class="cell text-right">
+                                    <span class="label" data-i18n="label.uvIndex">UV-INDEX</span>
+                                    <span class="idle-bar idle-bar--value"></span>
+                                </div>
+                            </div>
+                            <div class="row-split">
+                                <div class="cell address-cell">
+                                    <span class="label" data-i18n="label.location">LOCATION</span>
+                                    <span class="idle-bar idle-bar--address"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="response-card places-card idle-places">
+                        <div class="places-header">
+                            <span class="label" data-i18n="label.placesAroundMe">PLACES AROUND ME</span>
+                        </div>
+                        <div class="places-list">
+                            <div class="place-row place-row--loading">
+                                <span class="idle-bar idle-bar--icon"></span>
+                                <span class="idle-bar idle-bar--name"></span>
+                                <span class="idle-bar idle-bar--dist"></span>
+                            </div>
+                            <div class="place-row place-row--loading">
+                                <span class="idle-bar idle-bar--icon"></span>
+                                <span class="idle-bar idle-bar--name"></span>
+                                <span class="idle-bar idle-bar--dist"></span>
+                            </div>
+                            <div class="place-row place-row--loading">
+                                <span class="idle-bar idle-bar--icon"></span>
+                                <span class="idle-bar idle-bar--name"></span>
+                                <span class="idle-bar idle-bar--dist"></span>
+                            </div>
+                            <div class="place-row place-row--loading">
+                                <span class="idle-bar idle-bar--icon"></span>
+                                <span class="idle-bar idle-bar--name"></span>
+                                <span class="idle-bar idle-bar--dist"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="locate-idle-actions" class="idle-actions">
+                    <button id="btn-fetch-location" class="track-btn" data-i18n="locate.fetchLocation">Fetch Location</button>
                 </div>
             </div>
 
@@ -135,7 +199,9 @@
                     <div id="places-list" class="places-list"></div>
                 </div>
 
-                <button id="btn-locate-continue" class="track-btn" data-i18n="locate.continue">Continue</button>
+                <div class="track-btn-row" id="locate-chooser-actions">
+                    <button id="btn-locate-continue" class="track-btn" data-i18n="locate.continue">Continue</button>
+                </div>
             </div>
 
             <!-- ================= VIEW 2: SAVER ================= -->
@@ -258,7 +324,9 @@
                         </div>
                     </div>
                 </div>
-                <button id="btn-saved-back" class="track-btn" type="button" data-i18n="locate.back">Back</button>
+                <div class="track-btn-row" id="locate-saved-actions">
+                    <button id="btn-saved-back" class="track-btn" type="button" data-i18n="locate.back">Back</button>
+                </div>
             </div>
         </section>
 
