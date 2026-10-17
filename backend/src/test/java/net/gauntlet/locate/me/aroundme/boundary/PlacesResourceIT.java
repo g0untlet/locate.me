@@ -493,10 +493,10 @@ public class PlacesResourceIT {
         JsonArray categories = Json.createArrayBuilder().add("catering").add("catering.fast_food").build();
         when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
                 .thenReturn(featureCollection(
-                        anonymousFeature("muc-1", 48.1356, 11.6058, categories, null, "Munich", null, null),
-                        anonymousFeature("muc-2", 48.1359, 11.6061, categories, null, "Munich", null, null),
-                        anonymousFeature("ber-1", 48.1400, 11.6100, categories, null, "Berlin", null, null),
-                        anonymousFeature("nocity-1", 48.1380, 11.6080, categories, null, null, null, null)));
+                        namedFeature("Munich One", "muc-1", 48.1356, 11.6058, categories, "Munich"),
+                        namedFeature("Munich Two", "muc-2", 48.1359, 11.6061, categories, "Munich"),
+                        namedFeature("Berlin One", "ber-1", 48.1400, 11.6100, categories, "Berlin"),
+                        namedFeature("Cityless", "nocity-1", 48.1380, 11.6080, categories, null)));
 
         given()
                 .when()
@@ -568,60 +568,68 @@ public class PlacesResourceIT {
     }
 
     @Test
-    void anonymousPlaceGetsSyntheticNameFromCategoryAndStreet() {
+    void discardsPlacesWithoutName() {
         when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
-                .thenReturn(featureCollection(anonymousFeature("anon-1", 48.1356, 11.6058,
-                        Json.createArrayBuilder().add("leisure").add("leisure.park").build(),
-                        "Lucile-Grahn-Straße", null, null, null)));
+                .thenReturn(featureCollection(
+                        unnamedFeature("anon-1", 48.1356, 11.6058,
+                                Json.createArrayBuilder().add("leisure").add("leisure.park").build(),
+                                "Lucile-Grahn-Straße", null, null, null),
+                        unnamedFeature("anon-2", 48.1357, 11.6059,
+                                null, null, null, "Line One Address", "Full Formatted Address"),
+                        unnamedFeature("anon-3", 48.1358, 11.6060,
+                                null, null, null, null, "Full Formatted Address"),
+                        unnamedFeature("anon-4", 48.1359, 11.6061,
+                                null, null, null, null, null)));
 
+        // A POI without a Geoapify name is not useful in the places list:
+        // it is neither returned nor persisted, regardless of its address data.
         given()
                 .when()
                 .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
                 .then()
                 .statusCode(200)
-                .body("[0].name", is("Park (Lucile-Grahn-Straße)"));
+                .body("size()", is(0));
+
+        assertThat(countPlaces()).isZero();
     }
 
     @Test
-    void anonymousPlaceFallsBackToAddressLine1() {
+    void keepsNamedPlacesWhenSomeFeaturesAreUnnamed() {
         when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
-                .thenReturn(featureCollection(anonymousFeature("anon-2", 48.1356, 11.6058,
-                        null, null, null, "Line One Address", "Full Formatted Address")));
+                .thenReturn(featureCollection(
+                        feature("Isar Kebaphaus", PLACE_ID, 48.1355319, 11.605952,
+                                Json.createArrayBuilder().add("catering").add("catering.fast_food").build(),
+                                Json.createObjectBuilder().build()),
+                        unnamedFeature("anon-1", 48.1356, 11.6058,
+                                Json.createArrayBuilder().add("leisure").add("leisure.park").build(),
+                                "Lucile-Grahn-Straße", null, null, null)));
 
         given()
                 .when()
                 .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
                 .then()
                 .statusCode(200)
-                .body("[0].name", is("Line One Address"));
+                .body("size()", is(1))
+                .body("[0].name", is("Isar Kebaphaus"));
+
+        assertThat(countPlaces()).isEqualTo(1);
     }
 
     @Test
-    void anonymousPlaceFallsBackToFormatted() {
+    void treatsBlankNameAsMissing() {
         when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
-                .thenReturn(featureCollection(anonymousFeature("anon-3", 48.1356, 11.6058,
-                        null, null, null, null, "Full Formatted Address")));
+                .thenReturn(featureCollection(feature("   ", "blank-name-id", 48.1356, 11.6058,
+                        Json.createArrayBuilder().add("catering").add("catering.restaurant").build(),
+                        Json.createObjectBuilder().build())));
 
         given()
                 .when()
                 .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
                 .then()
                 .statusCode(200)
-                .body("[0].name", is("Full Formatted Address"));
-    }
+                .body("size()", is(0));
 
-    @Test
-    void anonymousPlaceWithoutAnyContextUsesUnknownPlace() {
-        when(geoapifyPlacesClient.places(anyString(), anyString(), anyString(), anyInt(), anyString(), anyString(), anyString()))
-                .thenReturn(featureCollection(anonymousFeature("anon-4", 48.1356, 11.6058,
-                        null, null, null, null, null)));
-
-        given()
-                .when()
-                .get("/api/places?userId=validUser&lat=48.1356&lon=11.6058")
-                .then()
-                .statusCode(200)
-                .body("[0].name", is("Unknown Place"));
+        assertThat(countPlaces()).isZero();
     }
 
     private JsonObject feature(String name, String placeId, double lat, double lon, JsonArray categories, JsonObject contact) {
@@ -645,7 +653,25 @@ public class PlacesResourceIT {
                 .build();
     }
 
-    private JsonObject anonymousFeature(String placeId, double lat, double lon, JsonArray categories,
+    private JsonObject namedFeature(String name, String placeId, double lat, double lon,
+                                    JsonArray categories, String city) {
+        JsonObjectBuilder props = Json.createObjectBuilder()
+                .add("name", name)
+                .add("categories", categories)
+                .add("place_id", placeId);
+        if (city != null) {
+            props.add("city", city);
+        }
+        return Json.createObjectBuilder()
+                .add("type", "Feature")
+                .add("properties", props)
+                .add("geometry", Json.createObjectBuilder()
+                        .add("type", "Point")
+                        .add("coordinates", Json.createArrayBuilder().add(lon).add(lat)))
+                .build();
+    }
+
+    private JsonObject unnamedFeature(String placeId, double lat, double lon, JsonArray categories,
                                         String street, String city, String addressLine1, String formatted) {
         JsonObjectBuilder props = Json.createObjectBuilder();
         if (categories != null) {

@@ -161,6 +161,7 @@ public class Places {
         List<String> groups = categoryGroups();
 
         int successfulCalls = 0;
+        int skippedUnnamed = 0;
         Set<String> seenPlaceIds = new HashSet<>();
         List<Place> places = new ArrayList<>();
 
@@ -193,12 +194,21 @@ public class Places {
 
             for (int i = 0; i < features.size(); i++) {
                 Place place = toPlace(features.getJsonObject(i), lat, lon);
+                if (place == null) {
+                    skippedUnnamed++;
+                    continue;
+                }
                 // The same POI can match more than one category group; merge it
                 // only once so the combined result and the cache stay deduplicated.
                 if (!isExcluded(place) && seenPlaceIds.add(place.placeId())) {
                     places.add(this.em.merge(place));
                 }
             }
+        }
+
+        if (skippedUnnamed > 0) {
+            LOG.log(System.Logger.Level.DEBUG,
+                    "Skipped {0} unnamed Geoapify feature(s) near ({1}, {2})", skippedUnnamed, lat, lon);
         }
 
         // Keep the existing failure semantics when no group could be fetched at
@@ -226,8 +236,17 @@ public class Places {
     private record NearPlace(Place place, double distance) {
     }
 
+    /**
+     * Maps a Geoapify feature to a Place. Returns {@code null} for features
+     * without a usable name: an unnamed POI is not useful in the "Places around
+     * me" list, and skipping it avoids storing synthetic category labels.
+     */
     private Place toPlace(JsonObject feature, double fetchLat, double fetchLon) {
         JsonObject props = feature.getJsonObject("properties");
+        String name = string(props, "name");
+        if (name == null || name.isBlank()) {
+            return null;
+        }
         JsonArray coordinates = feature.getJsonObject("geometry").getJsonArray("coordinates");
         double lon = coordinates.getJsonNumber(0).doubleValue();
         double lat = coordinates.getJsonNumber(1).doubleValue();
@@ -248,7 +267,7 @@ public class Places {
         place.fetchLon(fetchLon);
         String primary = primaryCategory(categories);
         String secondary = secondaryCategory(primary, categories);
-        place.name(PlaceNames.resolve(props, primary, secondary));
+        place.name(name.trim());
         place.primaryCategory(primary);
         place.secondaryCategory(secondary);
         place.formattedAddress(string(props, "formatted"));
