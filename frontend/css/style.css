@@ -2720,7 +2720,7 @@ a.attribution-link:hover {
 .release-notes-tagline {
     margin-bottom: 18px;
     color: var(--text-strong);
-    font-size: 1.16rem;
+    font-size: 1.1rem;
     font-weight: 700;
     line-height: 1.35;
 }
@@ -2765,7 +2765,7 @@ a.attribution-link:hover {
 
 .release-notes-item-body p {
     color: var(--text-muted);
-    font-size: 0.82rem;
+    font-size: 0.85rem;
     line-height: 1.45;
 }
 

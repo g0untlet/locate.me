@@ -16,7 +16,7 @@ importScripts('https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox
 const SHELL = ['/', '/index.html'];
 const ASSETS = [
     '/app.js?v=0.4.4_rc1_2',
-    '/css/style.css?v=0.4.4_rc1_2',
+    '/css/style.css?v=0.4.4_rc1_3',
     '/js/config.js?v=0.3.1_34', '/js/utils.js', '/js/api.js', '/js/state.js',
     '/js/i18n.js', '/js/release-notes.js', '/js/ui/toast.js', '/js/ui/badge.js',
     '/js/ui/status.js', '/js/ui/map.js', '/js/ui/install.js',
