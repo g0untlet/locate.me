@@ -17,6 +17,7 @@ import org.eclipse.microprofile.rest.client.inject.RestClient;
 import net.gauntlet.locate.me.Control;
 import net.gauntlet.locate.me.locator.entity.Position;
 import net.gauntlet.locate.me.locator.entity.WeatherCode;
+import net.gauntlet.locate.me.security.ExternalApiRateLimits;
 
 @Control
 public class Positions {
@@ -74,6 +75,9 @@ public class Positions {
     GeocodingClient geocodingClient;
 
     @Inject
+    ExternalApiRateLimits externalApiRateLimits;
+
+    @Inject
     @ConfigProperty(name = "nominatim.format")
     String geocodingFormat;
 
@@ -108,6 +112,9 @@ public class Positions {
     public Current enrich(Position position) {
         LOG.log(System.Logger.Level.DEBUG, "Enriching position for user {0}", position.userId());
         if (position.displayName() == null || position.displayName().isBlank()) {
+            // Acquire outside the try/catch so an external-API rate limit
+            // surfaces as 429 instead of being swallowed as a geocoding failure.
+            this.externalApiRateLimits.acquireNominatim();
             try {
                 JsonObject response = this.geocodingClient.reverse(position.latitude(), position.longitude(),
                         this.geocodingFormat, this.geocodingZoom, this.geocodingLayer);
@@ -138,6 +145,8 @@ public class Positions {
 
         List<ForecastTimeslice> forecast = List.of();
         Boolean isDay = null;
+        // Same as above: rate-limit rejection must not be treated as a weather failure.
+        this.externalApiRateLimits.acquireWeather();
         try {
             JsonObject response = this.weatherClient.forecast(position.latitude(), position.longitude(),
                     this.currentFields, this.hourlyFields, this.forecastHours + 1, this.timezone);

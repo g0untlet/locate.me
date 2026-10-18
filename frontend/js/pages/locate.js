@@ -383,9 +383,10 @@ function saverWeatherIds() {
 
 /* ==========================================================================
    Internal: Places around me (chooser list)
-   Renders up to MAX_PLACES rows, matching the backend's aroundme.max-places.
+   Renders every place returned by the backend. The backend already applies
+   the per-category-group result budget and returns the combined list in
+   distance order, so the client must not truncate it again.
    ========================================================================== */
-const MAX_PLACES = 20;
 
 /* Sentinel für einen fehlgeschlagenen Places-Fetch (Timeout/503/Netz). Eine
    echte Geoapify-Antwort ist immer ein Array – null heißt "nicht ladbar". */
@@ -411,30 +412,30 @@ function renderPlacesList(places) {
 
     card.removeAttribute('aria-busy');
     list.innerHTML = '';
-    const top = Array.isArray(places) ? places.slice(0, MAX_PLACES) : [];
+    const visiblePlaces = Array.isArray(places) ? places : [];
 
-    if (top.length === 0) {
+    if (visiblePlaces.length === 0) {
         card.classList.add('hidden');
         return;
     }
 
     card.classList.remove('hidden');
     if (count) {
-        count.textContent = t(top.length === 1 ? 'places.countOne' : 'places.countOther', { count: top.length });
+        count.textContent = t(visiblePlaces.length === 1 ? 'places.countOne' : 'places.countOther', { count: visiblePlaces.length });
     }
 
     // Compass-Dial nur sichtbar, wenn Sensor-Events vorhanden sind
     updateCompassVisibility();
     scheduleCompassWatchdog();
 
-    top.forEach(place => {
+    visiblePlaces.forEach(place => {
         const row = document.createElement('button');
         row.type = 'button';
         row.className = 'place-row';
         row.setAttribute('aria-pressed', 'false');
         const direction = directionShort(place.direction);
         row.innerHTML = `
-            ${getPlaceIconSvg(place.primaryCategory)}
+            ${getPlaceIconSvg(place.primaryCategory, place.secondaryCategory)}
             <span class="place-row-name">${escapeHtml(place.name || place.formattedAddress || t('places.unknownPlace'))}</span>
             <span class="place-row-distance">${formatDistanceMeters(place.distance)}${direction ? ` ${direction}` : ''}</span>
         `;
@@ -496,7 +497,7 @@ function selectPlace(place, row) {
     const container = document.getElementById('chooser-address-container');
     if (container) {
         const label = formatPlaceLabel(place);
-        container.innerHTML = `${getPlaceIconSvg(place.primaryCategory)}<span>${escapeHtml(label)}</span>`;
+        container.innerHTML = `${getPlaceIconSvg(place.primaryCategory, place.secondaryCategory)}<span>${escapeHtml(label)}</span>`;
         container.title = place.formattedAddress || '';
     }
 }
@@ -1124,7 +1125,7 @@ function handleContinue() {
     if (selectedPlace) {
         const place = selectedPlace;
         const label = formatPlaceLabel(place);
-        locationContainer.innerHTML = `${getPlaceIconSvg(place.primaryCategory)}<span>${escapeHtml(label)}</span>`;
+        locationContainer.innerHTML = `${getPlaceIconSvg(place.primaryCategory, place.secondaryCategory)}<span>${escapeHtml(label)}</span>`;
         locationContainer.title = place.formattedAddress || '';
     } else {
         fillAddress(locationContainer, cached);

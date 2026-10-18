@@ -309,8 +309,8 @@ export function getLocationIconSvg(category, type) {
     // AroundMe place categories (adopted as osmCategory on save) use the same
     // icons as the places list, so history and the saved view keep showing the
     // icon the user saw when selecting the place.
-    if (['catering', 'commercial', 'healthcare', 'leisure', 'entertainment', 'service'].includes(category)) {
-        return getPlaceIconSvg(category);
+    if (['catering', 'commercial', 'healthcare', 'leisure', 'entertainment', 'service', 'tourism', 'accommodation', 'sport'].includes(category)) {
+        return getPlaceIconSvg(category, type);
     }
 
     switch (category) {
@@ -334,7 +334,6 @@ export function getLocationIconSvg(category, type) {
                 return `<svg ${svgAttrs}><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>`;
             }
             return `<svg ${svgAttrs}><path d="M3 21h18M3 10h18M3 7l9-4 9 4M7 10v7M12 10v7M17 10v7"></path></svg>`;
-        case 'tourism':
         case 'historic':
             return `<svg ${svgAttrs}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
         case 'waterway':
@@ -347,9 +346,12 @@ export function getLocationIconSvg(category, type) {
 /* ==========================================================================
    Global Helper: Inline SVG Place Icon Renderer (AroundMe places)
    Geoapify categories: catering / commercial / healthcare / leisure /
-   entertainment / service.
+   entertainment / service / tourism / accommodation / sport.
+   Tourism attractions get a dedicated camera glyph; other tourism subcategories
+   use the generic star. Accommodation uses a bed; sport uses a trophy, with a
+   dumbbell for sport.fitness.
    ========================================================================== */
-export function getPlaceIconSvg(primaryCategory) {
+export function getPlaceIconSvg(primaryCategory, secondaryCategory) {
     const svgAttrs = `viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"`;
     const defaultIcon = `<svg ${svgAttrs}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`;
 
@@ -366,6 +368,22 @@ export function getPlaceIconSvg(primaryCategory) {
             return `<svg ${svgAttrs}><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>`;
         case 'service':
             return `<svg ${svgAttrs}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>`;
+        case 'accommodation':
+            return `<svg ${svgAttrs}><path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6"></path><path d="M3 15h18"></path><path d="M7 10V7a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3"></path><path d="M6 18v2"></path><path d="M18 18v2"></path></svg>`;
+        case 'sport':
+            // `sport.fitness` (and fitness stations) use a dumbbell; the
+            // broader top-level `sport` category uses a trophy.
+            if (secondaryCategory === 'fitness' || secondaryCategory === 'fitness_station') {
+                return `<svg ${svgAttrs}><path d="M6 7v10"></path><path d="M18 7v10"></path><path d="M3 9v6"></path><path d="M21 9v6"></path><path d="M6 12h12"></path></svg>`;
+            }
+            return `<svg ${svgAttrs}><path d="M8 21h8"></path><path d="M12 17v4"></path><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"></path><path d="M7 6H4a3 3 0 0 0 3 3"></path><path d="M17 6h3a3 3 0 0 1-3 3"></path></svg>`;
+        case 'tourism':
+            // Tourism attractions (e.g. sights/landmarks) use a camera glyph;
+            // all other tourism subcategories keep the generic tourism star.
+            if (secondaryCategory === 'attraction') {
+                return `<svg ${svgAttrs}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>`;
+            }
+            return `<svg ${svgAttrs}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
         default:
             return defaultIcon;
     }

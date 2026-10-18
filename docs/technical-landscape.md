@@ -133,7 +133,7 @@ net.gauntlet.locate.me
 │   └── entity/     Position, PositionTag, WeatherCode, WeatherCodeConverter
 ├── aroundme/                   places-around-me feature (BCE)
 │   ├── boundary/   PlacesResource
-│   ├── control/    Places, GeoapifyPlacesClient, Geoboxing, ClientLanguage, PlaceNames
+│   ├── control/    Places, GeoapifyPlacesClient, Geoboxing, ClientLanguage
 │   └── entity/     Place
 ├── system/                     system info feature (BCE)
 │   ├── boundary/   SystemBoundary
@@ -147,7 +147,7 @@ net.gauntlet.locate.me
 | Module | Purpose |
 |---------|---------|
 | `locator` | Position lifecycle (create/read/delete), geocoding + weather enrichment, distance/travel-time (walking, biking, driving) |
-| `aroundme` | Places around a coordinate: Geoapify fetch + H2 cache (cache-first geoboxing lookup, deduplicated by place_id), distance-sorted responses |
+| `aroundme` | Places around a coordinate: one Geoapify fetch per category group + H2 cache (cache-first geoboxing lookup, deduplicated by place_id), combined distance-sorted responses |
 | `system` | Application info endpoint and startup timestamp |
 | `security` | Cross-cutting infrastructure: Bucket4j rate limiting (`UserIdIdentityResolver` segments buckets per `userId` query param, `TooManyRequestsMapper` custom 429 JSON body + `Retry-After` + INFO log) and `AdminKeyVerifier` (constant-time check of the `adminKey` query param against `admin.key` for the admin stats endpoints) |
 
@@ -174,11 +174,10 @@ net.gauntlet.locate.me
 | `SystemInfo` | Application metadata (artifactId, version, startupTime) |
 | `GeocodingClient` | MicroProfile REST client → Nominatim reverse geocoding (`format`, `zoom`, `layer` configurable) |
 | `WeatherClient` | MicroProfile REST client → Open-Meteo forecast (current + `hourly`, `forecast_hours`, `timezone`) |
-| `Places` | Cache-first lookup: geoboxing query (cache hit) or Geoapify fetch + upsert (miss); cache-entry count; sole `EntityManager` access for places |
+| `Places` | Cache-first lookup: geoboxing query (cache hit) or one Geoapify fetch per `\|`-separated category group + combined upsert (miss); discards features without a usable Geoapify name; deduplicates by place ID and sorts by distance; cache-entry count; sole `EntityManager` access for places |
 | `GeoapifyPlacesClient` | MicroProfile REST client → Geoapify Places API (`/v2/places`) |
 | `Geoboxing` | Bounding-box spans (`deltaLat`/`deltaLon`) + haversine distance (static util) |
 | `ClientLanguage` | `Accept-Language` → lowercased 2-letter ISO-639-1 code (static util) |
-| `PlaceNames` | `name` fallback cascade for anonymous POIs (static util) |
 
 ## Boundary Components
 
@@ -187,7 +186,7 @@ net.gauntlet.locate.me
 | `PositionsResource` | REST `/positions`: create, delete, list, current, stats (admin); validation + userId authorization; adminKey check via `AdminKeyVerifier` |
 | `SystemBoundary` | REST `/system` → `/info` |
 | `DatabaseHealthCheck` | SmallRye readiness check (`SELECT 1`) |
-| `PlacesResource` | REST `/places`: GET list (cache-first) and stats (admin); validation + userId authorization; adminKey check via `AdminKeyVerifier`; adds response-only `distance` |
+| `PlacesResource` | REST `/places`: GET list (cache-first or grouped Geoapify fetch) and stats (admin); validation + userId authorization; adminKey check via `AdminKeyVerifier`; adds response-only `distance` |
 
 ### Rules
 
@@ -224,10 +223,10 @@ Common errors: 400 invalid/missing `userId` or body; 401 userId not in allow-lis
 
 | Method | Endpoint | Notes |
 |----------|----------|----------|
-| GET | `/api/places?userId=&lat=&lon=` | 200 places cached around the coordinate, served nearest-first; the `Accept-Language` header (optional) selects the Geoapify `lang`; cache-first lookup via a geoboxing box (`aroundme.cache-radius`), Geoapify fetch + upsert on cache miss; each place includes a response-only `distance` (meters) and `direction` (8-point compass `N/NE/E/SE/S/SW/W/NW`, empty when distance < 1 m) |
+| GET | `/api/places?userId=&lat=&lon=` | 200 places cached around the coordinate, served nearest-first; the `Accept-Language` header (optional) selects the Geoapify `lang`; cache-first lookup via a geoboxing box (`aroundme.cache-radius`), one Geoapify request per category group + combined upsert on cache miss; each place includes a response-only `distance` (meters) and `direction` (8-point compass `N/NE/E/SE/S/SW/W/NW`, empty when distance < 1 m) |
 | GET | `/api/places/stats?adminKey=` | 200 `{"count", "perCity":[{"city", "places"}, ...]}` — places-cache entry count plus per-city breakdown (`perCity` ordered by `city`; places without a city count toward `count` but are omitted from `perCity`); requires `adminKey` == `admin.key` (env `ADMIN_KEY`), otherwise 401; **not** rate-limited |
 
-Common errors: 400 invalid/missing `userId` or `lat`/`lon`; 401 userId not in allow-list (or invalid/missing `adminKey` on `/stats`); 429 per-user rate limit exceeded (`pwa-standard`: reads) — `Retry-After` header + JSON body `{"error":"TOO_MANY_REQUESTS","status":429}`; 503 Geoapify unavailable.
+Common errors: 400 invalid/missing `userId` or `lat`/`lon`; 401 userId not in allow-list (or invalid/missing `adminKey` on `/stats`); 429 per-user rate limit exceeded (`pwa-standard`: reads) — `Retry-After` header + JSON body `{"error":"TOO_MANY_REQUESTS","status":429}`; 503 Geoapify unavailable (all category-group requests failed).
 
 ## Health & Tooling
 
@@ -275,7 +274,7 @@ Geoapify `place_id`; re-fetching the same POI updates the row.
 | `geohash` String | `geohash` | VARCHAR(9) | not null; 9-char geohash via `ch.hsr:geohash` |
 | `latitude`, `longitude` double | `latitude`, `longitude` | DOUBLE | not null |
 | `fetchLat`, `fetchLon` double | `fetch_lat`, `fetch_lon` | DOUBLE | not null; origin (user's request lat/lon) of the fetch that produced this cache row — set in `Places.toPlace`, excluded from `toJSON()`; supports coverage-aware cache reads later |
-| `name` String | `name` | VARCHAR(255) | not null; `PlaceNames` fallback cascade — never blank |
+| `name` String | `name` | VARCHAR(255) | not null; Geoapify display name — features without a usable name are discarded |
 | `primaryCategory` String | `primary_category` | VARCHAR(255) | top-level segment of the first category |
 | `secondaryCategory` String | `secondary_category` | VARCHAR(255) | first sub-category of the primary |
 | `formattedAddress` String | `formatted_address` | VARCHAR(512) | |
@@ -290,10 +289,10 @@ Geoapify `place_id`; re-fetching the same POI updates the row.
 | `wheelchair` String | `wheelchair` | VARCHAR(64) | `yes` / `no` / null |
 | `rawJson` String | `raw_json` | CLOB | full raw Geoapify feature payload (excluded from `toJSON()`) |
 
-**Name resolution:** `name` is guaranteed non-blank. For anonymous POIs
-`PlaceNames` builds a synthetic name from the category (secondary preferred, else
-primary) plus the street (or city) context, falling back to `address_line1`,
-`formatted`, then `"Unknown Place"`.
+**Name handling:** only Geoapify features with a non-blank `properties.name` are
+imported. Unnamed POIs are skipped entirely (`Places.toPlace` returns `null` and
+the fetch logs the skipped count at DEBUG), so `name` stays non-blank and no
+synthetic fallback names are stored.
 
 ---
 
@@ -361,7 +360,8 @@ built by string concatenation. The history query `findByUserId`
 The places cache is queried with a geoboxing range query
 (`latitude`/`longitude` BETWEEN, served by `idx_places_coords`); the candidates
 are then verified against the exact haversine distance (≤ `aroundme.cache-radius`),
-sorted ascending and capped at `geoapify.limit` in memory (see `Places.findCached`).
+sorted ascending and capped at `aroundme.max-places × number of category groups`
+in memory (see `Places.findCached`).
 
 ---
 
@@ -380,7 +380,7 @@ sorted ascending and capped at `geoapify.limit` in memory (see `Places.findCache
 |------------|------------|------------|
 | Open-Meteo | REST/JSON | Current `temperature_2m`, `weather_code`, `uv_index`, `is_day`, `elevation`; hourly forecast `temperature_2m`, `weather_code`, `uv_index`, `precipitation_probability`, `is_day` (`forecast_hours`, `timezone=auto`) per position preview |
 | Nominatim (OSM) | REST/JSON | Reverse geocoding → display name + address parts |
-| Geoapify | REST/JSON | POI places around a coordinate (categories, radius, limit, `lang`) |
+| Geoapify | REST/JSON | POI places around a coordinate (category groups, radius, limit, `lang`); one request per `\|`-separated category group |
 | OSM tile server | HTTPS | Map tiles (browser-direct, Leaflet) |
 | Google Maps | HTTPS | Share link from map popups (native share) |
 
@@ -419,6 +419,18 @@ the backend from request flooding (e.g. a misbehaving client or a scripted attac
   (`Rate limit exceeded for user <id>: <METHOD> <path> – retry after <n>s`).
 - **State** — in-memory token buckets per identity (single backend instance; reset on
   restart; bounded by `quarkus.rate-limiter.max-size`, default 1000).
+- **External API protection** — a second, independent layer protects outgoing calls
+  whose providers enforce quotas per API key or source IP. `security.ExternalApiRateLimits`
+  owns three **global** Bucket4j buckets (not per user): Geoapify 2 calls/s (below its
+  3 calls/s API-key limit), Nominatim 1 call/s and Open-Meteo 5 calls/s. A call waits up
+  to `external-api.max-wait-seconds` (default 5 s) for a token; when the wait is
+  exhausted the request returns the same 429 response. The limiter is invoked
+  immediately before each outgoing call — before every Geoapify category-group request
+  in `Places.fetchAndStore`, and before the Nominatim/Open-Meteo calls in
+  `Positions.enrich` — outside the existing catch blocks so a rejection is not mistaken
+  for a failed enrichment. The 429 body/`Retry-After` is shared with
+  `TooManyRequestsMapper` via `security.TooManyRequests`. These buckets protect
+  per-second request rates; daily/monthly provider quotas are not tracked.
 - **Exempt** — `GET /api/system/info` is not annotated, so the frontend status probe is
   never throttled and the online/offline indicator stays reliable; the admin-only stats
   endpoints (`GET /api/positions/stats`, `GET /api/places/stats`) are exempt as they
@@ -426,7 +438,10 @@ the backend from request flooding (e.g. a misbehaving client or a scripted attac
 - **Tests** — the IT suite keeps `quarkus.rate-limiter.enabled=false`
   (`src/test/resources/application.properties`); `RateLimitIT` re-enables it with tiny
   limits via a `@TestProfile` and asserts the 429 status, JSON body and `Retry-After`
-  for both levels.
+  for both levels. The general IT suite uses very high `external-api.*` limits;
+  `ExternalApiRateLimitIT` overrides them with one-token buckets and asserts the 429 for
+  the Geoapify and Nominatim call paths, while `ExternalApiRateLimitsTest` covers all
+  three global buckets directly.
 - **Limitation / follow-up** — per-user quotas do not stop distributed floods or
   connection-level DoS; per-IP rate limiting at the Caddy edge is the intended next
   step (see Planned Technical Improvements).
@@ -482,13 +497,17 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 | `weather.forecast-hours` | Number of future hourly forecast slices returned (default 4; the current hour is skipped) |
 | `weather.timezone` | Open-Meteo timestamp timezone (`auto` = the coordinates' local timezone, so times match the local wall clock) |
 | `weather_uri/mp-rest/read-timeout`, `weather_uri/mp-rest/connect-timeout` | Open-Meteo client timeouts (ms), mirroring Geoapify |
-| `geoapify_uri/mp-rest/url`, `geoapify.categories`, `geoapify.limit`, `geoapify.radius`, `geoapify.format`, `geoapify.api-key` | Geoapify Places client: base URL, category filter (`catering,commercial,healthcare,leisure,entertainment,service`), result limit, fetch radius (m, 700), format, API key (`${GEOAPIFY_API_KEY:}`) |
+| `geoapify_uri/mp-rest/url`, `geoapify.categories`, `geoapify.limit`, `geoapify.radius`, `geoapify.format`, `geoapify.api-key` | Geoapify Places client: base URL, category groups (`catering,commercial,healthcare,leisure,entertainment\|tourism.attraction`; `\|` separates groups, each fetched with its own request), result limit per group, fetch radius (m, 700), format, API key (`${GEOAPIFY_API_KEY:}`) |
 | `aroundme.cache-radius` | Cache bounding-box radius (m, 700) for the cache-first lookup |
 | `aroundme.exclude-categories` | Comma-separated secondary POI categories to exclude (e.g. `playground`); applied on cache hits and fresh fetches |
-| `aroundme.max-places` | Maximum number of places returned for "Places around me" (default 20); `geoapify.limit` still controls the Geoapify fetch / cache size |
+| `aroundme.max-places` | Maximum number of places returned per category group (default 20); total response cap = value × number of groups. `geoapify.limit` still controls the Geoapify fetch / cache size per group |
 | `aroundme.read-from-cache` | `false` (default) — every request fetches fresh from Geoapify, the H2 cache is still written but never read; `true` restores the cache-first geoboxing lookup (`Places.findNear`) |
 | `quarkus.rate-limiter.buckets.pwa-standard.*` | Read bucket: `limits[0].permitted-uses=10`, `limits[0].period=30s`, `identity-resolver` (`security.UserIdIdentityResolver`), `shared=true` |
 | `quarkus.rate-limiter.buckets.pwa-critical.*` | Write/delete bucket: `limits[0].permitted-uses=5`, `limits[0].period=30s`, `identity-resolver` (same), `shared=true` |
+| `external-api.geoapify.requests`, `external-api.geoapify.period-seconds` | Global Geoapify bucket (default 2 calls/s; Geoapify allows 3/s per API key) |
+| `external-api.nominatim.requests`, `external-api.nominatim.period-seconds` | Global Nominatim bucket (default 1 call/s) |
+| `external-api.weather.requests`, `external-api.weather.period-seconds` | Global Open-Meteo bucket (default 5 calls/s) |
+| `external-api.max-wait-seconds` | Maximum blocking wait for a global external-API token (default 5 s); when exhausted the request returns 429 |
 | `%dev.quarkus.http.port=8090` | DEV port |
 | `quarkus.log.*` | Console DEBUG for project package |
 
@@ -501,8 +520,8 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 | Test Type | Scope |
 |------------|------------|
 | Architecture (ArchUnit) | `BceArchitectureTest` — enforces the BCE rules during unit tests (Surefire): component/layer package structure, boundary/control/entity membership, dependency direction (no control→boundary, no entity→boundary/control), `EntityManager` only in controls, `@Transactional` only in boundary, JAX-RS boundary methods return `Response`, no constructor injection, REST clients end with `Client`, no prohibited class suffixes. Documented exceptions: `DatabaseHealthCheck` (health check in boundary), `SystemInfo` (`@ApplicationScoped` control), `security` infra package, static-util/REST-client interfaces in control |
-| Integration tests (IT) | REST + persistence + enrichment on in-memory H2 (`PositionsResourceIT`, incl. `createWithTagAndComment` and `createWithInvalidTag`; `PlacesResourceIT` — cache hit/miss, distance sorting, dedup, anonymous names, language) |
-| Unit tests | `DistanceCalculatorTest`, `GeoboxingTest`, `ClientLanguageTest`, `PlaceNamesTest` |
+| Integration tests (IT) | REST + persistence + enrichment on in-memory H2 (`PositionsResourceIT`, incl. `createWithTagAndComment` and `createWithInvalidTag`; `PlacesResourceIT` — cache hit/miss, distance sorting, dedup, unnamed-place filtering, language) |
+| Unit tests | `DistanceCalculatorTest`, `GeoboxingTest`, `ClientLanguageTest` |
 | System tests (`backend-st`) | Run against a live backend on 8090 (`PositionsSystemIT` + `PositionsResourceClient`) |
 | Manual E2E | Real devices/browsers against DEV (Android Chrome/Brave, iOS Safari) |
 
@@ -562,11 +581,15 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 
 | Version | Date | Description |
 |---------|---------|---------|
+| 0.4.4 | 2026-10-18 | Frontend (place icons): `js/utils.js` `getPlaceIconSvg` gains an `accommodation` case (bed glyph, covering `accommodation.hotel` and other lodging subcategories) and a `sport` case (trophy glyph for the broad top-level category; dumbbell for `sport.fitness`/`sport.fitness_station`). Both categories are added to the `getLocationIconSvg` AroundMe delegation, forwarding `osmType` so chooser, selected address, saver, saved confirmation and history stay consistent. APP_VERSION 0.4.4, APP_BUILD 20261018; app.js cache-buster `0.4.4_3` in `index.html` and the `sw.js` `ASSETS` precache. No backend/API change. |
+| 0.4.4 | 2026-10-18 | Frontend (Places around me): removed the hard-coded `MAX_PLACES = 20` slice — `renderPlacesList` now renders every place returned by the grouped backend result (up to `aroundme.max-places` per category group; the existing `.places-list` flex/overflow CSS handles the longer, internally scrolling list). `js/utils.js` `getPlaceIconSvg(primaryCategory, secondaryCategory)` gains a `tourism` case: `tourism.attraction` renders a camera glyph, other tourism subcategories keep the generic star; `getLocationIconSvg` now delegates `tourism` to the same renderer and forwards `osmType`, so the chooser, selected address, saver, saved confirmation and history stay consistent. APP_VERSION 0.4.4, APP_BUILD 20261018; app.js cache-buster `0.4.4_2` in `index.html` and the `sw.js` `ASSETS` precache. No API change. |
 | 0.4.4 | 2026-10-16 | Frontend (History tiles): reworked `buildHistoryCard`. The tile body emits the address/comment full width; the elevation moved into `.log-card-meta` as `.log-card-elevation-chip` (solid triangle). A collapsible **details section** was added to the action tray — `.log-card-details` holding `.log-card-details-metrics` (temperature + UV pills) and `.log-card-details-gps` (`.log-card-coords` with a satellite glyph and `toFixed(4)` lat/lon plus the accuracy pill) — above `.log-card-tray-actions`. The accuracy badge background/colour moved from inline JS to CSS classes (`.log-card-accuracy-badge` uses `--chip-bg`; `.log-card-accuracy-badge--low` uses `--warning-bg`/`--warning-color`, fixing dark mode). The History filter bar gained a reset chip (`#history-filter-clear`, `clearAllFilters()`) shown only while a filter is set; new `history.clearFilters` key (en/de/es/fr). New CSS tokens `--card-border`/`--card-divider`/`--card-radius`/`--card-elevation`/`--card-elevation-hover`/`--chip-bg`; `.log-card` uses a 1px border + soft elevation (16px radius, white in light / `#2c3b4a` in dark), solid hairline dividers and a borderless `.log-card-tag`. No API change. |
 | 0.4.4 | 2026-10-16 | Frontend (Locate view): new idle/empty state — `#locate-idle` (`.locate-idle`, inert `aria-hidden` `.idle-ghost`, `.idle-actions`, static `.idle-bar` placeholders) renders a ghost of the chooser while no step is displayed; new `locate.idleHint` key (en/de/es/fr). The fetch/refresh button is re-parented per step by `placeFetchButton(where)` (idle → `#locate-idle-actions`, chooser → `#locate-chooser-actions` before Continue, saved → `#locate-saved-actions` after Back); `showView`/`hideViews` call it together with `setIdleVisible`, and the status line is toggled by `setStatusVisible` (`setTopControlsVisible`/`setFetchButtonVisible` removed). `#locate-saved` is `flex:1` and `#locate-saved-actions`/`#locate-chooser-actions` get `margin-top:auto`, pinning the action row above the bottom nav. Locate action rows widened to `max-width:100%`; container bottom gutter tightened 95→88 px mobile / 100→93 px desktop and `.track-btn-row`/idle button margin-bottom 12→8 px. No API change. |
 | 0.4.4 | 2026-10-16 | Frontend (i18n): French added as the fourth locale. New dictionary `frontend/locales/fr.json` (160 keys, identical key set/order and unchanged placeholders vs. `en.json`); `frontend/js/i18n.js` extends `SUPPORTED_LANGUAGES` to `['en','de','es','fr']` and `LOCALE_TAGS` with `fr: 'fr-FR'` (browser detection, English fallback and `Intl` date/number formatting therefore cover French automatically). `index.html` Settings `#language-select` gains `<option value="fr">Français</option>`. `sw.js` `LOCALES` precache gains `/locales/fr.json`. APP_VERSION 0.4.4, APP_BUILD 20261016; cache-busters `0.4.4_1` for app.js/style.css (mirrored in the `sw.js` `ASSETS` precache manifest). No API change; the static `website/` is untouched. |
 | 0.4.3 | 2026-10-02 | Frontend (live direction arrows): the **History** direction arrows are now heading-relative and track in real time instead of being frozen at render time — turning the phone sweeps every arrow like the Locate needle, and walking re-aims them. New `js/ui/compass.js` centralizes the device-heading source that previously lived inline in `locate.js` (`computeYawDeg`, `ANDROID_ROTATION_SIGN`, `webkitCompassHeading`, absolute-over-relative preference, sensor-permission diagnostics, and a synchronous `permissionPending` guard so one gesture never triggers two `requestPermission()` calls) and exposes it to both pages via `subscribeHeading`/`getHeading`/`hasHeading`/`requestHeadingPermission`; the emitted value is a screen-frame angle that rotates a north-pointing needle. `locate.js` shrank by ~117 lines and now only owns visibility, the shortest-path accumulator and the needle rotation — verified byte-identical in behaviour against the pre-refactor code over a 10-event alpha/tilt sequence (including the 359°→1° wrap rendering as 361°). Arrow rotation = `arrowRotation(bearing, heading)` = `bearing + heading` (new util; `heading` is the needle screen angle, so a target at bearing B renders at B + heading); `shortestPathRotation` (new util) feeds unwrapped angles to the CSS `transition: transform 0.15s ease-out` so the wrap never spins backwards. The **letters stay absolute** by design (true compass direction, also the accessible name), so only the arrow moves with the phone. Two inputs feed the arrows: heading changes `rotation` per sensor event, while a movement-gated `watchPosition` (`enableHighAccuracy:false`) changes `bearing` — it accepts a fix only if `accuracy ≤ 100 m` **and** the user actually moved `≥ 5 m` (`distanceMeters`), then recomputes all bearings **locally from the already-rendered cards with no backend request**, re-deriving the localized letters/`aria-label` so they stay consistent with the arrow. The badge is rendered hidden while an entry is within `DIRECTION_MIN_DISTANCE_M = 50` (computed from the same live fix, because the 8-point letter is meaningless at that range); the range check is re-evaluated on every accepted fix so the badge reappears once the user walks away, and hidden arrows are skipped by the rotation pass. Wiring is self-contained in `history.js` rather than relying on `app.js`: the heading subscription is created at module load, page visibility is read from `#page-history`'s hidden state, and a nav-click listener starts/stops the watcher (idempotent with the `onHistoryPageShown`/`onHistoryPageHidden` hooks `app.js` still calls); the watcher also stops on `visibilitychange`, and while the page is hidden the rotation pass does no work; writes are rAF-coalesced with a 1° deadband. Arrow registration is O(1) per card (no quadratic render on long histories). iOS: `requestPermission()` is called synchronously in the History tab click (both from `app.js` and `history.js`'s own listener); granted/denied is remembered, only a dismissed prompt is re-asked, and denial degrades to static absolute arrows. CSS: `will-change: transform` only under `#history-list.is-live-directions`, so an idle list is never promoted. `sw.js` `ASSETS` precache gained `/js/ui/compass.js`. `checkSensorPermissions` keeps its guard against a missing `navigator.permissions` (same check as before, just relocated into the shared module). No API change. APP_VERSION 0.4.3, APP_BUILD 20261002; cache-busters `0.4.3_2`. |
 | 0.4.3 | 2026-10-02 | Frontend (compass): `js/utils.js` gains four compass helpers — `bearingDegrees(lat1, lon1, lat2, lon2)` and `compassPoint(bearing)`, a client-side port of the backend `Geoboxing.bearingDegrees`/`compassPoint` (verified to produce identical bearings and identical 8-point buckets against the Java implementation over 2000 random coordinate pairs, including the `Math.round(bearing/45) % 8` bucket edges), plus `directionShort(abbr)`/`directionName(abbr)`, which map the English abbreviation returned by `GET /api/places` to the `direction.*` / `direction.<pt>Name` locale keys. No API change: `direction` stays an English abbreviation, the client localizes it. Locate (`renderPlacesList`) now renders `directionShort(place.direction)`. History (`fetchAndRenderHistory`) keeps the GPS fix it already resolves for the `distance`/travel-time request and passes it as `origin` into `buildHistoryCard`, which derives a **direction badge** next to the accuracy badge: an inline `rotate(<bearing>deg)` arrow SVG (`transform-box: fill-box; transform-origin: center`, so the rotation is around the arrow's own middle instead of the SVG viewBox origin), the localized short letters and a `history.directionTitle` tooltip/`aria-label` with the full localized name. Omitted entirely when no origin exists (no GPS/permission — the same condition under which the backend omits `distance`); within 50 m of the user it is rendered but hidden (re-evaluated live from the movement fix; the backend's separate `< 1 m` rule for "Places around me" is untouched). Rendered from cached data offline. New CSS `.log-card-meta` (right-aligned badge group, `flex-wrap` on `.log-card-header` prevents clipping on narrow screens), `.log-card-direction` (uses `--surface-subtle`, so it is correct in dark mode unlike the pre-existing hardcoded badge colors) and `.log-direction-arrow`. New keys `direction.*` (16) and `history.directionTitle` in en/de/es. APP_VERSION 0.4.3, APP_BUILD 20261002; cache-busters reset to `_1` for app.js and style.css (mirrored in the `sw.js` `ASSETS` precache manifest). |
+| 0.4.2 | 2026-10-18 | Backend (rate limiting): new `security.ExternalApiRateLimits` with three global Bucket4j buckets protecting outgoing calls — Geoapify 2/s, Nominatim 1/s, Open-Meteo 5/s (`external-api.*`, max wait 5 s). The buckets are global because the providers limit per API key/source IP. `Places.fetchAndStore` acquires a Geoapify token before each category-group request; `Positions.enrich` acquires Nominatim and Open-Meteo tokens immediately before their calls, outside the existing catch blocks so a limit rejection propagates as 429. The 429 body/`Retry-After` is shared with `TooManyRequestsMapper` via the new `security.TooManyRequests` helper. Existing per-user `pwa-standard`/`pwa-critical` buckets remain unchanged. Tests: `ExternalApiRateLimitsTest` (all three buckets) and `ExternalApiRateLimitIT` (Geoapify + Nominatim wiring); the general IT suite uses very high external limits. No frontend change; backend version unchanged at 0.4.2. |
+| 0.4.2 | 2026-10-18 | Backend (AroundMe): Geoapify features without a non-blank `properties.name` are discarded by `Places.toPlace` (returns `null`) and skipped in `fetchAndStore`, with a DEBUG summary of the skipped count. This removes synthetic names entirely: `PlaceNames` and `PlaceNamesTest` are deleted, and the fallback ITs are replaced by tests for unnamed/blank-name filtering. The existing H2 cache is intentionally not purged; legacy synthetic-name rows remain valid for the frontend if cache reads are enabled. `SystemBoundary` now logs `getInfo()` at DEBUG instead of INFO. |
 | 0.4.2 | 2026-09-21 | Frontend (Locate saver): removed the top "Refresh" button and the "Preview from …" status line from the pre-save step (`setTopControlsVisible` toggled by `showView`, hidden for `saver`; the status is re-shown for save progress/errors) — "Back" returns to the chooser where a fresh fetch remains. New separate **PLACE DETAILS** card on the saver when an adopted place has `phone`/`website`/`openingHours`/`wheelchair`, rendered by `renderPlaceInfo` (new utils.js `getPlaceInfoIconSvg`): phone as a `tel:` link, website as an external `http(s)` link labelled with its hostname, opening hours and wheelchair accessibility; hidden when none is present. New `label.placeDetails` + `placeInfo.*` keys (en/de/es); `#locate-status-container` id added. Saver layout: the cards are wrapped in `.saver-scroll` (`#locate-saver` + `.saver-scroll` `flex:1; min-height:0`, scroll area `overflow-y:auto`) so only the content scrolls and the Back/Save action row stays visible with the Tag & Comment accordion expanded. Chooser: `#places-card` is now `flex:1 1 auto` (stretches into the remaining space), `.places-list` `max-height:336px` removed (the list scrolls only on overflow) and `#btn-locate-continue` gets `margin-top:auto`, pinning Continue at the bottom. APP_BUILD 20260921; cache-busters app.js `_17`, style.css `_19`. |
 | 0.4.2 | 2026-09-19 | Forecast enrichment: `GET /api/positions/current` returns a response-only `forecast` array + `isDay` flag. `Positions.enrich` requests `weather.forecast-hours + 1` Open-Meteo `hourly` slices (`temperature_2m`, `weather_code`, `uv_index`, `precipitation_probability`, `is_day`; `timezone=auto`), skips slices at/before the current hour (derived from `current.time`) and limits to `weather.forecast-hours`. New nested records `ForecastTimeslice`/`Current` serialize `isDay`; the `Position` entity and DB schema are unchanged. `WeatherClient.forecast` gains the `hourly`, `forecast_hours` and `timezone` params. Frontend: the Locate weather box is a disclosure with a 4-column forecast grid (TEMP/UV/RAIN or SNOW), whole-number temperature and UV, and day/night icons (moon, cloud+moon) in the tray and the current header. Config: `weather.current-fields`, `weather.hourly-fields` (both incl. `is_day`), `weather.forecast-hours=4`, `weather.timezone=auto`, `weather_uri` timeouts. |
 | 0.4.2 | 2026-09-19 | Geocoding/config: `GeocodingClient.reverse` gains a `layer` query param; `Positions` injects `nominatim.format`/`nominatim.zoom`/`nominatim.layer` (`layer` default `address`, accepted `address,poi,railway,natural,manmade`, env `NOMINATIM_LAYER`). `geoapify.radius` and `aroundme.cache-radius` raised 500 m → 700 m; `PlacesResourceIT.cacheHitExcludesPlacesBeyondRadius` updated for the new radius. |

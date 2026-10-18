@@ -15,13 +15,13 @@ import io.quarkus.test.junit.QuarkusTest;
 public class SystemBoundaryIT {
 
     @Test
-    public void testGetInfo() {
+    public void getInfoReturnsServiceMetadata() {
         given()
           .when().get("/api/system/info")
           .then()
              .statusCode(200)
              .body("artifactId", is("locator-service"))
-             .body("version", is("0.4.1"))
+             .body("version", is("0.4.2"))
              .body("startupTime", notNullValue());
     }
 }
