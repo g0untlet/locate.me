@@ -8,6 +8,7 @@ import { silentBadgeSync } from './js/ui/badge.js';
 import { setHistoryView, initMapListeners } from './js/ui/map.js';
 import { initInstallPrompt } from './js/ui/install.js';
 import { requestHeadingPermission } from './js/ui/compass.js';
+import { maybeShowReleaseNotes } from './js/ui/release-notes.js';
 import { initSettingsPage } from './js/pages/settings.js';
 import { initLocatePage, resetLocatePage } from './js/pages/locate.js';
 import {
@@ -154,6 +155,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Trigger 1: Core Startup Sequence
     silentBadgeSync(getActiveUserId(), checkBackendStatus);
     checkBackendStatus();
+
+    // One-time "What's new" after the app has launched at least once and no
+    // install banner is competing for the user's attention.
+    maybeShowReleaseNotes();
 });
 
 // Trigger 3: Event-driven recovery when app moves back into foreground
