@@ -27,6 +27,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import net.gauntlet.locate.me.Control;
 import net.gauntlet.locate.me.aroundme.entity.Place;
+import net.gauntlet.locate.me.security.ExternalApiRateLimits;
 
 @Control
 public class Places {
@@ -42,6 +43,9 @@ public class Places {
     @Inject
     @RestClient
     GeoapifyPlacesClient geoapifyPlacesClient;
+
+    @Inject
+    ExternalApiRateLimits externalApiRateLimits;
 
     @Inject
     @ConfigProperty(name = "geoapify.categories")
@@ -166,6 +170,10 @@ public class Places {
         List<Place> places = new ArrayList<>();
 
         for (String group : groups) {
+            // Acquire outside the per-group try/catch: a global external-API
+            // rate limit must surface as 429 instead of being treated as a
+            // failed group and silently skipped.
+            this.externalApiRateLimits.acquireGeoapify();
             JsonObject response;
             try {
                 response = this.geoapifyPlacesClient.places(group, filter, bias, this.limit, this.format, this.apiKey.orElse(""), lang);
