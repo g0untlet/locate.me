@@ -11,70 +11,86 @@ export const RELEASE_NOTES = {
     version: '0.4.4',
     date: '2026-10-18',
     en: {
-        tagline: 'A fresher look, more places to discover, and a new language.',
+        tagline: 'A fresher look, more places, and a new language.',
         items: [
             {
                 title: 'Navigation, refreshed',
-                text: 'The bottom bar is now a modern floating dock with clearer icons, a stronger active state, and easier one-handed switching between Locate, History, and Settings.'
+                text: 'A modern floating bar with clearer icons and easier one-handed use.'
             },
             {
-                title: 'More places around you',
-                text: 'Tourist attractions and hotels now join cafés, shops, and services in “Places around me” — each with its own icon, so sights and stays are easy to spot.'
+                title: 'More places nearby',
+                text: 'Tourist attractions and hotels now join cafés, shops and services.'
+            },
+            {
+                title: 'History, streamlined',
+                text: 'A slimmer layout with cleaner cards, so more entries are visible at a glance.'
             },
             {
                 title: 'Bonjour, français!',
-                text: 'locate.me now speaks French. Choose Français in Settings, or let the app follow your browser language — the interface and nearby place names switch instantly.'
+                text: 'Choose Français in Settings or let locate.me follow your browser language.'
             }
         ]
     },
     de: {
-        tagline: 'Ein frischer Look, mehr Orte zum Entdecken und eine neue Sprache.',
+        tagline: 'Frischer Look, mehr Orte und eine neue Sprache.',
         items: [
             {
-                title: 'Navigation, neu gedacht',
-                text: 'Die untere Leiste ist jetzt eine moderne, schwebende Navigation mit klareren Icons, einem deutlicheren aktiven Tab und einfacherem Wechseln mit einer Hand zwischen Standort, Verlauf und Einstellungen.'
+                title: 'Neue Navigation',
+                text: 'Eine moderne, schwebende Leiste mit klareren Icons und einfacherer einhändiger Bedienung.'
             },
             {
-                title: 'Mehr Orte in deiner Nähe',
-                text: 'Sehenswürdigkeiten und Hotels erscheinen jetzt neben Cafés, Geschäften und Services in „Orte in der Nähe“ – jedes mit eigenem Icon, damit Ziele und Unterkünfte sofort ins Auge fallen.'
+                title: 'Mehr Orte in der Nähe',
+                text: 'Sehenswürdigkeiten und Hotels erscheinen jetzt neben Cafés, Geschäften und Services.'
+            },
+            {
+                title: 'Verlauf, aufgeräumt',
+                text: 'Ein schlankeres Layout mit klareren Karten – so sind mehr Einträge gleichzeitig sichtbar.'
             },
             {
                 title: 'Bonjour, français!',
-                text: 'locate.me spricht jetzt auch Französisch. Wähle Français in den Einstellungen oder lass die App deiner Browsersprache folgen – Oberfläche und Ortsnamen in der Nähe wechseln sofort.'
+                text: 'Wähle Français in den Einstellungen – locate.me erscheint dann auf Französisch.'
             }
         ]
     },
     es: {
-        tagline: 'Un aspecto más limpio, más lugares por descubrir y un nuevo idioma.',
+        tagline: 'Un look más limpio, más lugares y un nuevo idioma.',
         items: [
             {
-                title: 'Navegación renovada',
-                text: 'La barra inferior ahora es una moderna barra flotante con iconos más claros, un estado activo más visible y un cambio más cómodo con una sola mano entre Ubicación, Historial y Ajustes.'
+                title: 'Nueva navegación',
+                text: 'Una barra flotante moderna, con iconos más claros y un manejo más fácil con una sola mano.'
             },
             {
-                title: 'Más lugares cerca de ti',
-                text: 'Las atracciones turísticas y los hoteles ahora aparecen junto a cafeterías, tiendas y servicios en «Lugares cercanos», cada uno con su propio icono para reconocerlos de un vistazo.'
+                title: 'Más lugares cerca',
+                text: 'Las atracciones turísticas y los hoteles ahora aparecen junto a cafeterías, tiendas y servicios.'
+            },
+            {
+                title: 'Historial más ligero',
+                text: 'Un diseño más limpio, con tarjetas más claras, para ver más entradas de un vistazo.'
             },
             {
                 title: '¡Bonjour, français!',
-                text: 'locate.me ahora también habla francés. Elige Français en Ajustes o deja que la app siga el idioma de tu navegador; la interfaz y los nombres de los lugares cercanos cambian al instante.'
+                text: 'Elige Français en Ajustes o sigue el idioma de tu navegador.'
             }
         ]
     },
     fr: {
-        tagline: 'Une interface plus moderne, plus de lieux à découvrir et une nouvelle langue.',
+        tagline: 'Une interface plus moderne, plus de lieux et une nouvelle langue.',
         items: [
             {
                 title: 'Navigation repensée',
-                text: 'La barre inférieure est désormais une navigation flottante moderne : icônes plus claires, onglet actif plus visible et passage plus facile d’une seule main entre Localiser, Historique et Réglages.'
+                text: 'Une barre flottante moderne, avec des icônes plus claires et une utilisation plus simple à une main.'
             },
             {
                 title: 'Plus de lieux à proximité',
-                text: 'Les sites touristiques et les hôtels rejoignent désormais les cafés, commerces et services dans « Lieux à proximité » — chacun avec sa propre icône, pour repérer immédiatement les sites et les hébergements.'
+                text: 'Les sites touristiques et les hôtels rejoignent les cafés, commerces et services.'
+            },
+            {
+                title: 'Historique allégé',
+                text: 'Une mise en page plus légère, avec des cartes plus claires, pour voir plus d’entrées d’un coup d’œil.'
             },
             {
                 title: 'Bonjour !',
-                text: 'locate.me parle désormais français. Choisissez Français dans les Réglages ou laissez l’app suivre la langue de votre navigateur — l’interface et les noms des lieux à proximité changent instantanément.'
+                text: 'Choisissez Français dans les Réglages ou suivez la langue de votre navigateur.'
             }
         ]
     }
