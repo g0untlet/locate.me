@@ -70,6 +70,11 @@
     "places.compassLabel": "Brújula apuntando al norte",
     "places.compassTitle": "Norte",
 
+    "releaseNotes.title": "Novedades",
+    "releaseNotes.close": "Entendido",
+    "releaseNotes.closeLabel": "Cerrar",
+    "releaseNotes.viewAll": "Ver todas las novedades",
+
     "direction.n": "N",
     "direction.ne": "NE",
     "direction.e": "E",

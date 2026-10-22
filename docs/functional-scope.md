@@ -78,6 +78,12 @@ The condition shown (current and for each forecast hour) is mapped from the WMO 
 - On iOS Safari, which never fires `beforeinstallprompt`, a one-time "Add to Home Screen" hint is shown instead.
 - The promotion text follows the application language (browser-detected on a first visit, otherwise the language chosen in Settings).
 
+### 1.9. Release Notes ("What's New")
+- The app keeps a compact, app-local summary of the latest release in all app languages (EN/DE/ES/FR); unsupported languages fall back to English.
+- On app start, if the exact `APP_VERSION` differs from the last seen version, a native modal shows the latest release once. The first-ever launch never shows it; existing app state is recognised so upgrades are not mistaken for a fresh install. An active install banner suppresses it until a later launch. Build-only changes (`APP_BUILD`) do not trigger it.
+- The dialog uses a fixed header and footer with an internally scrolling body, so longer release notes stay app-like and the close/action controls remain reachable.
+- The dialog links to the full website release notes (EN/DE/ES); French users are linked to the English page.
+
 ## 2. User Interface
 
 The application is a single-page application (SPA) with three main views:
@@ -226,6 +232,7 @@ component.
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.4.4 | 2026-10-18 | Frontend ("What's new"): app-local release notes in EN/DE/ES/FR (EN fallback) are shown in a native dialog once per exact `APP_VERSION`, including rc versions. The first-ever launch is always skipped; an active install banner also suppresses the dialog until a later launch. Build-only `APP_BUILD` changes do not trigger it. New `js/release-notes.js` + `js/ui/release-notes.js`, modal styles and `releaseNotes.*` locale keys; the dialog has a fixed header/footer and an internally scrolling body. `APP_VERSION` 0.4.4_rc1, `APP_BUILD` 20261018; app.js cache-buster `0.4.4_rc1_4`, style.css `0.4.4_rc1_3`, new modules precached in `sw.js`. The dialog links to the full website release notes (FR -> EN). |
 | 0.4.4 | 2026-10-18 | Place icons: added an accommodation bed glyph for the `accommodation` category (e.g. `accommodation.hotel`) and a sport trophy glyph for the top-level `sport` category. `sport.fitness` and `sport.fitness_station` use a dumbbell instead. Both categories are included in the `getLocationIconSvg` AroundMe delegation, so the selected row, saver, saved confirmation and history keep the same icon. APP_BUILD 20261018; app.js cache-buster `0.4.4_3` (mirrored in `sw.js`). No backend/API change. |
 | 0.4.4 | 2026-10-18 | Places around me: the client-side 20-row cap (`MAX_PLACES`) was removed, so the chooser renders every place returned by the grouped backend result (up to `aroundme.max-places` per category group; the list scrolls internally). `getPlaceIconSvg` now accepts the secondary category and shows a dedicated camera icon for `tourism.attraction`; other tourism subcategories keep the generic star. `getLocationIconSvg` delegates tourism to the same renderer, keeping the selected row, saver, saved confirmation and history icons consistent. APP_BUILD 20261018; app.js cache-buster `0.4.4_2` (mirrored in `sw.js`). No API change. |
 | 0.4.4 | 2026-10-16 | History tiles (list view): the tile content was reworked. The resolved address (and the comment, when present) now use the full tile width. The temperature and UV-Index pills plus a new **GPS line** (small satellite icon + coordinates rounded to four decimals, e.g. `48.1372, 11.5755` + the GPS accuracy pill) moved out of the tile body into an expandable **details section** shown above the Map / Share / Delete buttons; only one tile is expanded at a time. The elevation is now a muted pill in the tile header (solid triangle + value, e.g. `▲ 521 m`) instead of an inline `(… m)` after the address. The tile outline was modernised: a 1px subtle border plus soft elevation shadows (white surface in light mode, lifted slate in dark, 16px radius), solid hairline separators and a borderless tag chip. The temperature/UV/accuracy pills were made smaller (0.72rem; the "UV" caption 0.58rem). |

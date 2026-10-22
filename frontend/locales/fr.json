@@ -70,6 +70,11 @@
     "places.compassLabel": "Boussole pointant vers le nord",
     "places.compassTitle": "Nord",
 
+    "releaseNotes.title": "Nouveautés",
+    "releaseNotes.close": "J'ai compris",
+    "releaseNotes.closeLabel": "Fermer",
+    "releaseNotes.viewAll": "Voir toutes les nouveautés (EN)",
+
     "direction.n": "N",
     "direction.ne": "NE",
     "direction.e": "E",

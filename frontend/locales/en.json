@@ -70,6 +70,11 @@
     "places.compassLabel": "Compass pointing north",
     "places.compassTitle": "North",
 
+    "releaseNotes.title": "What's new",
+    "releaseNotes.close": "Got it",
+    "releaseNotes.closeLabel": "Close",
+    "releaseNotes.viewAll": "View all release notes",
+
     "direction.n": "N",
     "direction.ne": "NE",
     "direction.e": "E",

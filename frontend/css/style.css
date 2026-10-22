@@ -32,6 +32,8 @@
     --warning-color: #b45309;
     --warning-bg: #fffbeb;
     --warning-border: #fde68a;
+    --overlay: rgba(15, 23, 42, 0.55);
+    --on-primary: #ffffff;
 }
 
 [data-theme="dark"] {
@@ -63,6 +65,8 @@
     --warning-color: #fcd34d;
     --warning-bg: #422006;
     --warning-border: #78350f;
+    --overlay: rgba(2, 6, 23, 0.72);
+    --on-primary: #ffffff;
 }
 
 * {
@@ -2602,4 +2606,246 @@ a.attribution-link:hover {
     color: var(--text-muted);
     font-family: inherit;
     font-weight: normal;
+}
+/* ==========================================================================
+   "What's new" Release Notes Dialog
+   Compact latest-release card shown once per APP_VERSION after the first-ever
+   launch. Native <dialog> places it in the browser top layer, so it is not
+   affected by the app container or the install banner.
+   ========================================================================== */
+.release-notes-dialog {
+    width: min(460px, calc(100% - 32px));
+    max-height: min(85vh, 720px);
+    margin: auto;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    box-shadow: var(--shadow);
+}
+
+.release-notes-dialog::backdrop {
+    background: var(--overlay);
+}
+
+.release-notes-panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    max-height: min(85vh, 720px);
+    overflow: hidden;
+    padding: 0;
+}
+
+.release-notes-header {
+    flex: 0 0 auto;
+    padding: 26px 24px 16px;
+    border-bottom: 1px solid var(--card-divider);
+}
+
+.release-notes-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 14px 24px 18px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.release-notes-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.release-notes-close:hover {
+    background-color: var(--surface-subtle);
+    color: var(--text-color);
+}
+
+.release-notes-close svg {
+    width: 15px;
+    height: 15px;
+}
+
+.release-notes-eyebrow {
+    margin: 0 36px 10px 0;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--primary-dark);
+}
+
+.release-notes-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 0;
+}
+
+.release-notes-version {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background-color: var(--primary-tint);
+    color: var(--primary-dark);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.release-notes-date {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.release-notes-tagline {
+    margin-bottom: 18px;
+    color: var(--text-strong);
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.release-notes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    list-style: none;
+}
+
+.release-notes-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+}
+
+.release-notes-item-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background-color: var(--primary-tint);
+    color: var(--primary-dark);
+}
+
+.release-notes-item-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
+.release-notes-item-body strong {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--text-strong);
+    font-size: 0.88rem;
+    line-height: 1.3;
+}
+
+.release-notes-item-body p {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+
+.release-notes-actions {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 0;
+    padding: 14px 24px 20px;
+    border-top: 1px solid var(--card-divider);
+    background-color: var(--card-bg);
+}
+
+.release-notes-link {
+    align-self: center;
+    color: var(--primary-dark);
+    font-size: 0.76rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.release-notes-link:hover {
+    text-decoration: underline;
+}
+
+.release-notes-done {
+    width: 100%;
+    padding: 12px 18px;
+    border: none;
+    border-radius: 10px;
+    background-color: var(--primary-color);
+    color: var(--on-primary);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.release-notes-done:hover {
+    background-color: var(--primary-hover);
+}
+
+.release-notes-dialog[open] {
+    animation: releaseNotesIn 0.22s ease-out;
+}
+
+@keyframes releaseNotesIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .release-notes-header {
+        padding: 22px 18px 14px;
+    }
+
+    .release-notes-body {
+        padding: 12px 18px 16px;
+    }
+
+    .release-notes-actions {
+        padding: 12px 18px 18px;
+    }
+
+    .release-notes-tagline {
+        font-size: 1.05rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .release-notes-dialog[open] {
+        animation: none;
+    }
 }

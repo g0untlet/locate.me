@@ -20,6 +20,11 @@ GitHub: https://github.com/g0untlet/locate.me
 Functional Scope see ./docs/functional-scope.md 
 Technical Landscape see ./docs/technical-landscape.md 
 
+## What's New
+- Update `frontend/js/release-notes.js` with every release.
+- Keep it compact: short tagline + 3–4 one-sentence bullets in EN/DE/ES/FR (EN fallback), language news last.
+- Before PROD, remove the `_rcX` suffix from `APP_VERSION` and bump the frontend cache-busters.
+
 ## Missing Context
 If required information is missing:
 - Ask for clarification instead of guessing.
