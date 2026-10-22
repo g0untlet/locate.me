@@ -9,7 +9,7 @@
 
 export const RELEASE_NOTES = {
     version: '0.4.4',
-    date: '2026-10-18',
+    date: '2026-10-22',
     en: {
         tagline: 'A fresher look, more places, and a new language.',
         items: [
@@ -48,7 +48,7 @@ export const RELEASE_NOTES = {
             },
             {
                 title: 'Bonjour, français!',
-                text: 'Wähle Français in den Einstellungen – locate.me erscheint dann auf Französisch.'
+                text: 'Wähle Français in den Einstellungen – oder lass locate.me der Sprache deines Browsers folgen.'
             }
         ]
     },
@@ -69,7 +69,7 @@ export const RELEASE_NOTES = {
             },
             {
                 title: '¡Bonjour, français!',
-                text: 'Elige Français en Ajustes o sigue el idioma de tu navegador.'
+                text: 'Elige Français en Ajustes o deja que locate.me siga el idioma de tu navegador.'
             }
         ]
     },
@@ -90,7 +90,7 @@ export const RELEASE_NOTES = {
             },
             {
                 title: 'Bonjour !',
-                text: 'Choisissez Français dans les Réglages ou suivez la langue de votre navigateur.'
+                text: 'Choisissez Français dans les Réglages ou laissez locate.me suivre la langue de votre navigateur.'
             }
         ]
     }
