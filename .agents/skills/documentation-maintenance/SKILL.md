@@ -16,8 +16,8 @@ metadata:
 # Scope Maintenance
 
 When implementing a feature:
-1. Read docs/functional-scope.md before making changes.
-2. Read docs/technical-landscape.md before making changes.
+1. Consult the relevant section(s) of `docs/functional-scope.md` and `docs/technical-landscape.md` — use the heading outline and grep; read only what the change touches.
+2. Read a whole document only when the change spans the whole subsystem.
 
 
 # Functional Scope Maintenance
@@ -29,7 +29,7 @@ After implementation:
 4. Add new REST endpoints to "Backend Services".
 5. Add new entities to "Business Objects".
 6. Update "BCE Classification".
-7. Update the Change Log.
+7. Update the relevant section of `docs/changelog.md` (Technical or Functional) — the file is large, read only the section you update.
 8. Report all modified sections in the final summary.
 
 Never introduce undocumented functionality.

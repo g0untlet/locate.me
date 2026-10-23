@@ -1,6 +1,6 @@
 # Locate.me
 
-A personal geo-location tracking application: a mobile-first **Progressive Web App (PWA)** frontend built with vanilla HTML/CSS/JS that requests high-accuracy GPS coordinates from the device and a **Quarkus 3 / Java 21** backend that enriches and persists them. The backend follows the **Boundary-Control-Entity (BCE)** architectural pattern and uses a file-based **H2** database.
+A personal geo-location tracking application: a mobile-first **Progressive Web App (PWA)** frontend built with vanilla HTML/CSS/JS that requests high-accuracy GPS coordinates from the device and a **Quarkus 3 / Java 25** backend that enriches and persists them. The backend follows the **Boundary-Control-Entity (BCE)** architectural pattern and uses a file-based **H2** database.
 
 ## Features
 
@@ -17,7 +17,7 @@ A personal geo-location tracking application: a mobile-first **Progressive Web A
 | Layer | Technology |
 |-------|------------|
 | Frontend | Vanilla JS (ES6 modules), HTML/CSS, no bundler |
-| Backend | Quarkus 3.33, Java 21, BCE architecture |
+| Backend | Quarkus 3.33, Java 25, BCE architecture |
 | Database | H2 (file-based) |
 | Reverse Proxy | Caddy2 |
 | Mapping | Leaflet.js + OpenStreetMap |
@@ -33,7 +33,7 @@ locate.me/
  ├── backend-st/  # Out-of-process system tests (MicroProfile REST clients)
  ├── docs/        # Functional scope, technical landscape, upgrade notes
  ├── deploy-frontend-dev.sh
- ├── deploy-backend-dev.sh
+ ├── deploy-backend-dev2.sh
  └── start-*-tunnel.sh   # SSH tunnels for remote development
 ```
 
@@ -41,7 +41,7 @@ locate.me/
 
 ### Prerequisites
 
-- Java 21
+- Java 25
 - Maven 3.9+
 
 ### Backend (Dev Mode)
@@ -77,7 +77,7 @@ mvn clean verify
 
 ## Deployment
 
-- `deploy-frontend-dev.sh` / `deploy-backend-dev.sh` deploy to the DEV server via rsync/SSH.
+- `deploy-frontend-dev.sh` / `deploy-backend-dev2.sh` deploy to the DEV server via rsync/SSH.
 - Caddy2 terminates TLS and reverse-proxies `/api` to the backend for the DEV and PROD environments.
 - Nothing is cached on clients: Caddy sends `Cache-Control: no-store` on all responses.
 

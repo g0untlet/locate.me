@@ -74,7 +74,7 @@ Business Entities (BE): key domain concepts with persistent state and behavior.
 
 Not every component needs a boundary - control can be accessed directly by other components.
 
-## Java Style (Java 21)
+## Java Style (Java 25)
 
 - Use `var`, pattern matching, text blocks, records
 - Logger: `java.lang.System.Logger` (never `java.util.logging.Logger`) - inject if available, otherwise:
@@ -162,7 +162,7 @@ cd [subsystem]-st && mvn compile -Dverify.results=true failsafe:integration-test
 
 ## Key Dependencies
 
-- Quarkus 3.{LATEST}, Java 21, MicroProfile (metrics, health, config, fault-tolerance, OpenAPI)
+- Quarkus 3.{LATEST}, Java 25, MicroProfile (metrics, health, config, fault-tolerance, OpenAPI)
 - `quarkus-rest-jsonb` for REST with JSON-B, `quarkus-smallrye-openapi`, `quarkus-smallrye-health`, `quarkus-smallrye-metrics`, `quarkus-smallrye-fault-tolerance`
 - Prefer `quarkus-smallrye-*` for MicroProfile/Jakarta EE APIs
 - Prefer Java SE > MicroProfile > Jakarta EE built-in features over external libraries
