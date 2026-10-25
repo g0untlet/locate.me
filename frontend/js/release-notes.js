@@ -8,89 +8,89 @@
    ========================================================================== */
 
 export const RELEASE_NOTES = {
-    version: '0.4.4',
-    date: '2026-10-22',
+    version: '0.4.5_rc1',
+    date: '2026-10-25',
     en: {
-        tagline: 'A fresher look, more places, and a new language.',
+        tagline: 'Filter the places around you and see their details right away.',
         items: [
             {
-                title: 'Navigation, refreshed',
-                text: 'A modern floating bar with clearer icons and easier one-handed use.'
+                title: 'Filter by category',
+                text: 'Tap a category icon above the places list to show only cafés, shops, sights or whatever you are looking for. The selected icon also shows its name, and a refresh starts unfiltered again.'
             },
             {
-                title: 'More places nearby',
-                text: 'Tourist attractions and hotels now join cafés, shops and services.'
+                title: 'Place details',
+                text: 'Tap a place to unfold its phone number, website, opening hours and wheelchair access right inside the list. Tap it again to close.'
             },
             {
-                title: 'History, streamlined',
-                text: 'A slimmer layout with cleaner cards, so more entries are visible at a glance.'
+                title: 'Better icons',
+                text: 'Sights, gyms and hotels now have their own icons, and leisure is a sun instead of an ambiguous tree.'
             },
             {
-                title: 'Bonjour, français!',
-                text: 'Choose Français in Settings or let locate.me follow your browser language.'
+                title: 'Clearer addresses',
+                text: 'A resolved address shows only street, house number, town and country — no shop or restaurant name from the same building.'
             }
         ]
     },
     de: {
-        tagline: 'Frischer Look, mehr Orte und eine neue Sprache.',
+        tagline: 'Filtere die Orte in deiner Nähe und sieh dir ihre Details direkt an.',
         items: [
             {
-                title: 'Neue Navigation',
-                text: 'Eine moderne, schwebende Leiste mit klareren Icons und einfacherer einhändiger Bedienung.'
+                title: 'Nach Kategorie filtern',
+                text: 'Tippe über der Ortsliste auf ein Kategorie-Icon, um nur Cafés, Geschäfte, Sehenswürdigkeiten oder Ähnliches zu sehen. Das gewählte Icon zeigt zusätzlich seinen Namen; ein Refresh startet wieder ungefiltert.'
             },
             {
-                title: 'Mehr Orte in der Nähe',
-                text: 'Sehenswürdigkeiten und Hotels erscheinen jetzt neben Cafés, Geschäften und Services.'
+                title: 'Details zum Ort',
+                text: 'Tippe auf einen Ort, um Telefonnummer, Website, Öffnungszeiten und Barrierefreiheit direkt in der Liste aufzuklappen. Nochmal tippen schließt sie wieder.'
             },
             {
-                title: 'Verlauf, aufgeräumt',
-                text: 'Ein schlankeres Layout mit klareren Karten – so sind mehr Einträge gleichzeitig sichtbar.'
+                title: 'Bessere Icons',
+                text: 'Sehenswürdigkeiten, Fitnessstudios und Hotels haben jetzt eigene Icons, und Freizeit zeigt eine Sonne statt eines missverständlichen Baums.'
             },
             {
-                title: 'Bonjour, français!',
-                text: 'Wähle Français in den Einstellungen – oder lass locate.me der Sprache deines Browsers folgen.'
+                title: 'Klarere Adressen',
+                text: 'Eine aufgelöste Adresse zeigt nur Straße, Hausnummer, Ort und Land – keine Laden- oder Restaurantnamen aus demselben Gebäude.'
             }
         ]
     },
     es: {
-        tagline: 'Un look más limpio, más lugares y un nuevo idioma.',
+        tagline: 'Filtra los lugares cercanos y consulta sus detalles al momento.',
         items: [
             {
-                title: 'Nueva navegación',
-                text: 'Una barra flotante moderna, con iconos más claros y un manejo más fácil con una sola mano.'
+                title: 'Filtrar por categoría',
+                text: 'Toca un icono de categoría encima de la lista para ver solo cafeterías, tiendas, lugares de interés o lo que busques. El icono activo muestra además su nombre, y al actualizar vuelves a verlo todo.'
             },
             {
-                title: 'Más lugares cerca',
-                text: 'Las atracciones turísticas y los hoteles ahora aparecen junto a cafeterías, tiendas y servicios.'
+                title: 'Detalles del lugar',
+                text: 'Toca un lugar para desplegar su teléfono, sitio web, horario y accesibilidad dentro de la lista. Toca de nuevo para cerrarlo.'
             },
             {
-                title: 'Historial más ligero',
-                text: 'Un diseño más limpio, con tarjetas más claras, para ver más entradas de un vistazo.'
+                title: 'Mejores iconos',
+                text: 'Los lugares de interés, los gimnasios y los hoteles tienen ahora sus propios iconos, y el ocio muestra un sol en lugar de un árbol ambiguo.'
             },
             {
-                title: '¡Bonjour, français!',
-                text: 'Elige Français en Ajustes o deja que locate.me siga el idioma de tu navegador.'
+                title: 'Direcciones más claras',
+                text: 'Una dirección resuelta muestra solo la calle, el número, la localidad y el país, sin nombres de tiendas o restaurantes del mismo edificio.'
             }
         ]
     },
     fr: {
-        tagline: 'Une interface plus moderne, plus de lieux et une nouvelle langue.',
+        tagline: 'Filtrez les lieux autour de vous et consultez leurs détails immédiatement.',
         items: [
             {
-                title: 'Navigation repensée',
-                text: 'Une barre flottante moderne, avec des icônes plus claires et une utilisation plus simple à une main.'
+                title: 'Filtrer par catégorie',
+                text: 'Touchez une icône de catégorie au-dessus de la liste pour n’afficher que les cafés, commerces, sites touristiques ou ce que vous cherchez. L’icône active affiche aussi son nom, et une actualisation repart sans filtre.'
             },
             {
-                title: 'Plus de lieux à proximité',
-                text: 'Les sites touristiques et les hôtels rejoignent les cafés, commerces et services.'
+                title: 'Détails du lieu',
+                text: 'Touchez un lieu pour déplier son téléphone, son site web, ses horaires et son accessibilité directement dans la liste. Touchez à nouveau pour refermer.'
             },
             {
-                title: 'Historique allégé',
-                text: 'Une mise en page plus légère, avec des cartes plus claires, pour voir plus d’entrées d’un coup d’œil.'
+                title: 'De meilleures icônes',
+                text: 'Les sites touristiques, les salles de sport et les hôtels ont désormais leurs propres icônes, et les loisirs affichent un soleil plutôt qu’un arbre ambigu.'
             },
             {
-                title: 'Bonjour !',
-                text: 'Choisissez Français dans les Réglages ou laissez locate.me suivre la langue de votre navigateur.'
+                title: 'Adresses plus claires',
+                text: 'Une adresse résolue n’affiche que la rue, le numéro, la localité et le pays — plus de nom de commerce ou de restaurant du même bâtiment.'
             }
         ]
     }

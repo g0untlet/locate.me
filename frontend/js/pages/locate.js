@@ -17,6 +17,7 @@ import {
     directionShort,
     getLocationIconSvg,
     getPlaceIconSvg,
+    placeCategoryLabel,
     getPlaceInfoIconSvg,
     formatPlaceLabel,
     formatShortAddress,
@@ -392,6 +393,30 @@ function saverWeatherIds() {
    echte Geoapify-Antwort ist immer ein Array – null heißt "nicht ladbar". */
 const PLACES_UNAVAILABLE = null;
 
+/* Category filter state. `loadedPlaces` is the last fetched result and the
+   single source for both the filter chips and the rows, so filtering never
+   triggers a backend request. `placeCategoryFilter` is a single primary
+   category (`null` = no filter, i.e. all places). `expandedPlaceId` is the
+   place whose details accordion is open (`null` = none). */
+let loadedPlaces = [];
+let placeCategoryFilter = null;
+let expandedPlaceId = null;
+
+/* A new fetch always starts from scratch: no category filter, no open
+   accordion. Selection is reset by renderChooser on the same round. */
+function resetPlacesView() {
+    placeCategoryFilter = null;
+    expandedPlaceId = null;
+}
+
+/* Canonical chip order – the primary categories the backend can be configured
+   for (`geoapify.categories` top-level values). Unknown categories follow
+   alphabetically, so the row stays stable across refreshes. */
+const PLACE_CATEGORY_ORDER = [
+    'catering', 'commercial', 'healthcare', 'leisure', 'entertainment',
+    'sport', 'accommodation', 'tourism', 'service'
+];
+
 /* ==========================================================================
    Internal: Places-Ergebnis verteilen – Fehlschlag (null) zeigt eine Meldung,
    ein Array wird als Liste gerendert (leer = Card aus).
@@ -404,44 +429,235 @@ function renderPlacesResult(places) {
     }
 }
 
-function renderPlacesList(places) {
-    const card  = document.getElementById('places-card');
-    const list  = document.getElementById('places-list');
-    const count = document.getElementById('places-count');
-    if (!card || !list) return;
+/* ==========================================================================
+   Internal: Category groups of the loaded result.
+   One entry per primary category, carrying the secondary category of the
+   nearest place so a chip shows the same glyph as the rows of its category
+   (e.g. the sights camera instead of the generic tourism star).
+   ========================================================================== */
+function placeCategoryGroups(places) {
+    const nearestSecondary = new Map();
+    places.forEach(place => {
+        if (place.primaryCategory && !nearestSecondary.has(place.primaryCategory)) {
+            nearestSecondary.set(place.primaryCategory, place.secondaryCategory || null);
+        }
+    });
+    const known = PLACE_CATEGORY_ORDER.filter(category => nearestSecondary.has(category));
+    const unknown = [...nearestSecondary.keys()]
+        .filter(category => !PLACE_CATEGORY_ORDER.includes(category))
+        .sort();
+    return [...known, ...unknown].map(category => ({
+        category,
+        secondary: nearestSecondary.get(category)
+    }));
+}
 
-    card.removeAttribute('aria-busy');
-    list.innerHTML = '';
-    const visiblePlaces = Array.isArray(places) ? places : [];
+function filteredPlaces() {
+    return placeCategoryFilter
+        ? loadedPlaces.filter(place => place.primaryCategory === placeCategoryFilter)
+        : loadedPlaces;
+}
 
-    if (visiblePlaces.length === 0) {
-        card.classList.add('hidden');
+/* ==========================================================================
+   Internal: Filter chip row.
+   Icon-only and single-select; tapping the active chip clears the filter and
+   the pinned × at the row end does the same. Hidden when the result carries
+   fewer than two categories – there is nothing to filter then.
+   ========================================================================== */
+function renderPlacesFilter() {
+    const bar    = document.getElementById('places-filter');
+    const chips  = document.getElementById('places-filter-chips');
+    const clear  = document.getElementById('places-filter-clear');
+    if (!bar || !chips || !clear) return;
+
+    chips.innerHTML = '';
+    const groups = placeCategoryGroups(loadedPlaces);
+    if (groups.length < 2) {
+        placeCategoryFilter = null;
+        bar.classList.add('hidden');
         return;
     }
 
-    card.classList.remove('hidden');
-    if (count) {
-        count.textContent = t(visiblePlaces.length === 1 ? 'places.countOne' : 'places.countOther', { count: visiblePlaces.length });
+    bar.classList.remove('hidden');
+    groups.forEach(({ category, secondary }) => {
+        const active = category === placeCategoryFilter;
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = `places-filter-chip${active ? ' places-filter-chip--active' : ''}`;
+        chip.dataset.category = category;
+        chip.setAttribute('aria-pressed', active ? 'true' : 'false');
+        chip.setAttribute('aria-label', placeCategoryLabel(category));
+        chip.title = placeCategoryLabel(category);
+        // The active chip shows its localized name: icon-only stays
+        // language-neutral, but the selected category is then self-explanatory.
+        chip.innerHTML = getPlaceIconSvg(category, secondary) +
+            (active ? `<span class="places-filter-chip-label">${escapeHtml(placeCategoryLabel(category))}</span>` : '');
+        chip.addEventListener('click', () => setPlaceCategoryFilter(active ? null : category));
+        chips.appendChild(chip);
+    });
+    clear.classList.toggle('hidden', placeCategoryFilter === null);
+}
+
+function hidePlacesFilter() {
+    const bar = document.getElementById('places-filter');
+    const chips = document.getElementById('places-filter-chips');
+    const clear = document.getElementById('places-filter-clear');
+    if (bar) bar.classList.add('hidden');
+    if (chips) chips.innerHTML = '';
+    if (clear) clear.classList.add('hidden');
+}
+
+/* ==========================================================================
+   Internal: Apply/clear the category filter.
+   A filtered-out selection would stay the saved label while being invisible,
+   so the chooser falls back to the resolved address instead.
+   ========================================================================== */
+function setPlaceCategoryFilter(category) {
+    placeCategoryFilter = category;
+    // The open accordion belongs to the previous view; a filtered-out row must
+    // not keep a hidden panel (or a selection the filter hides).
+    expandedPlaceId = null;
+    if (category && selectedPlace && selectedPlace.primaryCategory !== category) {
+        selectResolvedAddress();
     }
+    renderPlacesFilter();
+    renderPlaceRows();
+    updatePlacesCount();
+}
 
-    // Compass-Dial nur sichtbar, wenn Sensor-Events vorhanden sind
-    updateCompassVisibility();
-    scheduleCompassWatchdog();
+function updatePlacesCount() {
+    const count = document.getElementById('places-count');
+    if (!count) return;
+    const total = loadedPlaces.length;
+    if (placeCategoryFilter) {
+        count.textContent = t('places.countFiltered', {
+            shown: filteredPlaces().length,
+            total
+        });
+    } else {
+        count.textContent = t(total === 1 ? 'places.countOne' : 'places.countOther', { count: total });
+    }
+}
 
-    visiblePlaces.forEach(place => {
+/* ==========================================================================
+   Internal: Place details accordion.
+   One panel at a time, rendered as a sibling of the row button (a <button>
+   must not contain links), directly inside the scrolling list so the card,
+   header and action row never move. Only places that actually carry details
+   (phone / website / opening hours / wheelchair) can be expanded.
+   ========================================================================== */
+function placeDetailsId(place) {
+    const key = place.placeId || `${place.latitude},${place.longitude}`;
+    return `place-details-${String(key).replace(/[^a-zA-Z0-9_-]/g, '')}`;
+}
+
+function buildPlaceDetailsPanel(place, rowsHtml) {
+    const panel = document.createElement('div');
+    panel.className = 'place-details';
+    panel.id = placeDetailsId(place);
+    panel.setAttribute('role', 'region');
+    panel.setAttribute('aria-label', place.name || t('places.unknownPlace'));
+    panel.innerHTML = `<div class="place-info-list">${rowsHtml}</div>`;
+    // Kept in the DOM so aria-controls always points at a real element; the
+    // `hidden` attribute (not CSS) drives visibility.
+    panel.hidden = true;
+    return panel;
+}
+
+const PLACE_ROW_CHEVRON =
+    '<span class="place-row-chevron" aria-hidden="true">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
+            '<polyline points="6 9 12 15 18 9"></polyline>' +
+        '</svg>' +
+    '</span>';
+
+/* Select the row and toggle its accordion. Tapping the open row again only
+   collapses the panel; the selection (and the saved label) stays. */
+function handlePlaceRowClick(place, hasDetails, row) {
+    const wasExpanded = expandedPlaceId === place.placeId;
+    selectPlace(place, row);
+    expandedPlaceId = (!wasExpanded && hasDetails && place.placeId) ? place.placeId : null;
+    renderPlaceRows();
+    if (expandedPlaceId) {
+        const panel = document.getElementById(placeDetailsId(place));
+        if (panel) panel.scrollIntoView({ block: 'nearest' });
+    }
+}
+
+/* ==========================================================================
+   Internal: Place rows (unfiltered or filtered) + selection highlight.
+   Re-rendering must not lose an adopted place, so the highlight is re-applied
+   from `selectedPlace` by placeId; the list scroll offset is preserved.
+   ========================================================================== */
+function renderPlaceRows() {
+    const list = document.getElementById('places-list');
+    if (!list) return;
+
+    const scrollTop = list.scrollTop;
+    list.innerHTML = '';
+    filteredPlaces().forEach(place => {
+        const details = buildPlaceInfoRows(place);
+        const hasDetails = details !== '';
+        const expanded = hasDetails && Boolean(place.placeId) && place.placeId === expandedPlaceId;
+        const selected = Boolean(selectedPlace && place.placeId) && place.placeId === selectedPlace.placeId;
+
         const row = document.createElement('button');
         row.type = 'button';
         row.className = 'place-row';
-        row.setAttribute('aria-pressed', 'false');
+        if (selected) row.classList.add('place-row--selected');
+        if (expanded) row.classList.add('place-row--expanded');
+        row.setAttribute('aria-pressed', selected ? 'true' : 'false');
+        if (hasDetails) {
+            row.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            row.setAttribute('aria-controls', placeDetailsId(place));
+        }
+
         const direction = directionShort(place.direction);
         row.innerHTML = `
             ${getPlaceIconSvg(place.primaryCategory, place.secondaryCategory)}
             <span class="place-row-name">${escapeHtml(place.name || place.formattedAddress || t('places.unknownPlace'))}</span>
             <span class="place-row-distance">${formatDistanceMeters(place.distance)}${direction ? ` ${direction}` : ''}</span>
+            ${hasDetails ? PLACE_ROW_CHEVRON : ''}
         `;
-        row.addEventListener('click', () => selectPlace(place, row));
+        row.addEventListener('click', () => handlePlaceRowClick(place, hasDetails, row));
         list.appendChild(row);
+
+        if (hasDetails) {
+            const panel = buildPlaceDetailsPanel(place, details);
+            panel.hidden = !expanded;
+            list.appendChild(panel);
+        }
     });
+    list.scrollTop = scrollTop;
+}
+
+function renderPlacesList(places) {
+    const card = document.getElementById('places-card');
+    if (!card || !document.getElementById('places-list')) return;
+
+    card.removeAttribute('aria-busy');
+    loadedPlaces = Array.isArray(places) ? places : [];
+
+    if (loadedPlaces.length === 0) {
+        card.classList.add('hidden');
+        hidePlacesFilter();
+        return;
+    }
+
+    card.classList.remove('hidden');
+    // Safety net only – a new fetch already resets the filter up front
+    // (resetPlacesView); here the category simply must still be present.
+    if (placeCategoryFilter && !loadedPlaces.some(place => place.primaryCategory === placeCategoryFilter)) {
+        placeCategoryFilter = null;
+    }
+
+    updatePlacesCount();
+    renderPlacesFilter();
+    renderPlaceRows();
+
+    // Compass-Dial nur sichtbar, wenn Sensor-Events vorhanden sind
+    updateCompassVisibility();
+    scheduleCompassWatchdog();
 }
 
 /* ==========================================================================
@@ -457,6 +673,7 @@ function showPlacesLoading() {
 
     card.classList.remove('hidden');
     card.setAttribute('aria-busy', 'true');
+    hidePlacesFilter();
     if (count) count.textContent = t('places.loading');
 
     const skeletonRow =
@@ -481,6 +698,7 @@ function renderPlacesError() {
     card.removeAttribute('aria-busy');
     if (count) count.textContent = '';
     card.classList.remove('hidden');
+    hidePlacesFilter();
     list.innerHTML = `<div class="places-error" role="status">${t('places.error')}</div>`;
 }
 
@@ -504,6 +722,7 @@ function selectPlace(place, row) {
 
 function selectResolvedAddress() {
     selectedPlace = null;
+    expandedPlaceId = null;
 
     document.querySelectorAll('.place-row').forEach(r => {
         r.classList.remove('place-row--selected');
@@ -513,6 +732,9 @@ function selectResolvedAddress() {
 
     const cached = getCachedLocatePosition();
     if (cached) fillAddress(document.getElementById('chooser-address-container'), cached);
+
+    // Drop an open details panel: the place is no longer the chosen location.
+    renderPlaceRows();
 }
 
 /* ==========================================================================
@@ -676,11 +898,11 @@ function placeInfoRow(icon, content) {
         `<span class="place-info-content">${content}</span></div>`;
 }
 
-function renderPlaceInfo(place) {
-    const card = document.getElementById('saver-place-info');
-    const list = document.getElementById('saver-place-info-list');
-    if (!card || !list) return;
-
+/* Builds the phone / website / opening hours / wheelchair rows of a place.
+   Shared by the saver's PLACE DETAILS card and the details accordion in the
+   places list, so both always show the same information in the same order.
+   Returns an empty string when the place carries no detail at all. */
+function buildPlaceInfoRows(place) {
     const phone        = place ? String(place.phone        || '').trim() : '';
     const website      = place ? normalizeWebsite(place.website) : null;
     const openingHours = place ? String(place.openingHours || '').trim() : '';
@@ -714,13 +936,22 @@ function renderPlaceInfo(place) {
             `<span class="place-info-text">${escapeHtml(label)}</span>`));
     }
 
-    if (rows.length === 0) {
+    return rows.join('');
+}
+
+function renderPlaceInfo(place) {
+    const card = document.getElementById('saver-place-info');
+    const list = document.getElementById('saver-place-info-list');
+    if (!card || !list) return;
+
+    const rows = buildPlaceInfoRows(place);
+    if (!rows) {
         card.classList.add('hidden');
         list.innerHTML = '';
         return;
     }
 
-    list.innerHTML = rows.join('');
+    list.innerHTML = rows;
     card.classList.remove('hidden');
 }
 
@@ -964,6 +1195,8 @@ function fetchCurrentPosition(position, { getActiveUserId, checkBackendStatus },
     const { latitude, longitude } = position.coords;
     const userId = getActiveUserId();
     const epoch  = ++fetchEpoch;
+    // Every new round starts unfiltered and with any details accordion closed.
+    resetPlacesView();
 
     const placesPromise = apiGetPlaces(userId, latitude, longitude)
         .catch(() => PLACES_UNAVAILABLE);
@@ -1166,6 +1399,12 @@ export function initLocatePage(deps) {
     // --- Chooser: select resolved address ---
     document.getElementById('res-address-select').addEventListener('click', selectResolvedAddress);
 
+    // --- Chooser: clear the places category filter ---
+    const placesFilterClear = document.getElementById('places-filter-clear');
+    if (placesFilterClear) {
+        placesFilterClear.addEventListener('click', () => setPlaceCategoryFilter(null));
+    }
+
     // --- Chooser: expand/collapse the 3-hour forecast ---
     const weatherToggle = document.getElementById('chooser-weather-toggle');
     if (weatherToggle) {
@@ -1259,6 +1498,9 @@ export function resetLocatePage() {
 
     hideViews();
     selectedPlace = null;
+    loadedPlaces = [];
+    placeCategoryFilter = null;
+    expandedPlaceId = null;
     lastPreviewLabel = '';
     setCachedLocatePosition(null);
     renderForecast(null);
@@ -1276,6 +1518,7 @@ export function resetLocatePage() {
 
     const placesList = document.getElementById('places-list');
     if (placesList) placesList.innerHTML = '';
+    hidePlacesFilter();
     const placesCard = document.getElementById('places-card');
     if (placesCard) {
         placesCard.classList.add('hidden');

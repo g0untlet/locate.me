@@ -498,7 +498,7 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 | `weather.forecast-hours` | Number of future hourly forecast slices returned (default 4; the current hour is skipped) |
 | `weather.timezone` | Open-Meteo timestamp timezone (`auto` = the coordinates' local timezone, so times match the local wall clock) |
 | `weather_uri/mp-rest/read-timeout`, `weather_uri/mp-rest/connect-timeout` | Open-Meteo client timeouts (ms), mirroring Geoapify |
-| `geoapify_uri/mp-rest/url`, `geoapify.categories`, `geoapify.limit`, `geoapify.radius`, `geoapify.format`, `geoapify.api-key` | Geoapify Places client: base URL, category groups (`catering,commercial,healthcare,leisure,entertainment\|tourism.attraction`; `\|` separates groups, each fetched with its own request), result limit per group, fetch radius (m, 700), format, API key (`${GEOAPIFY_API_KEY:}`) |
+| `geoapify_uri/mp-rest/url`, `geoapify.categories`, `geoapify.limit`, `geoapify.radius`, `geoapify.format`, `geoapify.api-key` | Geoapify Places client: base URL, category groups (`catering,commercial,healthcare,leisure,entertainment,sport.fitness\|accommodation.hotel,tourism.sights`; `\|` separates groups, each fetched with its own request), result limit per group, fetch radius (m, 700), format, API key (`${GEOAPIFY_API_KEY:}`) |
 | `aroundme.cache-radius` | Cache bounding-box radius (m, 700) for the cache-first lookup |
 | `aroundme.exclude-categories` | Comma-separated secondary POI categories to exclude (e.g. `playground`); applied on cache hits and fresh fetches |
 | `aroundme.max-places` | Maximum number of places returned per category group (default 20); total response cap = value × number of groups. `geoapify.limit` still controls the Geoapify fetch / cache size per group |

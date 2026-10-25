@@ -347,9 +347,9 @@ export function getLocationIconSvg(category, type) {
    Global Helper: Inline SVG Place Icon Renderer (AroundMe places)
    Geoapify categories: catering / commercial / healthcare / leisure /
    entertainment / service / tourism / accommodation / sport.
-   Tourism attractions get a dedicated camera glyph; other tourism subcategories
-   use the generic star. Accommodation uses a bed; sport uses a trophy, with a
-   dumbbell for sport.fitness.
+   Tourism sights (and the legacy `tourism.attraction`) get a dedicated camera
+   glyph; other tourism subcategories use the generic star. Accommodation uses a
+   bed; sport uses a trophy, with a dumbbell for sport.fitness.
    ========================================================================== */
 export function getPlaceIconSvg(primaryCategory, secondaryCategory) {
     const svgAttrs = `viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"`;
@@ -363,7 +363,11 @@ export function getPlaceIconSvg(primaryCategory, secondaryCategory) {
         case 'healthcare':
             return `<svg ${svgAttrs}><path d="M10 3h4v6h6v4h-6v6h-4v-6H4v-4h6z"></path></svg>`;
         case 'leisure':
-            return `<svg ${svgAttrs}><path d="M12 19V5M12 5a4 4 0 0 0-4 4c0 2.5 2.5 5 4 7m0-11a4 4 0 0 1 4 4c0 2.5-2.5 5-4 7m-3 3h6"></path></svg>`;
+            // A sun instead of the old tree glyph: at 16px the tree (trunk +
+            // leaf arcs + ground line) read as a balloon. The sun is
+            // unmistakable and stands for outdoor leisure (parks, sports
+            // grounds, playgrounds). OSM `landuse`/`natural` keep the tree.
+            return `<svg ${svgAttrs}><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.9" y1="4.9" x2="6.3" y2="6.3"></line><line x1="17.7" y1="17.7" x2="19.1" y2="19.1"></line><line x1="4.9" y1="19.1" x2="6.3" y2="17.7"></line><line x1="17.7" y1="6.3" x2="19.1" y2="4.9"></line></svg>`;
         case 'entertainment':
             return `<svg ${svgAttrs}><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>`;
         case 'service':
@@ -378,15 +382,30 @@ export function getPlaceIconSvg(primaryCategory, secondaryCategory) {
             }
             return `<svg ${svgAttrs}><path d="M8 21h8"></path><path d="M12 17v4"></path><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"></path><path d="M7 6H4a3 3 0 0 0 3 3"></path><path d="M17 6h3a3 3 0 0 1-3 3"></path></svg>`;
         case 'tourism':
-            // Tourism attractions (e.g. sights/landmarks) use a camera glyph;
-            // all other tourism subcategories keep the generic tourism star.
-            if (secondaryCategory === 'attraction') {
+            // Sights (formerly configured as `tourism.attraction`) use a camera
+            // glyph; Geoapify also returns deeper categories such as
+            // `tourism.sights.museum`, which arrive as `sights.museum` here.
+            // All other tourism subcategories keep the generic tourism star.
+            if (secondaryCategory === 'attraction' || (secondaryCategory || '').startsWith('sights')) {
                 return `<svg ${svgAttrs}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>`;
             }
             return `<svg ${svgAttrs}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
         default:
             return defaultIcon;
     }
+}
+
+/* ==========================================================================
+   Global Helper: Localized AroundMe category name
+   The place filter is icon-only and therefore language-neutral; the category
+   name is only needed for tooltips and accessible names. Unknown categories
+   fall back to the raw Geoapify string.
+   ========================================================================== */
+export function placeCategoryLabel(category) {
+    if (!category) return '';
+    const key = `places.category.${category}`;
+    const label = t(key);
+    return label === key ? category : label;
 }
 
 /* ==========================================================================
