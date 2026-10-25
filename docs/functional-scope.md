@@ -56,6 +56,8 @@ The condition shown (current and for each forecast hour) is mapped from the WMO 
 ### 1.6. Geocoding
 - For a given location, the application fetches and displays the corresponding address.
 - This is done by an external API (OpenStreetMap/Nominatim).
+- Only the core address is shown: road + house number, city and country. POI names (shop, restaurant, sight, …) are never displayed, even when Nominatim answers with the POI of the building the coordinates fall on (`addresstype=shop`, e.g. a butcher at Viktualienmarkt 2) — POIs are covered by the Places Around Me feature instead.
+- The city falls back to `town`, `village` or `municipality` when Nominatim returns no `city` (rural addresses). If the response carries no road or city at all (park, motorway, …), the raw Nominatim display name is shown as a fallback.
 
 ### 1.7. Places Around Me (POI Discovery)
 - For a given location, the backend can fetch points of interest (POIs) around it from the Geoapify Places API. The default category groups are `catering,commercial,healthcare,leisure,entertainment` and `tourism.attraction`.
@@ -177,13 +179,14 @@ The main business object is the `Position` entity, which has the following attri
 - `userId`: The user who owns this position.
 - `latitude`, `longitude`: The coordinates of the position.
 - `accuracy`: The accuracy of the coordinates.
-- `displayName`: A human-readable name for the position.
+- `displayName`: A human-readable name for the position — the address composed from road + house number, city and country; for a position adopted from "Places around me" it is the place's formatted Geoapify address.
 - `temperature`, `weatherCode`: Weather information.
 - `uvIndex`: The current UV-Index at the position.
 - `elevation`: The elevation of the position in meters.
 - The `/positions/current` preview's `forecast` array and `isDay` flag are display-only and are not attributes of the persisted `Position`.
 - `timestamp`: When the position was recorded.
-- `osmCategory`, `osmType`, `osmName`, `addressType`, `houseNumber`, `road`, `city`, `country`: Geocoding information from OpenStreetMap.
+- `osmCategory`, `osmType`, `addressType`, `houseNumber`, `road`, `city`, `country`: Geocoding information from OpenStreetMap (the POI metadata drives the location icon, while the address parts feed `displayName` and the short address).
+- `osmName`: The label of a place the user adopted from "Places around me" (`Name, street houseNumber`); it is not filled by reverse geocoding, so geocoding never stores a POI name.
 - `tag`: An optional predefined tag for the position (`HOME`, `WORK`, `PARKING`, `SHOPPING`, `EATING`, `LEISURE`, `FRIENDS`, `HEALTH`).
 - `comment`: An optional user-provided comment (max. 25 characters in the UI, 255 in the database).
 

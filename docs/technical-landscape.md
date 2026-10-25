@@ -170,7 +170,7 @@ net.gauntlet.locate.me
 
 | Control | Responsibility |
 |----------|----------|
-| `Positions` | Orchestrates enrich (preview: geocoding + current weather + short hourly forecast assembly) and persist-only create, delete, queries and per-user counts; sole `EntityManager` access |
+| `Positions` | Orchestrates enrich (preview: geocoding + current weather + short hourly forecast assembly) and persist-only create, delete, queries and per-user counts; sole `EntityManager` access. The address label is composed from the Nominatim address parts (road + house number, city with `town`/`village`/`municipality` fallback, country), so POI names from the geocoding response never reach the client; Nominatim's `name` is not stored as `osmName` (that field is reserved for user-picked Geoapify places) |
 | `DistanceCalculator` | Haversine distance + walking/biking/driving time estimation (static util) |
 | `SystemInfo` | Application metadata (artifactId, version, startupTime) |
 | `GeocodingClient` | MicroProfile REST client → Nominatim reverse geocoding (`format`, `zoom`, `layer` configurable) |
@@ -380,7 +380,7 @@ in memory (see `Places.findCached`).
 | Interface | Protocol | Purpose |
 |------------|------------|------------|
 | Open-Meteo | REST/JSON | Current `temperature_2m`, `weather_code`, `uv_index`, `is_day`, `elevation`; hourly forecast `temperature_2m`, `weather_code`, `uv_index`, `precipitation_probability`, `is_day` (`forecast_hours`, `timezone=auto`) per position preview |
-| Nominatim (OSM) | REST/JSON | Reverse geocoding → display name + address parts |
+| Nominatim (OSM) | REST/JSON | Reverse geocoding → address parts (house number, road, city, country); the POI `name`/`display_name` prefix is discarded |
 | Geoapify | REST/JSON | POI places around a coordinate (category groups, radius, limit, `lang`); one request per `\|`-separated category group |
 | OSM tile server | HTTPS | Map tiles (browser-direct, Leaflet) |
 | Google Maps | HTTPS | Share link from map popups (native share) |
@@ -493,7 +493,7 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 | `allowed.user.ids` (+ `%dev`, `%test`) | Authorized users per profile |
 | `admin.key` (+ `%dev`, `%test`) | Single admin key for the stats endpoints: `${ADMIN_KEY:change-me}` (env-var overridable in prod), dev `dev-admin-key`, test `test-admin-key` |
 | `nominatim_uri/mp-rest/url`, `weather_uri/mp-rest/url` | REST client base URLs |
-| `nominatim.format`, `nominatim.zoom`, `nominatim.layer` | Nominatim reverse params: format (`jsonv2`), address granularity (`18`), layer filter (`address`; accepted `address,poi,railway,natural,manmade`; overridable via env `NOMINATIM_LAYER`) |
+| `nominatim.format`, `nominatim.zoom`, `nominatim.layer` | Nominatim reverse params: format (`jsonv2`), address granularity (`18`), layer filter (`address`; accepted `address,poi,railway,natural,manmade`; overridable via env `NOMINATIM_LAYER`). The layer filter does not hide POI names — a shop with a house number is served from the address layer — so `Positions` composes the label from the address parts, ignores `name` and uses `display_name` only as a fallback when no address part exists |
 | `weather.current-fields`, `weather.hourly-fields` | Comma-separated Open-Meteo fields for the current values and the hourly forecast (both include `is_day`) |
 | `weather.forecast-hours` | Number of future hourly forecast slices returned (default 4; the current hour is skipped) |
 | `weather.timezone` | Open-Meteo timestamp timezone (`auto` = the coordinates' local timezone, so times match the local wall clock) |

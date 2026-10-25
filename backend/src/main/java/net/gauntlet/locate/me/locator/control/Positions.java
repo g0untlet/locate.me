@@ -5,6 +5,8 @@ package net.gauntlet.locate.me.locator.control;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import jakarta.inject.Inject;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
@@ -23,6 +25,10 @@ import net.gauntlet.locate.me.security.ExternalApiRateLimits;
 public class Positions {
 
     static final System.Logger LOG = System.getLogger(Positions.class.getName());
+
+    // Mirrors the `display_name` column length in Position; the composed address
+    // is built from parts that are each up to 255 characters long.
+    static final int DISPLAY_NAME_MAX_LENGTH = 255;
 
     public record PositionCount(String userId, long locations) {
     }
@@ -119,24 +125,14 @@ public class Positions {
                 JsonObject response = this.geocodingClient.reverse(position.latitude(), position.longitude(),
                         this.geocodingFormat, this.geocodingZoom, this.geocodingLayer);
                 if (response != null) {
-                    if (response.containsKey("display_name") && !response.isNull("display_name")) {
-                        String displayName = response.getString("display_name");
-                        if (displayName != null && displayName.length() > 255) {
-                            displayName = displayName.substring(0, 255);
-                        }
-                        position.displayName(displayName);
-                    }
+                    applyAddress(position, response);
                     position.osmCategory(response.getString("category", null));
                     position.osmType(response.getString("type", null));
-                    position.osmName(response.getString("name", null));
                     position.addressType(response.getString("addresstype", null));
-                    if (response.containsKey("address") && !response.isNull("address")) {
-                        JsonObject address = response.getJsonObject("address");
-                        position.houseNumber(address.getString("house_number", null));
-                        position.road(address.getString("road", null));
-                        position.city(address.getString("city", null));
-                        position.country(address.getString("country", null));
-                    }
+                    // `name` is deliberately ignored: at building granularity it is
+                    // the POI (shop/restaurant) name, and POIs are covered by the
+                    // Geoapify places. `osmName` stays reserved for a place the user
+                    // picked explicitly, so reverse geocoding never stores a POI name.
                 }
             } catch (Exception e) {
                 LOG.log(System.Logger.Level.WARNING, "Failed to resolve displayName via OSM Nominatim API: {0}", e.getMessage());
@@ -175,6 +171,56 @@ public class Positions {
         }
 
         return new Current(position, forecast, isDay);
+    }
+
+    /**
+     * Stores the structured address of a Nominatim reverse response and derives
+     * the display label from it. A reverse request at building granularity answers
+     * with the POI of that building (`category=shop`, `addresstype=shop`), so the
+     * response's `display_name` starts with the shop or restaurant name even with
+     * `layer=address`. Composing the label from the address parts keeps the shown
+     * address and the tooltip free of POI names; `display_name` is used solely as
+     * a fallback when no address part is available (e.g. a park or a motorway).
+     */
+    static void applyAddress(Position position, JsonObject response) {
+        JsonObject address = response.containsKey("address") && !response.isNull("address")
+                ? response.getJsonObject("address")
+                : null;
+        if (address != null) {
+            position.houseNumber(address.getString("house_number", null));
+            position.road(address.getString("road", null));
+            // Rural addresses carry `town`/`village`/`municipality` instead of `city`.
+            position.city(firstValue(address, "city", "town", "village", "municipality"));
+            position.country(address.getString("country", null));
+        }
+        String addressLabel = composeAddress(position.road(), position.houseNumber(),
+                position.city(), position.country());
+        position.displayName(truncateDisplayName(
+                addressLabel != null ? addressLabel : response.getString("display_name", null)));
+    }
+
+    static String composeAddress(String road, String houseNumber, String city, String country) {
+        String street = Stream.of(road, houseNumber).filter(Positions::present).collect(Collectors.joining(" "));
+        List<String> parts = Stream.of(street, city, country).filter(Positions::present).toList();
+        return parts.isEmpty() ? null : String.join(", ", parts);
+    }
+
+    static String firstValue(JsonObject object, String... names) {
+        return Stream.of(names)
+                .map(name -> object.getString(name, null))
+                .filter(Positions::present)
+                .findFirst()
+                .orElse(null);
+    }
+
+    static boolean present(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    static String truncateDisplayName(String displayName) {
+        return displayName == null || displayName.length() <= DISPLAY_NAME_MAX_LENGTH
+                ? displayName
+                : displayName.substring(0, DISPLAY_NAME_MAX_LENGTH);
     }
 
     private List<ForecastTimeslice> forecastTimeslices(JsonObject response) {

@@ -32,7 +32,6 @@ import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
 import net.gauntlet.locate.me.aroundme.control.GeoapifyPlacesClient;
 import net.gauntlet.locate.me.aroundme.control.Geoboxing;
-import net.gauntlet.locate.me.aroundme.entity.Place;
 
 /**
  * Verifies that a "|"-separated geoapify.categories configuration triggers one
