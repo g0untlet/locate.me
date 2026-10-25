@@ -87,6 +87,7 @@ The condition shown (current and for each forecast hour) is mapped from the WMO 
 - On app start, if the exact `APP_VERSION` differs from the last seen version, a native modal shows the latest release once. The first-ever launch never shows it; existing app state is recognised so upgrades are not mistaken for a fresh install. An active install banner suppresses it until a later launch. Build-only changes (`APP_BUILD`) do not trigger it.
 - The dialog uses a fixed header and footer with an internally scrolling body, so longer release notes stay app-like and the close/action controls remain reachable.
 - The dialog links to the full website release notes (EN/DE/ES); French users are linked to the English page.
+- The application version shown in Settings is a button: tapping it re-opens this dialog on demand at any time, bypassing the once-per-version check (a second dialog is never stacked while one is open).
 
 ## 2. User Interface
 
@@ -126,7 +127,7 @@ The application is a single-page application (SPA) with three main views:
 - The user can set their `userId`.
 - The user can toggle between light and dark mode.
 - The user can select the application language — English (default), German, Spanish or French. On a first visit without a stored choice the language is auto-detected from the browser (`navigator.languages`/`navigator.language`, reduced to the primary subtag; English is the fallback) and is not persisted, so it keeps following the browser until the user makes an explicit choice. The choice is stored locally (`lang`) and applied in place (no page reload — a full reload in the installed Android PWA left the viewport mis-measured and clipped the bottom navigation until the app was killed); static and dynamic UI text is translated from flat JSON dictionaries (`frontend/locales/en.json`, `de.json`, `es.json`, `fr.json`) via a lean, framework-free lookup (`frontend/js/i18n.js`). Missing keys fall back to English. The app name "locate.me" and the predefined tag vocabulary (`HOME`, `WORK`, …) stay in English (the backend only understands the English tags); the selected language is additionally sent as `Accept-Language` for the "Places around me" request so POI names come back localized.
-- The view also displays the application version and links to the used services (OpenStreetMap, Leaflet, Open-Meteo).
+- The view also displays the application version and links to the used services (OpenStreetMap, Leaflet, Open-Meteo). Tapping the version re-opens the release notes dialog.
 
 ### 2.4. Install Prompt
 - A dismissible banner appears at the **top** of the app (over the header) to promote installation. On Android Chrome/Brave it is driven by the browser's `beforeinstallprompt` event; tapping "Install" opens the native install dialog and hides the banner. The event is captured in `index.html` before the module loads and consumed by `frontend/js/ui/install.js`.

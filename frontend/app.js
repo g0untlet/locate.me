@@ -8,7 +8,7 @@ import { silentBadgeSync } from './js/ui/badge.js';
 import { setHistoryView, initMapListeners } from './js/ui/map.js';
 import { initInstallPrompt } from './js/ui/install.js';
 import { requestHeadingPermission } from './js/ui/compass.js';
-import { maybeShowReleaseNotes } from './js/ui/release-notes.js';
+import { maybeShowReleaseNotes, openReleaseNotes } from './js/ui/release-notes.js';
 import { initSettingsPage } from './js/pages/settings.js';
 import { initLocatePage, resetLocatePage } from './js/pages/locate.js';
 import {
@@ -150,6 +150,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (statusIndicator) {
         statusIndicator.style.cursor = 'pointer';
         statusIndicator.addEventListener('click', () => checkBackendStatus(true));
+    }
+
+    // Tap the version in Settings: re-open the release notes on demand.
+    const versionDisplay = document.getElementById('app-version-display');
+    if (versionDisplay) {
+        versionDisplay.addEventListener('click', openReleaseNotes);
     }
 
     // Trigger 1: Core Startup Sequence

@@ -397,16 +397,23 @@ const PLACES_UNAVAILABLE = null;
    single source for both the filter chips and the rows, so filtering never
    triggers a backend request. `placeCategoryFilter` is a single primary
    category (`null` = no filter, i.e. all places). `expandedPlaceId` is the
-   place whose details accordion is open (`null` = none). */
+   place whose details accordion is open (`null` = none); `expandedRow` keeps
+   its row element so open/close can animate in place without re-rendering. */
 let loadedPlaces = [];
 let placeCategoryFilter = null;
 let expandedPlaceId = null;
+let expandedRow = null;
+
+/* Mirrors the CSS transition of `.place-details` (0.25s); the list scrolls to
+   the opened panel only once it reached its natural height. */
+const PLACE_DETAILS_ANIMATION_MS = 250;
 
 /* A new fetch always starts from scratch: no category filter, no open
    accordion. Selection is reset by renderChooser on the same round. */
 function resetPlacesView() {
     placeCategoryFilter = null;
     expandedPlaceId = null;
+    expandedRow = null;
 }
 
 /* Canonical chip order – the primary categories the backend can be configured
@@ -515,8 +522,10 @@ function hidePlacesFilter() {
 function setPlaceCategoryFilter(category) {
     placeCategoryFilter = category;
     // The open accordion belongs to the previous view; a filtered-out row must
-    // not keep a hidden panel (or a selection the filter hides).
+    // not keep a hidden panel (or a selection the filter hides). The list is
+    // re-rendered below, so reset the references instead of animating a close.
     expandedPlaceId = null;
+    expandedRow = null;
     if (category && selectedPlace && selectedPlace.primaryCategory !== category) {
         selectResolvedAddress();
     }
@@ -557,11 +566,49 @@ function buildPlaceDetailsPanel(place, rowsHtml) {
     panel.id = placeDetailsId(place);
     panel.setAttribute('role', 'region');
     panel.setAttribute('aria-label', place.name || t('places.unknownPlace'));
-    panel.innerHTML = `<div class="place-info-list">${rowsHtml}</div>`;
-    // Kept in the DOM so aria-controls always points at a real element; the
-    // `hidden` attribute (not CSS) drives visibility.
-    panel.hidden = true;
+    // The inner wrapper carries padding/background/border and the fade; the
+    // outer element animates its grid row, so `aria-controls` always points at
+    // a real element that stays in the DOM while collapsed.
+    panel.innerHTML = `<div class="place-details-inner"><div class="place-info-list">${rowsHtml}</div></div>`;
     return panel;
+}
+
+function placeDetailsPanelOf(row) {
+    const id = row ? row.getAttribute('aria-controls') : null;
+    return id ? document.getElementById(id) : null;
+}
+
+/* Open/close the panel in place (no re-render), so the height and the chevron
+   transition together. */
+function setPlaceDetailsExpanded(row, expanded) {
+    if (!row) return;
+    row.classList.toggle('place-row--expanded', expanded);
+    row.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    const panel = placeDetailsPanelOf(row);
+    if (panel) panel.classList.toggle('place-details--open', expanded);
+}
+
+function openPlaceDetails(place, row) {
+    expandedRow = row;
+    expandedPlaceId = place.placeId;
+    setPlaceDetailsExpanded(row, true);
+
+    // Scroll once the panel reached its natural height; skip the wait when the
+    // user prefers reduced motion. The guard prevents a scroll after a fast
+    // second tap (collapse) or a different row being opened meanwhile.
+    const reducedMotion = typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.setTimeout(() => {
+        if (expandedPlaceId !== place.placeId || expandedRow !== row) return;
+        const panel = placeDetailsPanelOf(row);
+        if (panel) panel.scrollIntoView({ block: 'nearest' });
+    }, reducedMotion ? 0 : PLACE_DETAILS_ANIMATION_MS);
+}
+
+function closePlaceDetails() {
+    if (expandedRow) setPlaceDetailsExpanded(expandedRow, false);
+    expandedRow = null;
+    expandedPlaceId = null;
 }
 
 const PLACE_ROW_CHEVRON =
@@ -576,11 +623,9 @@ const PLACE_ROW_CHEVRON =
 function handlePlaceRowClick(place, hasDetails, row) {
     const wasExpanded = expandedPlaceId === place.placeId;
     selectPlace(place, row);
-    expandedPlaceId = (!wasExpanded && hasDetails && place.placeId) ? place.placeId : null;
-    renderPlaceRows();
-    if (expandedPlaceId) {
-        const panel = document.getElementById(placeDetailsId(place));
-        if (panel) panel.scrollIntoView({ block: 'nearest' });
+    closePlaceDetails();
+    if (!wasExpanded && hasDetails && place.placeId) {
+        openPlaceDetails(place, row);
     }
 }
 
@@ -624,7 +669,7 @@ function renderPlaceRows() {
 
         if (hasDetails) {
             const panel = buildPlaceDetailsPanel(place, details);
-            panel.hidden = !expanded;
+            panel.classList.toggle('place-details--open', expanded);
             list.appendChild(panel);
         }
     });
@@ -722,7 +767,6 @@ function selectPlace(place, row) {
 
 function selectResolvedAddress() {
     selectedPlace = null;
-    expandedPlaceId = null;
 
     document.querySelectorAll('.place-row').forEach(r => {
         r.classList.remove('place-row--selected');
@@ -733,8 +777,9 @@ function selectResolvedAddress() {
     const cached = getCachedLocatePosition();
     if (cached) fillAddress(document.getElementById('chooser-address-container'), cached);
 
-    // Drop an open details panel: the place is no longer the chosen location.
-    renderPlaceRows();
+    // The place is no longer the chosen location: collapse its details in place
+    // (animated) instead of re-rendering the list.
+    closePlaceDetails();
 }
 
 /* ==========================================================================
@@ -1501,6 +1546,7 @@ export function resetLocatePage() {
     loadedPlaces = [];
     placeCategoryFilter = null;
     expandedPlaceId = null;
+    expandedRow = null;
     lastPreviewLabel = '';
     setCachedLocatePosition(null);
     renderForecast(null);

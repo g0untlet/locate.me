@@ -1789,17 +1789,45 @@ html.i18n-loading .app-container {
 .place-row .place-row-chevron svg {
     width: 14px;
     height: 14px;
-    transition: transform 0.15s ease-out;
+    transition: transform 0.2s ease;
 }
 
 .place-row--expanded .place-row-chevron svg {
     transform: rotate(180deg);
 }
 
+/* Auto-height disclosure: the outer grid wrapper animates `grid-template-rows`
+   0fr -> 1fr, so the panel grows to its natural height (opening hours can wrap;
+   a fixed max-height would clip or snap). `visibility` is transitioned too: it
+   flips immediately when opening and only at the end of the collapse, which
+   keeps the links out of the tab order while the panel is closed. The inner
+   element carries padding/background/border and the fade, and clips the content
+   while the grid track shrinks. */
 .place-details {
+    display: grid;
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    transition: grid-template-rows 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                visibility 0.25s;
+}
+
+.place-details--open {
+    grid-template-rows: 1fr;
+    visibility: visible;
+}
+
+.place-details-inner {
+    min-height: 0;
+    overflow: hidden;
     padding: 2px 16px 8px 44px;
     border-top: 1px solid var(--border-color);
     background-color: var(--surface-subtle);
+    opacity: 0;
+    transition: opacity 0.2s linear;
+}
+
+.place-details--open .place-details-inner {
+    opacity: 1;
 }
 
 .place-details .place-info-row svg {
@@ -1812,7 +1840,9 @@ html.i18n-loading .app-container {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .place-row .place-row-chevron svg {
+    .place-row .place-row-chevron svg,
+    .place-details,
+    .place-details-inner {
         transition: none;
     }
 }
@@ -2735,11 +2765,46 @@ html.i18n-loading .app-container {
     transition: color 0.15s ease;
 }
 
-/* Nur echte Links (a) bekommen Hover-Verhalten; Plain-Text-Spans bleiben
-   statisch, damit "VERSION"-Einträge nicht wie Hyperlinks wirken. */
-a.attribution-link:hover {
+/* Attribution links are clickable: a dotted underline marks them as interactive
+   (matching the version button), a solid underline plus primary colour on hover
+   or keyboard focus. */
+a.attribution-link {
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+}
+
+a.attribution-link:hover,
+a.attribution-link:focus-visible {
     color: var(--primary-dark);
-    text-decoration: underline;
+    text-decoration: underline solid;
+}
+
+/* The version text is a button that re-opens the "What's new" dialog. It uses
+   the same dotted underline as the attribution links so its clickability reads
+   consistently. */
+button.attribution-link.attribution-version {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+button.attribution-link.attribution-version:hover,
+button.attribution-link.attribution-version:focus-visible {
+    color: var(--primary-dark);
+    text-decoration: underline solid;
+}
+
+button.attribution-link.attribution-version:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: 4px;
 }
 
 .attribution-link--offline {

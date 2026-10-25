@@ -315,7 +315,7 @@ DEV/tests: in-memory (`jdbc:h2:mem:locator_dev`, `jdbc:h2:mem:locator_test`). Cr
 ## Schema Management
 
 Since 0.4.0 the schema is managed by **Flyway** (`quarkus-flyway`); Hibernate runs with
-`quarkus.hibernate-orm.database.generation=none` and never alters the schema.
+`quarkus.hibernate-orm.schema-management.strategy=none` and never alters the schema.
 
 - Migrations are applied automatically at startup (`quarkus.flyway.migrate-at-start=true`).
 - Migration scripts live in `backend/src/main/resources/db/migration/`:
@@ -487,7 +487,7 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 |------------|------------|
 | `quarkus.package.jar.type=uber-jar` | Single executable JAR |
 | `quarkus.datasource.*` (`%dev`, `%test`) | H2 URLs + credentials |
-| `quarkus.hibernate-orm.database.generation` | `none` (schema owned by Flyway) |
+| `quarkus.hibernate-orm.schema-management.strategy` | `none` (schema owned by Flyway; non-deprecated replacement for `quarkus.hibernate-orm.database.generation`) |
 | `quarkus.flyway.migrate-at-start` | `true` — apply pending migrations on startup |
 | `quarkus.flyway.baseline-on-migrate`, `quarkus.flyway.baseline-version` | `true` / `1` — baseline existing non-empty DBs at v1, skipping `V1__baseline.sql` |
 | `allowed.user.ids` (+ `%dev`, `%test`) | Authorized users per profile |
