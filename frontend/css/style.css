@@ -457,17 +457,17 @@ html.i18n-loading .app-container {
     margin-top: 1px;
 }
 
-/* Elevation: quiet muted micro-item in the card's right measurement column,
-   subordinate to the temperature/UV pills (no colored background on purpose). */
+/* Elevation: quiet muted micro-item in the expanded GPS details row (in front
+   of the coordinates), styled like the coords/accuracy pills next to it. */
 .log-card-elevation-chip {
     display: inline-flex;
     align-items: center;
     gap: 3px;
     padding: 2px 7px;
     border-radius: 6px;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
-    background-color: var(--surface-subtle);
+    background-color: var(--chip-bg);
     color: var(--text-muted);
     white-space: nowrap;
 }
@@ -645,9 +645,20 @@ html.i18n-loading .app-container {
     margin-top: 0;
 }
 
-.log-card-travel-row .log-card-distance {
-    margin-left: auto;
-    flex-shrink: 0;
+/* Distance pill in the card header, in front of the direction badge. Theme
+   tokens keep it correct in dark mode (the former inline background was a
+   hardcoded light slate). */
+.log-card-distance {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background-color: var(--surface-subtle);
+    color: var(--text-muted);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 
 .log-card-accuracy-badge { 
@@ -1563,6 +1574,121 @@ html.i18n-loading .app-container {
     stroke-width: 1.5;
 }
 
+/* --- Chooser: Places category filter (icon-only, single-select) ---
+   Sits between the header and the scrolling list so the header (label, count,
+   north compass) stays a passive status row. Appears only when the result
+   carries at least two categories – with a single one there is nothing to
+   filter, so no vertical space is spent. */
+.places-filter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 16px 6px;
+    flex-shrink: 0;
+}
+
+.places-filter-chips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    /* Horizontal only: `overflow-x: auto` would otherwise compute the vertical
+       axis to `auto` as well and the 3px hit-area/focus-ring overhang of the
+       chips would make the strip wobble vertically by a few pixels. The block
+       padding keeps that overhang (and the focus ring) inside the scrollport;
+       the negative margin keeps the row height unchanged. */
+    padding-block: 3px;
+    margin-block: -3px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+}
+
+.places-filter-chips::-webkit-scrollbar {
+    display: none;
+}
+
+.places-filter-chip,
+.places-filter-clear {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    padding: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    background-color: var(--card-bg);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+/* Enlarge the tap target to 36px without changing the visual footprint or the
+   row height (chips are 30px wide with a 6px gap, so hit areas only touch). */
+.places-filter-chip::after,
+.places-filter-clear::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+}
+
+.places-filter-chip svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.places-filter-clear svg {
+    width: 14px;
+    height: 14px;
+}
+
+.places-filter-chip:hover,
+.places-filter-clear:hover {
+    background-color: var(--surface-subtle);
+    color: var(--text-color);
+}
+
+.places-filter-chip--active,
+.places-filter-chip--active:hover {
+    background-color: var(--primary-tint);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+/* The active chip grows into a pill and shows the localized category name, so
+   an ambiguous glyph is explained exactly where it is selected. Idle chips
+   stay icon-only and language-neutral. */
+.places-filter-chip--active {
+    width: auto;
+    min-width: 30px;
+    padding: 0 10px 0 8px;
+    gap: 6px;
+    border-radius: 15px;
+}
+
+.places-filter-chip-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.places-filter-chip:focus-visible,
+.places-filter-clear:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 1px;
+}
+
+.places-filter-clear {
+    background-color: var(--surface-subtle);
+}
+
 .places-error {
     padding: 8px 16px 12px;
     font-size: 0.8rem;
@@ -1668,6 +1794,98 @@ html.i18n-loading .app-container {
     font-weight: 600;
     color: var(--text-muted);
     white-space: nowrap;
+}
+
+/* Chevron + distance as one right-aligned tail: the distance is the last
+   element of every row, so distances line up whether or not a row can expand.
+   The tighter inner gap keeps the chevron visually attached to the distance
+   instead of floating in the row gap. */
+.place-row-tail {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* --- Chooser: place details accordion (phone / website / hours / wheelchair) ---
+   Only places that carry at least one detail get a chevron and can be expanded.
+   The panel is a sibling of the row button inside the scrolling list, so the
+   card height and the pinned action row stay untouched. */
+.place-row-chevron {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+.place-row .place-row-chevron svg {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s ease;
+}
+
+.place-row--expanded .place-row-chevron svg {
+    transform: rotate(180deg);
+}
+
+/* Auto-height disclosure: the outer grid wrapper animates `grid-template-rows`
+   0fr -> 1fr, so the panel grows to its natural height (opening hours can wrap;
+   a fixed max-height would clip or snap). `visibility` is transitioned too: it
+   flips immediately when opening and only at the end of the collapse, which
+   keeps the links out of the tab order while the panel is closed. The inner
+   element carries the fade and clips the content while the grid track shrinks.
+   Padding/border/background live one level deeper (`.place-info-list`): on the
+   collapsing grid item they would give the closed panel an 11px box and every
+   detail row would look taller than a row without details. */
+.place-details {
+    display: grid;
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    overflow: hidden;
+    /* The list is a flex column: without this the panel would shrink to 0 in an
+       over-full list (overflow:hidden zeroes its automatic minimum size), so an
+       opened panel could not unfold. The list scrolls instead. */
+    flex-shrink: 0;
+    transition: grid-template-rows 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                visibility 0.25s;
+}
+
+.place-details--open {
+    grid-template-rows: 1fr;
+    visibility: visible;
+}
+
+.place-details-inner {
+    min-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.2s linear;
+}
+
+.place-details--open .place-details-inner {
+    opacity: 1;
+}
+
+.place-details-inner > .place-info-list {
+    padding: 2px 16px 8px 44px;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--surface-subtle);
+}
+
+.place-details .place-info-row svg {
+    width: 16px;
+    height: 16px;
+}
+
+.place-details .place-info-content {
+    font-size: 0.8rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .place-row .place-row-chevron svg,
+    .place-details,
+    .place-details-inner {
+        transition: none;
+    }
 }
 
 /* ==========================================================================
@@ -2588,15 +2806,55 @@ html.i18n-loading .app-container {
     transition: color 0.15s ease;
 }
 
-/* Nur echte Links (a) bekommen Hover-Verhalten; Plain-Text-Spans bleiben
-   statisch, damit "VERSION"-Einträge nicht wie Hyperlinks wirken. */
-a.attribution-link:hover {
+/* Attribution links are clickable: a dotted underline marks them as interactive
+   (matching the version button), a solid underline plus primary colour on hover
+   or keyboard focus. */
+a.attribution-link {
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+}
+
+a.attribution-link:hover,
+a.attribution-link:focus-visible {
     color: var(--primary-dark);
-    text-decoration: underline;
+    text-decoration: underline solid;
+}
+
+/* The version text is a button that re-opens the "What's new" dialog. It uses
+   the same dotted underline as the attribution links so its clickability reads
+   consistently. */
+button.attribution-link.attribution-version {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+button.attribution-link.attribution-version:hover,
+button.attribution-link.attribution-version:focus-visible {
+    color: var(--primary-dark);
+    text-decoration: underline solid;
+}
+
+button.attribution-link.attribution-version:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: 4px;
 }
 
 .attribution-link--offline {
     color: var(--error-color, #dc2626);
+}
+
+/* Server-origin line below the backend version / online-since row. */
+.attribution-server {
+    margin-top: 4px;
 }
 
 /* Chrome Android Fix: CSS-Variablen in dynamisch gesetztem Content erzwingen */

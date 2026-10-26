@@ -19,6 +19,7 @@ import {
     formatShortAddress,
     formatRelativeDate,
     formatTravelTime,
+    formatDistanceKm,
     formatElevation,
     PREDEFINED_TAGS,
     posMatchesFilter
@@ -346,20 +347,12 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
         `;
     }
 
-    // --- Distanz ---
+    // --- Distanz (Header, vor dem Richtungs-Badge) ---
+    // The header answers "how far and which way"; the travel row below keeps
+    // the times only. Formatting is m/km so the chip stays short ("300 m").
     let distanceHtml = "";
     if (pos.distance !== undefined && pos.distance !== null && !isNaN(parseFloat(pos.distance))) {
-        const distVal = parseFloat(pos.distance);
-        const compactDistance = distVal > 100;
-        distanceHtml = `
-            <div class="log-card-distance" style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); background-color: #f1f5f9; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
-                <svg class="action-icon" style="stroke: var(--text-muted); width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
-                </svg>
-                <span>${compactDistance ? `~${Math.round(distVal)}` : distVal.toFixed(2)} km</span>
-            </div>
-        `;
+        distanceHtml = `<span class="log-card-distance">${formatDistanceKm(pos.distance)}</span>`;
     }
 
     // --- Travel Times (walk / bike / drive) ---
@@ -385,8 +378,9 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
         travelTimesHtml = `<div class="log-card-travel-times">${travelItemsHtml}</div>`;
     }
 
-    const travelRowHtml = (travelTimesHtml !== "" || distanceHtml !== "")
-        ? `<div class="log-card-travel-row">${travelTimesHtml}${distanceHtml}</div>`
+    // Travel times only: the distance moved up into the card header.
+    const travelRowHtml = travelTimesHtml !== ""
+        ? `<div class="log-card-travel-row">${travelTimesHtml}</div>`
         : "";
 
     const dateFormatted      = formatRelativeDate(pos.timestamp);
@@ -443,9 +437,9 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
         </div>`
         : '';
 
-    // Elevation: muted pill in the header meta row (it takes the slot the GPS
-    // accuracy badge used to occupy). Solid triangle disambiguates "m" from the
-    // distance chip in the travel row.
+    // Elevation: muted pill in the expanded GPS details, in front of the
+    // coordinates. The solid triangle disambiguates "m" from the distance chip
+    // in the header.
     const elevationHtml = elevationFormatted
         ? `<span class="log-card-elevation-chip">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -477,8 +471,8 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
                     <span style="margin-left: 6px;">${dateFormatted}</span>${tagHtml}
                 </div>
                 <div class="log-card-meta">
+                    ${distanceHtml}
                     ${directionHtml}
-                    ${elevationHtml}
                 </div>
             </div>
             <div class="log-card-body">
@@ -500,6 +494,7 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
                     ${uvHtml}
                 </div>
                 <div class="log-card-details-gps">
+                    ${elevationHtml}
                     ${coordsHtml}
                     <span class="log-card-accuracy-badge${isLowAccuracy ? ' log-card-accuracy-badge--low' : ''}">
                         <svg class="log-accuracy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

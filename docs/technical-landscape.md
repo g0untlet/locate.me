@@ -170,7 +170,7 @@ net.gauntlet.locate.me
 
 | Control | Responsibility |
 |----------|----------|
-| `Positions` | Orchestrates enrich (preview: geocoding + current weather + short hourly forecast assembly) and persist-only create, delete, queries and per-user counts; sole `EntityManager` access |
+| `Positions` | Orchestrates enrich (preview: geocoding + current weather + short hourly forecast assembly) and persist-only create, delete, queries and per-user counts; sole `EntityManager` access. The address label is composed from the Nominatim address parts (road + house number, city with `town`/`village`/`municipality` fallback, country), so POI names from the geocoding response never reach the client; Nominatim's `name` is not stored as `osmName` (that field is reserved for user-picked Geoapify places) |
 | `DistanceCalculator` | Haversine distance + walking/biking/driving time estimation (static util) |
 | `SystemInfo` | Application metadata (artifactId, version, startupTime) |
 | `GeocodingClient` | MicroProfile REST client → Nominatim reverse geocoding (`format`, `zoom`, `layer` configurable) |
@@ -315,7 +315,7 @@ DEV/tests: in-memory (`jdbc:h2:mem:locator_dev`, `jdbc:h2:mem:locator_test`). Cr
 ## Schema Management
 
 Since 0.4.0 the schema is managed by **Flyway** (`quarkus-flyway`); Hibernate runs with
-`quarkus.hibernate-orm.database.generation=none` and never alters the schema.
+`quarkus.hibernate-orm.schema-management.strategy=none` and never alters the schema.
 
 - Migrations are applied automatically at startup (`quarkus.flyway.migrate-at-start=true`).
 - Migration scripts live in `backend/src/main/resources/db/migration/`:
@@ -380,7 +380,7 @@ in memory (see `Places.findCached`).
 | Interface | Protocol | Purpose |
 |------------|------------|------------|
 | Open-Meteo | REST/JSON | Current `temperature_2m`, `weather_code`, `uv_index`, `is_day`, `elevation`; hourly forecast `temperature_2m`, `weather_code`, `uv_index`, `precipitation_probability`, `is_day` (`forecast_hours`, `timezone=auto`) per position preview |
-| Nominatim (OSM) | REST/JSON | Reverse geocoding → display name + address parts |
+| Nominatim (OSM) | REST/JSON | Reverse geocoding → address parts (house number, road, city, country); the POI `name`/`display_name` prefix is discarded |
 | Geoapify | REST/JSON | POI places around a coordinate (category groups, radius, limit, `lang`); one request per `\|`-separated category group |
 | OSM tile server | HTTPS | Map tiles (browser-direct, Leaflet) |
 | Google Maps | HTTPS | Share link from map popups (native share) |
@@ -487,18 +487,18 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 |------------|------------|
 | `quarkus.package.jar.type=uber-jar` | Single executable JAR |
 | `quarkus.datasource.*` (`%dev`, `%test`) | H2 URLs + credentials |
-| `quarkus.hibernate-orm.database.generation` | `none` (schema owned by Flyway) |
+| `quarkus.hibernate-orm.schema-management.strategy` | `none` (schema owned by Flyway; non-deprecated replacement for `quarkus.hibernate-orm.database.generation`) |
 | `quarkus.flyway.migrate-at-start` | `true` — apply pending migrations on startup |
 | `quarkus.flyway.baseline-on-migrate`, `quarkus.flyway.baseline-version` | `true` / `1` — baseline existing non-empty DBs at v1, skipping `V1__baseline.sql` |
 | `allowed.user.ids` (+ `%dev`, `%test`) | Authorized users per profile |
 | `admin.key` (+ `%dev`, `%test`) | Single admin key for the stats endpoints: `${ADMIN_KEY:change-me}` (env-var overridable in prod), dev `dev-admin-key`, test `test-admin-key` |
 | `nominatim_uri/mp-rest/url`, `weather_uri/mp-rest/url` | REST client base URLs |
-| `nominatim.format`, `nominatim.zoom`, `nominatim.layer` | Nominatim reverse params: format (`jsonv2`), address granularity (`18`), layer filter (`address`; accepted `address,poi,railway,natural,manmade`; overridable via env `NOMINATIM_LAYER`) |
+| `nominatim.format`, `nominatim.zoom`, `nominatim.layer` | Nominatim reverse params: format (`jsonv2`), address granularity (`18`), layer filter (`address`; accepted `address,poi,railway,natural,manmade`; overridable via env `NOMINATIM_LAYER`). The layer filter does not hide POI names — a shop with a house number is served from the address layer — so `Positions` composes the label from the address parts, ignores `name` and uses `display_name` only as a fallback when no address part exists |
 | `weather.current-fields`, `weather.hourly-fields` | Comma-separated Open-Meteo fields for the current values and the hourly forecast (both include `is_day`) |
 | `weather.forecast-hours` | Number of future hourly forecast slices returned (default 4; the current hour is skipped) |
 | `weather.timezone` | Open-Meteo timestamp timezone (`auto` = the coordinates' local timezone, so times match the local wall clock) |
 | `weather_uri/mp-rest/read-timeout`, `weather_uri/mp-rest/connect-timeout` | Open-Meteo client timeouts (ms), mirroring Geoapify |
-| `geoapify_uri/mp-rest/url`, `geoapify.categories`, `geoapify.limit`, `geoapify.radius`, `geoapify.format`, `geoapify.api-key` | Geoapify Places client: base URL, category groups (`catering,commercial,healthcare,leisure,entertainment\|tourism.attraction`; `\|` separates groups, each fetched with its own request), result limit per group, fetch radius (m, 700), format, API key (`${GEOAPIFY_API_KEY:}`) |
+| `geoapify_uri/mp-rest/url`, `geoapify.categories`, `geoapify.limit`, `geoapify.radius`, `geoapify.format`, `geoapify.api-key` | Geoapify Places client: base URL, category groups (`catering,commercial,healthcare,leisure,entertainment,sport.fitness\|accommodation.hotel,tourism.sights`; `\|` separates groups, each fetched with its own request), result limit per group, fetch radius (m, 700), format, API key (`${GEOAPIFY_API_KEY:}`) |
 | `aroundme.cache-radius` | Cache bounding-box radius (m, 700) for the cache-first lookup |
 | `aroundme.exclude-categories` | Comma-separated secondary POI categories to exclude (e.g. `playground`); applied on cache hits and fresh fetches |
 | `aroundme.max-places` | Maximum number of places returned per category group (default 20); total response cap = value × number of groups. `geoapify.limit` still controls the Geoapify fetch / cache size per group |

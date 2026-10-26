@@ -188,6 +188,14 @@ function showReleaseNotes(version) {
     writeStorage(SEEN_KEY, version);
 }
 
+/* Manual re-open from the version row in Settings. Bypasses the
+   once-per-version gate, the first-launch rule, the install-banner suppression
+   and the startup delay, but never stacks a second dialog. */
+export function openReleaseNotes() {
+    if (document.querySelector('dialog[open]')) return;
+    showReleaseNotes(getAppVersion());
+}
+
 export function maybeShowReleaseNotes() {
     const version = getAppVersion();
 

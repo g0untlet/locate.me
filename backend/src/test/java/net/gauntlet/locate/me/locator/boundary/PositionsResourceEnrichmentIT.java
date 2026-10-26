@@ -144,10 +144,11 @@ public class PositionsResourceEnrichmentIT {
         assertThat(response.getStatus()).isEqualTo(200);
 
         JsonObject json = (JsonObject) response.getEntity();
-        assertThat(json.getString("displayName")).isEqualTo("Reichstagsgebäude, Platz der Republik, Tiergarten, Mitte, Berlin, 10557, Deutschland");
+        // Composed from the address parts, so the POI name "Reichstagsgebäude" is gone
+        assertThat(json.getString("displayName")).isEqualTo("Platz der Republik, Berlin, Deutschland");
         assertThat(json.getString("osmCategory")).isEqualTo("historic");
         assertThat(json.getString("osmType")).isEqualTo("memorial");
-        assertThat(json.getString("osmName")).isEqualTo("Reichstagsgebäude");
+        assertThat(json.containsKey("osmName")).isFalse();
         assertThat(json.getString("addressType")).isEqualTo("historic");
         assertThat(json.getString("road")).isEqualTo("Platz der Republik");
         assertThat(json.getString("city")).isEqualTo("Berlin");
@@ -181,5 +182,52 @@ public class PositionsResourceEnrichmentIT {
                 .setParameter("userId", userId)
                 .getSingleResult();
         assertThat(count).isEqualTo(0);
+    }
+
+    @Test
+    @Transactional
+    public void previewPositionOmitsShopNameFromAddress() {
+        // A shop node with a house number is served from Nominatim's address layer,
+        // so `layer=address` does not prevent the POI name in `name`/`display_name`.
+        when(geocodingClient.reverse(anyDouble(), anyDouble(), anyString(), anyInt(), anyString()))
+                .thenReturn(Json.createObjectBuilder()
+                        .add("place_id", 128874772)
+                        .add("osm_type", "node")
+                        .add("osm_id", 648549118)
+                        .add("category", "shop")
+                        .add("type", "butcher")
+                        .add("addresstype", "shop")
+                        .add("name", "F. Wöhrmüller")
+                        .add("display_name", "F. Wöhrmüller, 2, Viktualienmarkt, Graggenauerviertel, "
+                                + "Altstadt-Lehel, München, Bayern, 80331, Deutschland")
+                        .add("address", Json.createObjectBuilder()
+                                .add("shop", "F. Wöhrmüller")
+                                .add("house_number", "2")
+                                .add("road", "Viktualienmarkt")
+                                .add("quarter", "Graggenauerviertel")
+                                .add("suburb", "Altstadt-Lehel")
+                                .add("city", "München")
+                                .add("state", "Bayern")
+                                .add("postcode", "80331")
+                                .add("country", "Deutschland")
+                                .add("country_code", "de")
+                                .build())
+                        .build());
+
+        Response response = positionsResource.fetchCurrentPosition("validUser", 48.1363, 11.5768);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        JsonObject json = (JsonObject) response.getEntity();
+        assertThat(json.getString("displayName")).isEqualTo("Viktualienmarkt 2, München, Deutschland");
+        assertThat(json.getString("road")).isEqualTo("Viktualienmarkt");
+        assertThat(json.getString("houseNumber")).isEqualTo("2");
+        assertThat(json.getString("city")).isEqualTo("München");
+        assertThat(json.getString("country")).isEqualTo("Deutschland");
+        // The POI metadata itself is kept (it drives the icon), its name is not
+        assertThat(json.getString("osmCategory")).isEqualTo("shop");
+        assertThat(json.getString("osmType")).isEqualTo("butcher");
+        assertThat(json.getString("addressType")).isEqualTo("shop");
+        assertThat(json.containsKey("osmName")).isFalse();
+        assertThat(response.getEntity().toString()).doesNotContain("F. Wöhrmüller");
     }
 }

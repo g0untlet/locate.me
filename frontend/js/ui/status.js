@@ -1,10 +1,23 @@
 import { apiGetSystemInfo } from '../api.js';
+import { API_BASE_URL } from '../config.js';
 import { showStatusToast } from './toast.js';
 import { t, getLocaleTag } from '../i18n.js';
 
 /* ==========================================================================
    Backend Info Renderer (Settings-Seite)
    ========================================================================== */
+/* The origin the app actually talks to: the configured dev backend, or the
+   app's own origin in production where Caddy proxies /api. */
+function serverOrigin() {
+    return API_BASE_URL || window.location.origin;
+}
+
+function serverInfoHtml() {
+    return `<div class="attribution-links attribution-server">` +
+        `<span class="attribution-link">${t('settings.server', { url: serverOrigin() })}</span>` +
+        `</div>`;
+}
+
 function renderBackendInfo(info) {
     const el = document.getElementById('backend-info');
     if (!el) return;
@@ -13,7 +26,7 @@ function renderBackendInfo(info) {
         el.innerHTML = `
             <div class="attribution-links">
                 <span class="attribution-link attribution-link--offline">${t('settings.backendNotReachable')}</span>
-            </div>`;
+            </div>` + serverInfoHtml();
         return;
     }
 
@@ -32,7 +45,7 @@ function renderBackendInfo(info) {
         <div class="attribution-links">
             <span class="attribution-link">${info.artifactId || '–'} ${info.version || ''}</span>
             <span class="attribution-link">${t('settings.onlineSince', { date: onlineSince })}</span>
-        </div>`;
+        </div>` + serverInfoHtml();
 }
 
 /* ==========================================================================

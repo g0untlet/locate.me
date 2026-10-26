@@ -96,7 +96,7 @@ curl -X GET "http://localhost:8090/api/places?userId=user123&lat=48.135617&lon=1
 
 | Property | Default | Purpose |
 |----------|---------|---------|
-| `geoapify.categories` | `catering,commercial,healthcare,leisure,entertainment\|tourism.attraction` | POI category groups fetched and used for a place's primary/secondary category; `\|` separates groups |
+| `geoapify.categories` | `catering,commercial,healthcare,leisure,entertainment,sport.fitness\|accommodation.hotel,tourism.sights` | POI category groups fetched and used for a place's primary/secondary category; `\|` separates groups |
 | `geoapify.radius` / `geoapify.limit` | `700` m / `20` | Search radius; number of places fetched & cached per category group |
 | `aroundme.max-places` | `20` | Places returned per category group (total cap = value × number of groups) |
 | `aroundme.cache-radius` | `700` m | Geobox size of the cache-first lookup |
