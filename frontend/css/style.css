@@ -1582,7 +1582,16 @@ html.i18n-loading .app-container {
     gap: 6px;
     flex: 1;
     min-width: 0;
+    /* Horizontal only: `overflow-x: auto` would otherwise compute the vertical
+       axis to `auto` as well and the 3px hit-area/focus-ring overhang of the
+       chips would make the strip wobble vertically by a few pixels. The block
+       padding keeps that overhang (and the focus ring) inside the scrollport;
+       the negative margin keeps the row height unchanged. */
+    padding-block: 3px;
+    margin-block: -3px;
     overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
     scrollbar-width: none;
 }
 
@@ -1774,6 +1783,17 @@ html.i18n-loading .app-container {
     font-weight: 600;
     color: var(--text-muted);
     white-space: nowrap;
+}
+
+/* Chevron + distance as one right-aligned tail: the distance is the last
+   element of every row, so distances line up whether or not a row can expand.
+   The tighter inner gap keeps the chevron visually attached to the distance
+   instead of floating in the row gap. */
+.place-row-tail {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
 /* --- Chooser: place details accordion (phone / website / hours / wheelchair) ---
@@ -2809,6 +2829,11 @@ button.attribution-link.attribution-version:focus-visible {
 
 .attribution-link--offline {
     color: var(--error-color, #dc2626);
+}
+
+/* Server-origin line below the backend version / online-since row. */
+.attribution-server {
+    margin-top: 4px;
 }
 
 /* Chrome Android Fix: CSS-Variablen in dynamisch gesetztem Content erzwingen */

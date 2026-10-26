@@ -159,6 +159,7 @@
     "settings.saved": "Settings saved successfully!",
     "settings.backendNotReachable": "Server not reachable",
     "settings.onlineSince": "Online since {date}",
+    "settings.server": "Server: {url}",
 
     "weather.unknown": "Unknown",
     "weather.clearSky": "Clear sky",

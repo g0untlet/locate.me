@@ -658,11 +658,13 @@ function renderPlaceRows() {
         }
 
         const direction = directionShort(place.direction);
+        // The distance is always the row's last element, with the chevron in
+        // front of it, so distances (and direction letters) stay right-aligned
+        // across rows with and without details.
         row.innerHTML = `
             ${getPlaceIconSvg(place.primaryCategory, place.secondaryCategory)}
             <span class="place-row-name">${escapeHtml(place.name || place.formattedAddress || t('places.unknownPlace'))}</span>
-            <span class="place-row-distance">${formatDistanceMeters(place.distance)}${direction ? ` ${direction}` : ''}</span>
-            ${hasDetails ? PLACE_ROW_CHEVRON : ''}
+            <span class="place-row-tail">${hasDetails ? PLACE_ROW_CHEVRON : ''}<span class="place-row-distance">${formatDistanceMeters(place.distance)}${direction ? ` ${direction}` : ''}</span></span>
         `;
         row.addEventListener('click', () => handlePlaceRowClick(place, hasDetails, row));
         list.appendChild(row);

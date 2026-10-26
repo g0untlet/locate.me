@@ -159,6 +159,7 @@
     "settings.saved": "¡Ajustes guardados correctamente!",
     "settings.backendNotReachable": "Servidor no disponible",
     "settings.onlineSince": "En línea desde {date}",
+    "settings.server": "Servidor: {url}",
 
     "weather.unknown": "Desconocido",
     "weather.clearSky": "Cielo despejado",

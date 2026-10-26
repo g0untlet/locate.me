@@ -159,6 +159,7 @@
     "settings.saved": "Réglages enregistrés avec succès !",
     "settings.backendNotReachable": "Serveur injoignable",
     "settings.onlineSince": "En ligne depuis {date}",
+    "settings.server": "Serveur: {url}",
 
     "weather.unknown": "Inconnu",
     "weather.clearSky": "Ciel dégagé",
