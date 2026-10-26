@@ -457,17 +457,17 @@ html.i18n-loading .app-container {
     margin-top: 1px;
 }
 
-/* Elevation: quiet muted micro-item in the card's right measurement column,
-   subordinate to the temperature/UV pills (no colored background on purpose). */
+/* Elevation: quiet muted micro-item in the expanded GPS details row (in front
+   of the coordinates), styled like the coords/accuracy pills next to it. */
 .log-card-elevation-chip {
     display: inline-flex;
     align-items: center;
     gap: 3px;
     padding: 2px 7px;
     border-radius: 6px;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
-    background-color: var(--surface-subtle);
+    background-color: var(--chip-bg);
     color: var(--text-muted);
     white-space: nowrap;
 }
@@ -645,9 +645,20 @@ html.i18n-loading .app-container {
     margin-top: 0;
 }
 
-.log-card-travel-row .log-card-distance {
-    margin-left: auto;
-    flex-shrink: 0;
+/* Distance pill in the card header, in front of the direction badge. Theme
+   tokens keep it correct in dark mode (the former inline background was a
+   hardcoded light slate). */
+.log-card-distance {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background-color: var(--surface-subtle);
+    color: var(--text-muted);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 
 .log-card-accuracy-badge { 

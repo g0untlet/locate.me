@@ -84,6 +84,17 @@ export function formatDistanceMeters(meters) {
     return `${(m / 1000).toFixed(1)} km`;
 }
 
+/* Distance in kilometres (the backend reports History distances in km).
+   Short and locale-neutral: "300 m" below 1 km, one decimal up to 100 km,
+   rounded with a tilde above that (mirrors the compact travel-time style). */
+export function formatDistanceKm(km) {
+    const v = parseFloat(km);
+    if (isNaN(v)) return '';
+    if (v < 1) return `${Math.round(v * 1000)} m`;
+    if (v < 100) return `${v.toFixed(1)} km`;
+    return `~${Math.round(v)} km`;
+}
+
 export function formatTravelTime(minutes, compact = false) {
     const total = Math.round(minutes);
     if (compact) {

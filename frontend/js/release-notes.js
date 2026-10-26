@@ -11,7 +11,7 @@
 
 export const RELEASE_NOTES = {
     version: '0.4.5_rc2',
-    date: '2026-10-25',
+    date: '2026-10-26',
     en: {
         tagline: 'Filter nearby places and see their details at a glance.',
         items: [
@@ -26,6 +26,10 @@ export const RELEASE_NOTES = {
             {
                 title: 'Better icons',
                 text: 'Sights, gyms and hotels are easier to tell apart.'
+            },
+            {
+                title: 'History at a glance',
+                text: 'Distance now sits in the card header; elevation moved into the details.'
             }
         ]
     },
@@ -43,6 +47,10 @@ export const RELEASE_NOTES = {
             {
                 title: 'Bessere Icons',
                 text: 'Sehenswürdigkeiten, Fitnessstudios und Hotels sind besser unterscheidbar.'
+            },
+            {
+                title: 'Verlauf auf einen Blick',
+                text: 'Die Entfernung steht jetzt im Kartenkopf; die Höhe wanderte in die Details.'
             }
         ]
     },
@@ -60,6 +68,10 @@ export const RELEASE_NOTES = {
             {
                 title: 'Mejores iconos',
                 text: 'Lugares de interés, gimnasios y hoteles se distinguen mejor.'
+            },
+            {
+                title: 'Historial de un vistazo',
+                text: 'La distancia ahora está en la cabecera; la altitud pasó a los detalles.'
             }
         ]
     },
@@ -77,6 +89,10 @@ export const RELEASE_NOTES = {
             {
                 title: 'De meilleures icônes',
                 text: 'Sites touristiques, salles de sport et hôtels se distinguent mieux.'
+            },
+            {
+                title: 'Historique en un coup d’œil',
+                text: 'La distance passe dans l’en-tête ; l’altitude rejoint les détails.'
             }
         ]
     }
