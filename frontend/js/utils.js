@@ -58,6 +58,52 @@ export function formatShortAddress(pos) {
 }
 
 /* ==========================================================================
+   Global Helper: Share a saved location
+
+   The share sheet hands `text` and `url` to the target app and ignores
+   `title` almost everywhere (Android, WhatsApp, Telegram, SMS), so the brand
+   has to live in the text itself – and first, because chat bubbles and
+   notification previews truncate. Without navigator.share (desktop Firefox,
+   embedded browsers) the same message goes to the clipboard instead of
+   degrading to a bare URL.
+
+   Resolves to true only when the message reached the clipboard, so the caller
+   can show its "copied" feedback; a native share (or a user cancel) resolves
+   false because the OS already gave feedback.
+   ========================================================================== */
+export function shareLocation(address, mapsUrl) {
+    const text = `locate.me: ${address}`;
+    if (navigator.share) {
+        return navigator.share({ title: 'locate.me', text, url: mapsUrl })
+            .then(() => false)
+            .catch(err => {
+                console.log('Share cancelled or failed:', err.message);
+                return false;
+            });
+    }
+    if (!navigator.clipboard || !navigator.clipboard.writeText) {
+        return Promise.resolve(false);
+    }
+    return navigator.clipboard.writeText(`${text}\n${mapsUrl}`)
+        .then(() => true)
+        .catch(() => false);
+}
+
+/* Swaps a share button's label for "Copied!" and back, remembering the original
+   markup so the icon survives. The is-copied guard keeps a rapid second tap
+   from capturing the temporary label as the thing to restore. */
+export function showCopied(btn) {
+    if (btn.classList.contains('is-copied')) return;
+    btn.classList.add('is-copied');
+    const originalHTML = btn.innerHTML;
+    btn.textContent = t('history.copied');
+    setTimeout(() => {
+        btn.innerHTML = originalHTML;
+        btn.classList.remove('is-copied');
+    }, 1500);
+}
+
+/* ==========================================================================
    Global Helper: AroundMe Place Label Formatter
    Formats a selected place as "Name, <street> <houseNumber>" for the chooser
    address box, the saver LOCATION row and the saved position label.

@@ -5,12 +5,12 @@
    in all app languages. Unsupported languages fall back to English in the UI.
    Update this file together with the website notes and the APP_VERSION bump
    (and refresh the app.js/style.css cache-busters) for every release.
-   Keep the dialog short: one short tagline and three one-sentence bullets —
-   long notes are simply not read.
+   Keep the dialog short: one short tagline and at most five one-sentence
+   bullets — long notes are simply not read.
    ========================================================================== */
 
 export const RELEASE_NOTES = {
-    version: '0.4.5_rc2',
+    version: '0.4.5_rc3',
     date: '2026-10-26',
     en: {
         tagline: 'Filter nearby places and see their details at a glance.',
@@ -30,6 +30,10 @@ export const RELEASE_NOTES = {
             {
                 title: 'History at a glance',
                 text: 'Distance now sits in the card header; elevation moved into the details.'
+            },
+            {
+                title: 'Realistic drive times',
+                text: 'The car estimate in History now fits short errands and long motorway trips alike.'
             }
         ]
     },
@@ -51,6 +55,10 @@ export const RELEASE_NOTES = {
             {
                 title: 'Verlauf auf einen Blick',
                 text: 'Die Entfernung steht jetzt im Kartenkopf; die Höhe wanderte in die Details.'
+            },
+            {
+                title: 'Realistische Fahrzeiten',
+                text: 'Die berechneten Fahrzeiten im Verlauf passen jetzt zu kurzen Fahrten und zu langen Autobahnstrecken.'
             }
         ]
     },
@@ -72,6 +80,10 @@ export const RELEASE_NOTES = {
             {
                 title: 'Historial de un vistazo',
                 text: 'La distancia ahora está en la cabecera; la altitud pasó a los detalles.'
+            },
+            {
+                title: 'Tiempos de coche realistas',
+                text: 'La estimación en coche del historial ahora encaja tanto en trayectos cortos como en viajes largos por autopista.'
             }
         ]
     },
@@ -93,6 +105,10 @@ export const RELEASE_NOTES = {
             {
                 title: 'Historique en un coup d’œil',
                 text: 'La distance passe dans l’en-tête ; l’altitude rejoint les détails.'
+            },
+            {
+                title: 'Temps de trajet réalistes',
+                text: 'L’estimation en voiture dans l’historique colle désormais aux trajets courts comme aux longs trajets sur autoroute.'
             }
         ]
     }
