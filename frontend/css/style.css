@@ -1821,12 +1821,19 @@ html.i18n-loading .app-container {
    a fixed max-height would clip or snap). `visibility` is transitioned too: it
    flips immediately when opening and only at the end of the collapse, which
    keeps the links out of the tab order while the panel is closed. The inner
-   element carries padding/background/border and the fade, and clips the content
-   while the grid track shrinks. */
+   element carries the fade and clips the content while the grid track shrinks.
+   Padding/border/background live one level deeper (`.place-info-list`): on the
+   collapsing grid item they would give the closed panel an 11px box and every
+   detail row would look taller than a row without details. */
 .place-details {
     display: grid;
     grid-template-rows: 0fr;
     visibility: hidden;
+    overflow: hidden;
+    /* The list is a flex column: without this the panel would shrink to 0 in an
+       over-full list (overflow:hidden zeroes its automatic minimum size), so an
+       opened panel could not unfold. The list scrolls instead. */
+    flex-shrink: 0;
     transition: grid-template-rows 0.25s cubic-bezier(0.4, 0, 0.2, 1),
                 visibility 0.25s;
 }
@@ -1839,15 +1846,18 @@ html.i18n-loading .app-container {
 .place-details-inner {
     min-height: 0;
     overflow: hidden;
-    padding: 2px 16px 8px 44px;
-    border-top: 1px solid var(--border-color);
-    background-color: var(--surface-subtle);
     opacity: 0;
     transition: opacity 0.2s linear;
 }
 
 .place-details--open .place-details-inner {
     opacity: 1;
+}
+
+.place-details-inner > .place-info-list {
+    padding: 2px 16px 8px 44px;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--surface-subtle);
 }
 
 .place-details .place-info-row svg {
