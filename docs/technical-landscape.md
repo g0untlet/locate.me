@@ -171,7 +171,7 @@ net.gauntlet.locate.me
 | Control | Responsibility |
 |----------|----------|
 | `Positions` | Orchestrates enrich (preview: geocoding + current weather + short hourly forecast assembly) and persist-only create, delete, queries and per-user counts; sole `EntityManager` access. The address label is composed from the Nominatim address parts (road + house number, city with `town`/`village`/`municipality` fallback, country), so POI names from the geocoding response never reach the client; Nominatim's `name` is not stored as `osmName` (that field is reserved for user-picked Geoapify places) |
-| `DistanceCalculator` | Haversine distance + walking/biking/driving time estimation (static util) |
+| `DistanceCalculator` | Haversine distance + walking/biking/driving time estimation (static util). Walking and biking use a fixed speed × circuity factor; driving uses a continuous speed curve that ramps from city speed (22 km/h) to cruise speed (90 km/h) over the trip length (24 km scale), plus a start/stop cost and a congestion allowance on top of free-flow routing — no distance bands, so the estimate is strictly monotone |
 | `SystemInfo` | Application metadata (artifactId, version, startupTime) |
 | `GeocodingClient` | MicroProfile REST client → Nominatim reverse geocoding (`format`, `zoom`, `layer` configurable) |
 | `WeatherClient` | MicroProfile REST client → Open-Meteo forecast (current + `hourly`, `forecast_hours`, `timezone`) |

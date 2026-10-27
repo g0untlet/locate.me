@@ -81,6 +81,8 @@
     "places.category.accommodation": "Hoteles y alojamiento",
     "places.category.tourism": "Lugares de interés",
     "places.category.service": "Servicios",
+    "places.category.public_transport": "Transporte público",
+    "places.category.other": "Otros",
 
     "releaseNotes.title": "Novedades",
     "releaseNotes.close": "Entendido",

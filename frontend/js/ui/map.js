@@ -8,7 +8,7 @@ import {
     getLocateSavedMap, setLocateSavedMap,
     getLocateSavedMarker, setLocateSavedMarker
 } from '../state.js';
-import { formatShortAddress, formatRelativeDate, posMatchesFilter } from '../utils.js';
+import { formatShortAddress, formatRelativeDate, posMatchesFilter, shareLocation, showCopied } from '../utils.js';
 import { t } from '../i18n.js';
 
 const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -196,21 +196,9 @@ export function initMapListeners() {
             const mapsUrl  = btn.getAttribute('data-maps-url');
             const address  = btn.getAttribute('data-address');
 
-            if (navigator.share) {
-                navigator.share({
-                    title: 'locate.me',
-                    text: address,
-                    url: mapsUrl
-                }).catch(err => {
-                    console.log('Share cancelled or failed:', err.message);
-                });
-            } else {
-                navigator.clipboard.writeText(mapsUrl).then(() => {
-                    const originalHTML = btn.innerHTML;
-                    btn.textContent = t('history.copied');
-                    setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
-                }).catch(() => {});
-            }
+            shareLocation(address, mapsUrl).then(copied => {
+                if (copied) showCopied(btn);
+            });
         });
     }
 }
