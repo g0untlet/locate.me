@@ -81,6 +81,8 @@
     "places.category.accommodation": "Hotels & Unterkünfte",
     "places.category.tourism": "Sehenswürdigkeiten",
     "places.category.service": "Dienstleistungen",
+    "places.category.public_transport": "Öffentliche Verkehrsmittel",
+    "places.category.other": "Sonstige",
 
     "releaseNotes.title": "Was ist neu",
     "releaseNotes.close": "Alles klar",

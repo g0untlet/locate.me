@@ -10,8 +10,8 @@
    ========================================================================== */
 
 export const RELEASE_NOTES = {
-    version: '0.4.5_rc3',
-    date: '2026-10-26',
+    version: '0.4.5',
+    date: '2026-10-27',
     en: {
         tagline: 'Filter nearby places and see their details at a glance.',
         items: [
