@@ -130,14 +130,20 @@ export function formatDistanceMeters(meters) {
     return `${(m / 1000).toFixed(1)} km`;
 }
 
+/* Distance (km) from which History switches to approximations: the chip drops
+   the decimals for a tilde value ("~437 km") and the travel times collapse to
+   whole hours ("~7h"). Shared so both flip at exactly the same distance. */
+export const APPROX_DISTANCE_KM = 300;
+
 /* Distance in kilometres (the backend reports History distances in km).
-   Short and locale-neutral: "300 m" below 1 km, one decimal up to 100 km,
-   rounded with a tilde above that (mirrors the compact travel-time style). */
+   Short and locale-neutral: "300 m" below 1 km, one decimal up to
+   APPROX_DISTANCE_KM, rounded with a tilde from there on (mirrors the compact
+   travel-time style). */
 export function formatDistanceKm(km) {
     const v = parseFloat(km);
     if (isNaN(v)) return '';
     if (v < 1) return `${Math.round(v * 1000)} m`;
-    if (v < 100) return `${v.toFixed(1)} km`;
+    if (v < APPROX_DISTANCE_KM) return `${v.toFixed(1)} km`;
     return `~${Math.round(v)} km`;
 }
 

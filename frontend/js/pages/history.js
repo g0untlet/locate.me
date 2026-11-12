@@ -20,6 +20,7 @@ import {
     formatRelativeDate,
     formatTravelTime,
     formatDistanceKm,
+    APPROX_DISTANCE_KM,
     formatElevation,
     shareLocation,
     showCopied,
@@ -363,7 +364,9 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
     if (presentTravelModes.length > 0) {
         const travelDistanceKm = pos.distance !== undefined && pos.distance !== null && !isNaN(parseFloat(pos.distance))
             ? parseFloat(pos.distance) : null;
-        const compactTravelTimes = travelDistanceKm !== null && travelDistanceKm > 100;
+        // Same threshold (and the same >= boundary) as the distance chip in the
+        // header, so chip and times always switch to approximations together.
+        const compactTravelTimes = travelDistanceKm !== null && travelDistanceKm >= APPROX_DISTANCE_KM;
         const travelItemsHtml = presentTravelModes.map(m => `
             <span class="log-card-travel-item" title="${t('history.estimatedTime', { mode: m.label })}" aria-label="${t('history.timeAria', { mode: m.label, time: formatTravelTime(parseFloat(m.minutes)) })}">
                 ${getTravelIconSvg(m.mode)}
