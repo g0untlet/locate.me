@@ -10,8 +10,8 @@
     <meta name="apple-mobile-web-app-title" content="locate.me">
     <title>locate.me</title>
     <script>
-        const APP_VERSION = '0.4.5';
-        const APP_BUILD   = '20261027';
+        const APP_VERSION = '0.5.0_rc1';
+        const APP_BUILD   = '20261112';
         document.documentElement.dataset.appVersion = APP_VERSION;
         document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light';
         document.documentElement.lang = localStorage.getItem('lang') || 'en';
@@ -33,7 +33,7 @@
             window.dispatchEvent(new Event('locateme:installed'));
         });
     </script>
-    <link rel="stylesheet" href="css/style.css?v=0.4.5_7">
+    <link rel="stylesheet" href="css/style.css?v=0.5.0_rc1_3">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -239,12 +239,12 @@
                                     <div id="tag-chips" class="tag-chips"></div>
                                 </div>
                                 <div class="save-options-row">
-                                    <span class="label" data-i18n="label.comment">COMMENT</span>
-                                    <div class="comment-input-wrapper">
-                                        <input id="comment-input" class="comment-input" type="text"
-                                               maxlength="25" placeholder="Add a comment (optional)…" data-i18n-placeholder="saveOptions.commentPlaceholder" autocomplete="off">
-                                        <span id="comment-counter" class="comment-counter">0/25</span>
+                                    <div class="save-options-row-head">
+                                        <span class="label" data-i18n="label.comment">COMMENT</span>
+                                        <span id="comment-counter" class="comment-counter">0/75</span>
                                     </div>
+                                    <textarea id="comment-input" class="comment-input" rows="2"
+                                              maxlength="75" placeholder="Add a comment (optional)…" data-i18n-placeholder="saveOptions.commentPlaceholder" autocomplete="off" enterkeyhint="done"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -396,7 +396,8 @@
                 <div class="form-group">
                     <label for="username-input" class="label" data-i18n="label.userId">USER ID</label>
                     <div class="input-with-icon">
-                        <input type="password" id="username-input" class="settings-input" placeholder="user123">
+                        <input type="password" id="username-input" class="settings-input" placeholder="user123"
+                               maxlength="16" pattern="[A-Za-z0-9]+" autocomplete="off" spellcheck="false" autocapitalize="off">
                         <button type="button" id="toggle-password-btn" class="toggle-password-trigger" aria-label="Toggle user ID visibility" data-i18n-aria-label="settings.toggleUserId">
                             <svg class="eye-icon" id="eye-icon-visible" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -417,8 +418,7 @@
                         <span data-i18n="settings.requestUserId">Request your own User ID</span>
                     </a></small>
                 </div>
-                <button id="save-settings-btn" class="track-btn" data-i18n="settings.save">Save Settings</button>
-                <div id="settings-status" class="settings-status"></div>
+                <div id="settings-status" class="settings-status" aria-live="polite"></div>
                 
                 <div class="attribution-block">
                     <span class="attribution-label" data-i18n="label.version">VERSION</span>

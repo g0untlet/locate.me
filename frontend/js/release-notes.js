@@ -10,105 +10,73 @@
    ========================================================================== */
 
 export const RELEASE_NOTES = {
-    version: '0.4.5',
-    date: '2026-10-27',
+    version: '0.5.0_rc1',
+    date: '2026-11-12',
     en: {
-        tagline: 'Filter nearby places and see their details at a glance.',
+        tagline: 'Place details in your history — right where you saved them.',
         items: [
             {
-                title: 'Filter by category',
-                text: 'Tap a category icon to narrow the places around you.'
+                title: 'Details in History',
+                text: 'Unfold a saved place to see its opening hours, phone, website and accessibility.'
             },
             {
-                title: 'Place details',
-                text: 'Tap a place to unfold phone, website, hours and access; tap again to close.'
+                title: 'Longer comments',
+                text: 'Comments now hold 75 characters and get two lines while saving.'
             },
             {
-                title: 'Better icons',
-                text: 'Sights, gyms and hotels are easier to tell apart.'
-            },
-            {
-                title: 'History at a glance',
-                text: 'Distance now sits in the card header; elevation moved into the details.'
-            },
-            {
-                title: 'Realistic drive times',
-                text: 'The car estimate in History now fits short errands and long motorway trips alike.'
+                title: 'Safer history',
+                text: 'Saved comments are shown as plain text, so nothing in them can run.'
             }
         ]
     },
     de: {
-        tagline: 'Orte filtern und Details auf einen Blick.',
+        tagline: 'Ortsdetails im Verlauf — genau dort, wo du sie gespeichert hast.',
         items: [
             {
-                title: 'Nach Kategorie filtern',
-                text: 'Tippe ein Kategorie-Icon an, um die Orte in deiner Nähe einzugrenzen.'
+                title: 'Details im Verlauf',
+                text: 'Klappe einen gespeicherten Ort auf und sieh Öffnungszeiten, Telefon, Website und Barrierefreiheit.'
             },
             {
-                title: 'Details zum Ort',
-                text: 'Tippe einen Ort an für Telefon, Website, Öffnungszeiten und Zugang; nochmal tippen schließt.'
+                title: 'Längere Kommentare',
+                text: 'Kommentare fassen jetzt 75 Zeichen und haben beim Speichern zwei Zeilen.'
             },
             {
-                title: 'Bessere Icons',
-                text: 'Sehenswürdigkeiten, Fitnessstudios und Hotels sind besser unterscheidbar.'
-            },
-            {
-                title: 'Verlauf auf einen Blick',
-                text: 'Die Entfernung steht jetzt im Kartenkopf; die Höhe wanderte in die Details.'
-            },
-            {
-                title: 'Realistische Fahrzeiten',
-                text: 'Die berechneten Fahrzeiten im Verlauf passen jetzt zu kurzen Fahrten und zu langen Autobahnstrecken.'
+                title: 'Sicherer Verlauf',
+                text: 'Gespeicherte Kommentare werden nur als Text angezeigt — nichts darin kann ausgeführt werden.'
             }
         ]
     },
     es: {
-        tagline: 'Filtra los lugares cercanos y consulta sus detalles.',
+        tagline: 'Los detalles de tus lugares, dentro del historial.',
         items: [
             {
-                title: 'Filtrar por categoría',
-                text: 'Toca un icono de categoría para acotar los lugares cercanos.'
+                title: 'Detalles en el historial',
+                text: 'Despliega un lugar guardado para ver su horario, teléfono, web y accesibilidad.'
             },
             {
-                title: 'Detalles del lugar',
-                text: 'Toca un lugar para ver teléfono, web, horario y acceso; toca de nuevo para cerrar.'
+                title: 'Comentarios más largos',
+                text: 'Los comentarios admiten ahora 75 caracteres y ocupan dos líneas al guardar.'
             },
             {
-                title: 'Mejores iconos',
-                text: 'Lugares de interés, gimnasios y hoteles se distinguen mejor.'
-            },
-            {
-                title: 'Historial de un vistazo',
-                text: 'La distancia ahora está en la cabecera; la altitud pasó a los detalles.'
-            },
-            {
-                title: 'Tiempos de coche realistas',
-                text: 'La estimación en coche del historial ahora encaja tanto en trayectos cortos como en viajes largos por autopista.'
+                title: 'Historial más seguro',
+                text: 'Los comentarios guardados se muestran como texto plano, así que nada de lo que contienen puede ejecutarse.'
             }
         ]
     },
     fr: {
-        tagline: 'Filtrez les lieux proches et voyez leurs détails.',
+        tagline: 'Les détails de vos lieux, directement dans l’historique.',
         items: [
             {
-                title: 'Filtrer par catégorie',
-                text: 'Touchez une icône de catégorie pour affiner les lieux à proximité.'
+                title: 'Détails dans l’historique',
+                text: 'Dépliez un lieu enregistré pour voir horaires, téléphone, site web et accessibilité.'
             },
             {
-                title: 'Détails du lieu',
-                text: 'Touchez un lieu pour voir téléphone, site, horaires et accès ; touchez à nouveau pour fermer.'
+                title: 'Commentaires plus longs',
+                text: 'Les commentaires vont désormais jusqu’à 75 caractères et disposent de deux lignes lors de l’enregistrement.'
             },
             {
-                title: 'De meilleures icônes',
-                text: 'Sites touristiques, salles de sport et hôtels se distinguent mieux.'
-            },
-            {
-                title: 'Historique en un coup d’œil',
-                text: 'La distance passe dans l’en-tête ; l’altitude rejoint les détails.'
-            },
-            {
-                title: 'Temps de trajet réalistes',
-                text: 'L’estimation en voiture dans l’historique colle désormais aux trajets courts comme aux longs trajets sur autoroute.'
+                title: 'Historique plus sûr',
+                text: 'Les commentaires enregistrés s’affichent en texte brut : rien de ce qu’ils contiennent ne peut s’exécuter.'
             }
         ]
     }

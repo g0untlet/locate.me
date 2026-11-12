@@ -18,7 +18,8 @@ import {
     getLocationIconSvg,
     getPlaceIconSvg,
     placeCategoryLabel,
-    getPlaceInfoIconSvg,
+    buildPlaceInfoRows,
+    escapeHtml,
     formatPlaceLabel,
     formatShortAddress,
     formatRelativeDate,
@@ -260,7 +261,24 @@ function initSaveOptions() {
     });
 
     if (comment && counter) {
+        // The field is a two-row textarea (75 characters wrap onto line two),
+        // but the comment stays one logical line: Enter never inserts a break
+        // and pasted line breaks are folded to a space, so history card, saved
+        // strip and the collapsed summary render exactly as before.
+        comment.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') e.preventDefault();
+        });
         comment.addEventListener('input', () => {
+            const caret  = comment.selectionStart;
+            const before = comment.value;
+            const single = before.replace(/[\r\n]+/g, ' ');
+            if (single !== before) {
+                comment.value = single;
+                // Keep the caret roughly where the user expects it after folding.
+                const removed = before.length - single.length;
+                const pos     = Math.max(0, (caret ?? single.length) - removed);
+                comment.setSelectionRange(pos, pos);
+            }
             counter.textContent = t('saveOptions.commentCounter', { count: comment.value.length });
             updateSaveOptionsSummary();
         });
@@ -330,12 +348,6 @@ function hideViews() {
 /* ==========================================================================
    Internal: Render helpers
    ========================================================================== */
-function escapeHtml(str) {
-    return String(str ?? '').replace(/[&<>"']/g, c => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]));
-}
-
 function fillWeather({ icon, temp, weather, uv }, data) {
     if (icon) {
         icon.innerHTML = getWeatherIconSvg(data.weatherCode, data.isDay);
@@ -919,73 +931,9 @@ function showSavedCard(data) {
 /* ==========================================================================
    Internal: Place-details renderer (saver step only). An adopted place may
    carry phone, website, opening hours and/or wheelchair accessibility. The
-   compact box is only shown when at least one of them is available; the phone
-   number is a tel: link (dialer on Android/iOS), the website an external link.
+   compact box is only shown when at least one of them is available; the rows
+   themselves come from the shared buildPlaceInfoRows() in utils.js.
    ========================================================================== */
-function normalizeWebsite(url) {
-    const raw = String(url || '').trim();
-    if (!raw) return null;
-    const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-    try {
-        const parsed = new URL(withScheme);
-        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
-        return { href: parsed.href, label: parsed.hostname.replace(/^www\./i, '') };
-    } catch {
-        return null;
-    }
-}
-
-function telHref(phone) {
-    const digits = String(phone || '').replace(/[^+0-9]/g, '');
-    return digits ? `tel:${digits}` : null;
-}
-
-function placeInfoRow(icon, content) {
-    return `<div class="place-info-row">${getPlaceInfoIconSvg(icon)}` +
-        `<span class="place-info-content">${content}</span></div>`;
-}
-
-/* Builds the phone / website / opening hours / wheelchair rows of a place.
-   Shared by the saver's PLACE DETAILS card and the details accordion in the
-   places list, so both always show the same information in the same order.
-   Returns an empty string when the place carries no detail at all. */
-function buildPlaceInfoRows(place) {
-    const phone        = place ? String(place.phone        || '').trim() : '';
-    const website      = place ? normalizeWebsite(place.website) : null;
-    const openingHours = place ? String(place.openingHours || '').trim() : '';
-    const wheelchair   = place ? String(place.wheelchair   || '').trim() : '';
-
-    const rows = [];
-
-    const tel = phone ? telHref(phone) : null;
-    if (tel) {
-        const ariaLabel = t('placeInfo.call', { phone });
-        rows.push(placeInfoRow('phone',
-            `<a class="place-info-link" href="${escapeHtml(tel)}" aria-label="${escapeHtml(ariaLabel)}">${escapeHtml(phone)}</a>`));
-    }
-
-    if (website) {
-        rows.push(placeInfoRow('website',
-            `<a class="place-info-link" href="${escapeHtml(website.href)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(t('placeInfo.website'))}">${escapeHtml(website.label)}</a>`));
-    }
-
-    if (openingHours) {
-        rows.push(placeInfoRow('openingHours',
-            `<span class="place-info-text">${escapeHtml(openingHours)}</span>`));
-    }
-
-    if (wheelchair) {
-        let label;
-        if (wheelchair === 'yes')      label = t('placeInfo.wheelchairYes');
-        else if (wheelchair === 'no')  label = t('placeInfo.wheelchairNo');
-        else                           label = wheelchair;
-        rows.push(placeInfoRow('wheelchair',
-            `<span class="place-info-text">${escapeHtml(label)}</span>`));
-    }
-
-    return rows.join('');
-}
-
 function renderPlaceInfo(place) {
     const card = document.getElementById('saver-place-info');
     const list = document.getElementById('saver-place-info-list');
@@ -1388,6 +1336,26 @@ function applySelectedPlace(payload) {
 }
 
 /* ==========================================================================
+   Internal: Snapshot the adopted place's contact details onto the payload.
+   History renders them later (unfold a saved entry) and the backend stores them
+   with the position — a snapshot by design, because the places cache changes
+   and may be gone. Without an adopted place the keys are removed, so a plain
+   GPS save never carries details.
+   ========================================================================== */
+const PLACE_DETAIL_KEYS = ['phone', 'website', 'openingHours', 'wheelchair'];
+
+function applyPlaceDetails(payload, place) {
+    PLACE_DETAIL_KEYS.forEach(key => {
+        const value = place && typeof place[key] === 'string' ? place[key].trim() : '';
+        if (value) {
+            payload[key] = value;
+        } else {
+            delete payload[key];
+        }
+    });
+}
+
+/* ==========================================================================
    Internal: CONTINUE – switch to the saver view, pre-filled with the
    selected location (resolved address or chosen place).
    ========================================================================== */
@@ -1521,6 +1489,7 @@ export function initLocatePage(deps) {
         }
 
         applySelectedPlace(payload);
+        applyPlaceDetails(payload, selectedPlace);
 
         sendPositionToBackend(payload, deps);
     });

@@ -222,6 +222,96 @@ public class PositionsResourceIT {
     }
 
     @Test
+    void createWithPlaceDetails() {
+        JsonObject json = Json.createObjectBuilder()
+                .add("userId", "validUser")
+                .add("latitude", 48.1351)
+                .add("longitude", 11.5820)
+                .add("osmName", "Cafe Central, Rosental 1")
+                .add("osmCategory", "catering")
+                .add("osmType", "catering.cafe")
+                .add("phone", "+49 89 123456")
+                .add("website", "https://example.org")
+                .add("openingHours", "Mo-Fr 09:00-18:00")
+                .add("wheelchair", "yes")
+                .add("timestamp", Instant.now().toString())
+                .build();
+
+        int id = given()
+                .contentType(ContentType.JSON)
+                .body(json.toString())
+                .when()
+                .post("/api/positions?userId=validUser")
+                .then()
+                .statusCode(201)
+                .body("id", notNullValue())
+                .body("phone", is("+49 89 123456"))
+                .body("website", is("https://example.org"))
+                .body("openingHours", is("Mo-Fr 09:00-18:00"))
+                .body("wheelchair", is("yes"))
+                .extract()
+                .path("id");
+
+        // Round-trip: the snapshot survives persistence and both GET variants
+        given()
+                .when()
+                .get("/api/positions?userId=validUser")
+                .then()
+                .statusCode(200)
+                .body("[0].id", is(id))
+                .body("[0].phone", is("+49 89 123456"))
+                .body("[0].website", is("https://example.org"))
+                .body("[0].openingHours", is("Mo-Fr 09:00-18:00"))
+                .body("[0].wheelchair", is("yes"));
+
+        given()
+                .when()
+                .get("/api/positions?userId=validUser&lat=48.14&lon=11.58")
+                .then()
+                .statusCode(200)
+                .body("[0].phone", is("+49 89 123456"))
+                .body("[0].openingHours", is("Mo-Fr 09:00-18:00"));
+
+        // Cleanup
+        given()
+                .when()
+                .delete("/api/positions/" + id + "?userId=validUser")
+                .then()
+                .statusCode(204);
+    }
+
+    @Test
+    void createWithoutPlaceDetailsOmitsThem() {
+        JsonObject json = Json.createObjectBuilder()
+                .add("userId", "validUser")
+                .add("latitude", 48.1351)
+                .add("longitude", 11.5820)
+                .add("timestamp", Instant.now().toString())
+                .build();
+
+        int id = given()
+                .contentType(ContentType.JSON)
+                .body(json.toString())
+                .when()
+                .post("/api/positions?userId=validUser")
+                .then()
+                .statusCode(201)
+                .body("phone", nullValue())
+                .body("website", nullValue())
+                .body("openingHours", nullValue())
+                .body("wheelchair", nullValue())
+                .extract()
+                .path("id");
+
+        // Cleanup
+        given()
+                .when()
+                .delete("/api/positions/" + id + "?userId=validUser")
+                .then()
+                .statusCode(204);
+    }
+
+    @Test
     void createWithInvalidTag() {
         JsonObject json = Json.createObjectBuilder()
                 .add("userId", "validUser")

@@ -130,14 +130,20 @@ export function formatDistanceMeters(meters) {
     return `${(m / 1000).toFixed(1)} km`;
 }
 
+/* Distance (km) from which History switches to approximations: the chip drops
+   the decimals for a tilde value ("~437 km") and the travel times collapse to
+   whole hours ("~7h"). Shared so both flip at exactly the same distance. */
+export const APPROX_DISTANCE_KM = 300;
+
 /* Distance in kilometres (the backend reports History distances in km).
-   Short and locale-neutral: "300 m" below 1 km, one decimal up to 100 km,
-   rounded with a tilde above that (mirrors the compact travel-time style). */
+   Short and locale-neutral: "300 m" below 1 km, one decimal up to
+   APPROX_DISTANCE_KM, rounded with a tilde from there on (mirrors the compact
+   travel-time style). */
 export function formatDistanceKm(km) {
     const v = parseFloat(km);
     if (isNaN(v)) return '';
     if (v < 1) return `${Math.round(v * 1000)} m`;
-    if (v < 100) return `${v.toFixed(1)} km`;
+    if (v < APPROX_DISTANCE_KM) return `${v.toFixed(1)} km`;
     return `~${Math.round(v)} km`;
 }
 
@@ -493,6 +499,84 @@ export function getPlaceInfoIconSvg(kind) {
         default:
             return `<svg ${svgAttrs}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
     }
+}
+
+/* ==========================================================================
+   Global Helper: HTML escaping for values interpolated into innerHTML.
+   ========================================================================== */
+export function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+}
+
+/* ==========================================================================
+   Global Helper: Place-details rows (phone / website / opening hours /
+   wheelchair). Shared by the saver's PLACE DETAILS card, the places-list
+   accordion and the History card accordion, so all three always show the same
+   information in the same order. Accepts any object carrying those four fields
+   — a Geoapify place or a saved position. Returns an empty string when the
+   object carries no detail at all.
+   ========================================================================== */
+function normalizeWebsite(url) {
+    const raw = String(url || '').trim();
+    if (!raw) return null;
+    const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    try {
+        const parsed = new URL(withScheme);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+        return { href: parsed.href, label: parsed.hostname.replace(/^www\./i, '') };
+    } catch {
+        return null;
+    }
+}
+
+function telHref(phone) {
+    const digits = String(phone || '').replace(/[^+0-9]/g, '');
+    return digits ? `tel:${digits}` : null;
+}
+
+function placeInfoRow(icon, content) {
+    return `<div class="place-info-row">${getPlaceInfoIconSvg(icon)}` +
+        `<span class="place-info-content">${content}</span></div>`;
+}
+
+export function buildPlaceInfoRows(place) {
+    const phone        = place ? String(place.phone        || '').trim() : '';
+    const website      = place ? normalizeWebsite(place.website) : null;
+    const openingHours = place ? String(place.openingHours || '').trim() : '';
+    const wheelchair   = place ? String(place.wheelchair   || '').trim() : '';
+
+    const rows = [];
+
+    const tel = phone ? telHref(phone) : null;
+    if (tel) {
+        const ariaLabel = t('placeInfo.call', { phone });
+        rows.push(placeInfoRow('phone',
+            `<a class="place-info-link" href="${escapeHtml(tel)}" aria-label="${escapeHtml(ariaLabel)}">${escapeHtml(phone)}</a>`));
+    }
+
+    if (website) {
+        rows.push(placeInfoRow('website',
+            `<a class="place-info-link" href="${escapeHtml(website.href)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(t('placeInfo.website'))}">${escapeHtml(website.label)}</a>`));
+    }
+
+    if (openingHours) {
+        rows.push(placeInfoRow('openingHours',
+            `<span class="place-info-text">${escapeHtml(openingHours)}</span>`));
+    }
+
+    if (wheelchair) {
+        let label;
+        if (wheelchair === 'yes' || wheelchair === 'designated') label = t('placeInfo.wheelchairYes');
+        else if (wheelchair === 'no')      label = t('placeInfo.wheelchairNo');
+        else if (wheelchair === 'limited') label = t('placeInfo.wheelchairLimited');
+        else                               label = wheelchair;
+        rows.push(placeInfoRow('wheelchair',
+            `<span class="place-info-text">${escapeHtml(label)}</span>`));
+    }
+
+    return rows.join('');
 }
 
 /* ==========================================================================

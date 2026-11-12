@@ -32,6 +32,7 @@
     --warning-color: #b45309;
     --warning-bg: #fffbeb;
     --warning-border: #fde68a;
+    --success-color: #16a34a;
     --overlay: rgba(15, 23, 42, 0.55);
     --on-primary: #ffffff;
 }
@@ -65,6 +66,7 @@
     --warning-color: #fcd34d;
     --warning-bg: #422006;
     --warning-border: #78350f;
+    --success-color: #4ade80;
     --overlay: rgba(2, 6, 23, 0.72);
     --on-primary: #ffffff;
 }
@@ -129,7 +131,11 @@ html.i18n-loading .app-container {
     .app-container {
         width: 100%;
         max-width: 380px;
-        height: 640px;
+        /* 640px on a typical screen, but never taller than the viewport minus
+           the 20px body padding above/below — landscape phones (e.g. 844x390)
+           used to get a 640px frame centered in a 390px-high window, so its
+           top and bottom were clipped by body{overflow:hidden}. */
+        height: min(640px, calc(100dvh - 40px));
         border-radius: var(--border-radius);
         padding: 30px 20px 93px 20px;
     }
@@ -137,8 +143,8 @@ html.i18n-loading .app-container {
 
 /* ==========================================================================
    Desktop / Tall Viewports: Frame wächst mit dem Inhalt, damit nichts
-   abgeschnitten wird. Durch min-width + min-height ausgelöst – Smartphones
-   (Portrait UND Landscape) behalten den fixen 640px-Rahmen unverändert.
+   abgeschnitten wird. Durch min-width + min-height ausgelöst. Der Rahmen
+   bleibt 640px hoch, sofern der Viewport (wie im Portrait) hoch genug ist.
    ========================================================================== */
 @media (min-width: 480px) and (min-height: 520px) {
     .app-container {
@@ -748,30 +754,78 @@ html.i18n-loading .app-container {
     height: 15px;
 }
 
+/* Auto-height disclosure: the tray animates `grid-template-rows` 0fr -> 1fr so
+   it grows to its natural content height. A fixed max-height (the former 170px)
+   would clip the place-detail rows and any long opening hours. Horizontal
+   padding stays on the tray (it never affects height); the vertical spacing
+   lives on the inner blocks, so the closed tray is exactly 0px. */
 .log-card-action-tray {
-    max-height: 0;
+    display: grid;
+    grid-template-rows: 0fr;
     opacity: 0;
     overflow: hidden;
     background-color: var(--surface-subtle);
     border-top: 1px solid transparent;
     padding: 0 14px;
-    transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 0.2s linear,
-                padding 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: grid-template-rows 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.2s linear;
+}
+
+.log-card-action-tray-inner {
+    min-height: 0;
+    overflow: hidden;
 }
 
 .log-card.expanded .log-card-action-tray {
-    max-height: 170px;
+    grid-template-rows: 1fr;
     opacity: 1;
-    padding: 10px 14px;
     border-top-color: var(--card-divider);
 }
 
-/* Accordion details: weather / UV / GPS-accuracy pills on the first line, raw
-   coordinates on a muted second line. Only visible while the tile is expanded. */
+/* Accordion details: an optional place-details block (phone / website /
+   opening hours / wheelchair of an adopted place), then the weather / UV /
+   GPS-accuracy pills on the first line and the raw coordinates on a muted
+   second line. Only visible while the tile is expanded. */
 .log-card-details {
+    padding-top: 10px;
     padding-bottom: 10px;
     border-bottom: 1px solid var(--card-divider);
+}
+
+/* Contact rows of a saved place, rendered by the shared buildPlaceInfoRows():
+   compact icon + text lines separated from the weather pills by one hairline.
+   Kept lean on purpose – no per-row dividers, no chips. */
+.log-card-place-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--card-divider);
+}
+
+.log-card-place-details .place-info-row {
+    padding: 2px 0;
+}
+
+.log-card-place-details .place-info-row + .place-info-row {
+    border-top: none;
+}
+
+.log-card-place-details .place-info-row svg {
+    width: 14px;
+    height: 14px;
+    margin-top: 2px;
+}
+
+.log-card-place-details .place-info-content {
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--text-muted);
+}
+
+.log-card-place-details .place-info-link {
+    color: var(--primary-color);
 }
 
 .log-card-details-metrics {
@@ -816,6 +870,13 @@ html.i18n-loading .app-container {
     align-items: center;
     gap: 12px;
     padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .log-card-action-tray {
+        transition: none;
+    }
 }
 
 .tray-action-btn {
@@ -957,6 +1018,8 @@ html.i18n-loading .app-container {
     flex-shrink: 0;
 }
 .settings-status { font-size: 0.85rem; text-align: center; font-weight: 500; min-height: 18px; }
+.settings-status--ok { color: var(--success-color); }
+.settings-status--error { color: var(--demo-color); }
 
 /* ==========================================================================
    Dark Mode Toggle Switch (Settings Page)
@@ -2021,6 +2084,16 @@ html.i18n-loading .app-container {
     margin-bottom: 0;
 }
 
+/* Label + character counter share one line above the comment field, so the
+   counter never overlaps the (two-line) text. */
+.save-options-row-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+
 .tag-chips {
     display: flex;
     flex-wrap: wrap;
@@ -2053,21 +2126,22 @@ html.i18n-loading .app-container {
     border-color: var(--primary-color);
 }
 
-.comment-input-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    width: 100%;
-}
-
+/* Two-row textarea: 75 characters wrap onto a second line instead of hiding
+   behind the field edge. Enter is blocked in locate.js, so it stays one
+   logical line; resize is off to keep the saver layout stable. */
 .comment-input {
+    display: block;
     width: 100%;
-    padding: 9px 48px 9px 12px;
+    padding: 9px 12px;
+    font-family: inherit;
     font-size: 0.88rem;
+    line-height: 1.35;
     border: 1px solid var(--border-color);
     border-radius: 8px;
     background-color: var(--card-bg);
     color: var(--text-color);
+    resize: none;
+    overflow-y: auto;
     transition: var(--transition);
 }
 
@@ -2077,8 +2151,7 @@ html.i18n-loading .app-container {
 }
 
 .comment-counter {
-    position: absolute;
-    right: 10px;
+    flex-shrink: 0;
     font-size: 0.7rem;
     color: var(--text-muted);
     pointer-events: none;
@@ -3105,5 +3178,37 @@ button.attribution-link.attribution-version:focus-visible {
 @media (prefers-reduced-motion: reduce) {
     .release-notes-dialog[open] {
         animation: none;
+    }
+}
+
+/* ==========================================================================
+   Tablets & Desktop: the phone frame used to stay a fixed 380px card in the
+   middle of the screen (18% of a 1920px viewport, with narrower cards than on
+   a phone). Scale it with the viewport instead. Portrait phones stay below
+   480px, so their full-bleed layout is untouched by these rules; min-height
+   uses min() so short, wide windows cannot be clipped again.
+   These rules sit at the END of the file on purpose: they must override the
+   component defaults above (.track-btn, .idle-hint, .locate-action-group, …)
+   which have the same specificity and would otherwise win by source order.
+   ========================================================================== */
+@media (min-width: 768px) {
+    .app-container {
+        max-width: 460px;
+        min-height: min(700px, calc(100dvh - 40px));
+    }
+    /* 280px caps read as lost content in a wider frame. .gps-fallback .track-btn-row
+       is listed explicitly: its own cap is more specific than `.track-btn-row`. */
+    .track-btn,
+    .track-btn-row,
+    .locate-action-group,
+    .gps-fallback .track-btn-row,
+    .idle-hint {
+        max-width: 320px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .app-container {
+        max-width: 560px;
     }
 }

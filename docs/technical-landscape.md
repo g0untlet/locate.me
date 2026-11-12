@@ -91,7 +91,7 @@ Browser (PWA) --HTTPS--> Caddy2 --/api--> Quarkus REST (Boundary /api)
 | `js/config.js` | API base URL resolution (dev port vs. relative proxy paths) |
 | `js/api.js` | Fetch wrappers for all REST endpoints |
 | `js/state.js` | Central mutable state (maps, cached fix, history data) |
-| `js/utils.js` | Formatting helpers (relative/weekday dates, address, weather text/icons, UV level, elevation, travel-time formatting + walk/bike/drive icons) and compass helpers (`bearingDegrees`, `compassPoint`, `directionShort`, `directionName` — client-side port of the backend `Geoboxing`, localizes the 8-point direction; `arrowRotation`/`shortestPathRotation` for heading-relative arrow angles; `distanceMeters` haversine for the live-movement gate) |
+| `js/utils.js` | Formatting helpers (relative/weekday dates, address, weather text/icons, UV level, elevation, travel-time formatting + walk/bike/drive icons), the shared place-detail renderer (`buildPlaceInfoRows` — phone/website/opening hours/wheelchair rows used by the saver card, the places-list accordion and the History card) plus `escapeHtml`, and compass helpers (`bearingDegrees`, `compassPoint`, `directionShort`, `directionName` — client-side port of the backend `Geoboxing`, localizes the 8-point direction; `arrowRotation`/`shortestPathRotation` for heading-relative arrow angles; `distanceMeters` haversine for the live-movement gate) |
 | `js/ui/` | Reusable UI: `status.js`, `badge.js`, `toast.js`, `map.js` (Leaflet wrapper), `install.js` (PWA install banner / iOS hint), `compass.js` (shared device-heading source: `deviceorientation` + `deviceorientationabsolute` with tilt-compensated `computeYawDeg`, `subscribeHeading`/`getHeading`/`hasHeading`, `requestHeadingPermission` for the iOS motion-sensor gate), `release-notes.js` (once-per-version “What's new” dialog with first-launch and install-banner guards) |
 | `js/pages/` | Screens: `locate.js`, `history.js`, `settings.js` (deps injected) |
 
@@ -208,8 +208,8 @@ query parameter. Functional purpose of the endpoints is documented in
 
 | Method | Endpoint | Notes |
 |----------|----------|----------|
-| GET | `/api/positions?userId=&lat=&lon=` | 200 list, newest first; optional `lat`/`lon` add response-only `distance` (km), `walkingTimeMinutes`, `bikingTimeMinutes`, `drivingTimeMinutes` |
-| POST | `/api/positions?userId=` | 201 + `Location`; persists client-provided data verbatim (no server-side geocoding/weather resolution) |
+| GET | `/api/positions?userId=&lat=&lon=` | 200 list, newest first; optional `lat`/`lon` add response-only `distance` (km), `walkingTimeMinutes`, `bikingTimeMinutes`, `drivingTimeMinutes`; optional fields (`tag`, `comment`, `phone`, `website`, `openingHours`, `wheelchair`) appear only when stored |
+| POST | `/api/positions?userId=` | 201 + `Location`; persists client-provided data verbatim (no server-side geocoding/weather resolution), including the place-detail snapshot of an adopted place |
 | GET | `/api/positions/current?userId=&lat=&lon=` | 200 preview; geocoding + weather enrichment (current incl. response-only `isDay`, plus a `forecast` array of the next `weather.forecast-hours` future hours — current hour skipped; each slice `time`, `temperature`, `weatherCode`, `uvIndex`, `precipitationProbability`, `isDay`); not persisted |
 | DELETE | `/api/positions/{id}?userId=` | 204 |
 | GET | `/api/positions/stats?adminKey=` | 200 `{"total", "perUser":[{"userId", "locations"}, ...]}` — total stored positions plus per-user counts (`perUser` ordered by `userId`); requires `adminKey` == `admin.key` (env `ADMIN_KEY`), otherwise 401; **not** rate-limited |
@@ -256,7 +256,16 @@ Single table, no relationships.
 | `timestamp` Instant | `timestamp` | TIMESTAMP | not null |
 | `osmCategory` … `country` | `osm_category`, `osm_type`, `osm_name`, `address_type`, `house_number`, `road`, `city`, `country` | VARCHAR(255) | |
 | `tag` PositionTag | `tag` | VARCHAR(32) | `@Enumerated(EnumType.STRING)`; since 0.4.0 the column is defined as `VARCHAR(32)` by the Flyway `V1__baseline.sql` — pre-0.4.0 databases had a native H2 `ENUM` that was converted to `VARCHAR` in 0.3.0 |
-| `comment` String | `comment` | VARCHAR(255) | UI limit: 25 chars |
+| `comment` String | `comment` | VARCHAR(255) | UI limit: 50 chars |
+| `phone` String | `phone` | VARCHAR(64) | Snapshot of the adopted place's phone; empty for a plain GPS save |
+| `website` String | `website` | VARCHAR(512) | Snapshot of the adopted place's website |
+| `openingHours` String | `opening_hours` | VARCHAR(512) | Snapshot of the adopted place's opening hours |
+| `wheelchair` String | `wheelchair` | VARCHAR(64) | Snapshot of the adopted place's wheelchair access (`yes`/`no`/`limited`/…) |
+
+The four place-detail columns are a **snapshot**, deliberately not a foreign key to
+`places`: that table is a cache that is upserted on every Geoapify fetch and may be
+absent, so a reference would show today's cache row (or nothing) instead of what the
+user saved. Names and lengths mirror `Place` so one frontend renderer serves both.
 
 ### Enumerations
 
@@ -327,6 +336,9 @@ Since 0.4.0 the schema is managed by **Flyway** (`quarkus-flyway`); Hibernate ru
     coordinate indexes (`idx_places_geohash`, `idx_places_coords`) backing the
     cache geoboxing lookup; `fetch_lat`/`fetch_lon` record the fetch origin for a
     future coverage-aware cache read.
+  - `V4__add_place_details_to_positions.sql` — snapshots the contact metadata of an
+    adopted place onto the position (`phone`, `website`, `opening_hours`,
+    `wheelchair`), so History can render it without touching the `places` cache.
 - **Existing databases** (DEV/PROD, already populated): on the first 0.4.0 start Flyway
   baselines them at version 1 (`quarkus.flyway.baseline-on-migrate=true`,
   `quarkus.flyway.baseline-version=1`). `V1__baseline.sql` is skipped and existing data is

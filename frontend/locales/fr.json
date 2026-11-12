@@ -60,7 +60,7 @@
 
     "saveOptions.tagComment": "Étiquette & commentaire",
     "saveOptions.commentPlaceholder": "Ajouter un commentaire (facultatif)…",
-    "saveOptions.commentCounter": "{count}/25",
+    "saveOptions.commentCounter": "{count}/75",
 
     "places.countOne": "{count} lieu",
     "places.countOther": "{count} lieux",
@@ -111,6 +111,7 @@
     "placeInfo.website": "Ouvrir le site web",
     "placeInfo.wheelchairYes": "Accessible en fauteuil roulant",
     "placeInfo.wheelchairNo": "Non accessible en fauteuil roulant",
+    "placeInfo.wheelchairLimited": "Accès limité en fauteuil roulant",
 
     "forecast.title": "Prévisions sur 3 h",
     "forecast.expand": "Afficher les prévisions sur 3 h",
@@ -157,7 +158,7 @@
     "settings.toggleUserId": "Afficher/masquer l'ID utilisateur",
     "settings.userIdHelp": "Laissé vide, le mode démo « user123 » sera utilisé par défaut.",
     "settings.requestUserId": "Demander votre propre ID utilisateur",
-    "settings.save": "Enregistrer les réglages",
+    "settings.invalidUserId": "Lettres et chiffres uniquement, 16 caractères au maximum.",
     "settings.saved": "Réglages enregistrés avec succès !",
     "settings.backendNotReachable": "Serveur injoignable",
     "settings.onlineSince": "En ligne depuis {date}",

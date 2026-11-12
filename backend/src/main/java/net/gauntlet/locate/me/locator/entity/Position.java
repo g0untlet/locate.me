@@ -99,6 +99,28 @@ public class Position {
     @Column(name = "comment", length = 255)
     String comment;
 
+    // Place details snapshot: the contact metadata of a place the user picked
+    // from "Places around me", as it looked at save time. Deliberately flat
+    // values (not a foreign key to Place): `places` is a cache that is upserted on
+    // every Geoapify fetch, so a reference would show today's data instead of what
+    // was saved — and it would miss whenever the cache does. Column names and
+    // lengths mirror Place, so one renderer serves both.
+    @Size(max = 64)
+    @Column(length = 64)
+    String phone;
+
+    @Size(max = 512)
+    @Column(length = 512)
+    String website;
+
+    @Size(max = 512)
+    @Column(name = "opening_hours", length = 512)
+    String openingHours;
+
+    @Size(max = 64)
+    @Column(length = 64)
+    String wheelchair;
+
     public Position() {
     }
 
@@ -291,6 +313,42 @@ public class Position {
         return this;
     }
 
+    public String phone() {
+        return this.phone;
+    }
+
+    public Position phone(String phone) {
+        this.phone = phone;
+        return this;
+    }
+
+    public String website() {
+        return this.website;
+    }
+
+    public Position website(String website) {
+        this.website = website;
+        return this;
+    }
+
+    public String openingHours() {
+        return this.openingHours;
+    }
+
+    public Position openingHours(String openingHours) {
+        this.openingHours = openingHours;
+        return this;
+    }
+
+    public String wheelchair() {
+        return this.wheelchair;
+    }
+
+    public Position wheelchair(String wheelchair) {
+        this.wheelchair = wheelchair;
+        return this;
+    }
+
     public JsonObject toJSON() {
         JsonObjectBuilder builder = Json.createObjectBuilder();
         if (this.id != null) {
@@ -360,7 +418,20 @@ public class Position {
         if (this.comment != null) {
             builder.add("comment", this.comment);
         }
-        
+
+        if (this.phone != null) {
+            builder.add("phone", this.phone);
+        }
+        if (this.website != null) {
+            builder.add("website", this.website);
+        }
+        if (this.openingHours != null) {
+            builder.add("openingHours", this.openingHours);
+        }
+        if (this.wheelchair != null) {
+            builder.add("wheelchair", this.wheelchair);
+        }
+
         return builder.build();
     }
 
@@ -429,6 +500,18 @@ public class Position {
         }
         if (json.containsKey("comment") && !json.isNull("comment")) {
             position.comment(json.getString("comment"));
+        }
+        if (json.containsKey("phone") && !json.isNull("phone")) {
+            position.phone(json.getString("phone"));
+        }
+        if (json.containsKey("website") && !json.isNull("website")) {
+            position.website(json.getString("website"));
+        }
+        if (json.containsKey("openingHours") && !json.isNull("openingHours")) {
+            position.openingHours(json.getString("openingHours"));
+        }
+        if (json.containsKey("wheelchair") && !json.isNull("wheelchair")) {
+            position.wheelchair(json.getString("wheelchair"));
         }
         return position;
     }
