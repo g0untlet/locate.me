@@ -131,7 +131,11 @@ html.i18n-loading .app-container {
     .app-container {
         width: 100%;
         max-width: 380px;
-        height: 640px;
+        /* 640px on a typical screen, but never taller than the viewport minus
+           the 20px body padding above/below — landscape phones (e.g. 844x390)
+           used to get a 640px frame centered in a 390px-high window, so its
+           top and bottom were clipped by body{overflow:hidden}. */
+        height: min(640px, calc(100dvh - 40px));
         border-radius: var(--border-radius);
         padding: 30px 20px 93px 20px;
     }
@@ -139,8 +143,8 @@ html.i18n-loading .app-container {
 
 /* ==========================================================================
    Desktop / Tall Viewports: Frame wächst mit dem Inhalt, damit nichts
-   abgeschnitten wird. Durch min-width + min-height ausgelöst – Smartphones
-   (Portrait UND Landscape) behalten den fixen 640px-Rahmen unverändert.
+   abgeschnitten wird. Durch min-width + min-height ausgelöst. Der Rahmen
+   bleibt 640px hoch, sofern der Viewport (wie im Portrait) hoch genug ist.
    ========================================================================== */
 @media (min-width: 480px) and (min-height: 520px) {
     .app-container {
@@ -3174,5 +3178,37 @@ button.attribution-link.attribution-version:focus-visible {
 @media (prefers-reduced-motion: reduce) {
     .release-notes-dialog[open] {
         animation: none;
+    }
+}
+
+/* ==========================================================================
+   Tablets & Desktop: the phone frame used to stay a fixed 380px card in the
+   middle of the screen (18% of a 1920px viewport, with narrower cards than on
+   a phone). Scale it with the viewport instead. Portrait phones stay below
+   480px, so their full-bleed layout is untouched by these rules; min-height
+   uses min() so short, wide windows cannot be clipped again.
+   These rules sit at the END of the file on purpose: they must override the
+   component defaults above (.track-btn, .idle-hint, .locate-action-group, …)
+   which have the same specificity and would otherwise win by source order.
+   ========================================================================== */
+@media (min-width: 768px) {
+    .app-container {
+        max-width: 460px;
+        min-height: min(700px, calc(100dvh - 40px));
+    }
+    /* 280px caps read as lost content in a wider frame. .gps-fallback .track-btn-row
+       is listed explicitly: its own cap is more specific than `.track-btn-row`. */
+    .track-btn,
+    .track-btn-row,
+    .locate-action-group,
+    .gps-fallback .track-btn-row,
+    .idle-hint {
+        max-width: 320px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .app-container {
+        max-width: 560px;
     }
 }
