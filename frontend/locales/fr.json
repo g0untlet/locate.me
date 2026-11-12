@@ -60,7 +60,7 @@
 
     "saveOptions.tagComment": "Étiquette & commentaire",
     "saveOptions.commentPlaceholder": "Ajouter un commentaire (facultatif)…",
-    "saveOptions.commentCounter": "{count}/50",
+    "saveOptions.commentCounter": "{count}/75",
 
     "places.countOne": "{count} lieu",
     "places.countOther": "{count} lieux",
@@ -111,6 +111,7 @@
     "placeInfo.website": "Ouvrir le site web",
     "placeInfo.wheelchairYes": "Accessible en fauteuil roulant",
     "placeInfo.wheelchairNo": "Non accessible en fauteuil roulant",
+    "placeInfo.wheelchairLimited": "Accès limité en fauteuil roulant",
 
     "forecast.title": "Prévisions sur 3 h",
     "forecast.expand": "Afficher les prévisions sur 3 h",

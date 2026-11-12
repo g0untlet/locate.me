@@ -60,7 +60,7 @@
 
     "saveOptions.tagComment": "Tag & Comment",
     "saveOptions.commentPlaceholder": "Add a comment (optional)…",
-    "saveOptions.commentCounter": "{count}/50",
+    "saveOptions.commentCounter": "{count}/75",
 
     "places.countOne": "{count} place",
     "places.countOther": "{count} places",
@@ -111,6 +111,7 @@
     "placeInfo.website": "Open website",
     "placeInfo.wheelchairYes": "Wheelchair accessible",
     "placeInfo.wheelchairNo": "Not wheelchair accessible",
+    "placeInfo.wheelchairLimited": "Limited wheelchair access",
 
     "forecast.title": "3-hour forecast",
     "forecast.expand": "Show 3-hour forecast",

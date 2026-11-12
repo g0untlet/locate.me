@@ -748,30 +748,78 @@ html.i18n-loading .app-container {
     height: 15px;
 }
 
+/* Auto-height disclosure: the tray animates `grid-template-rows` 0fr -> 1fr so
+   it grows to its natural content height. A fixed max-height (the former 170px)
+   would clip the place-detail rows and any long opening hours. Horizontal
+   padding stays on the tray (it never affects height); the vertical spacing
+   lives on the inner blocks, so the closed tray is exactly 0px. */
 .log-card-action-tray {
-    max-height: 0;
+    display: grid;
+    grid-template-rows: 0fr;
     opacity: 0;
     overflow: hidden;
     background-color: var(--surface-subtle);
     border-top: 1px solid transparent;
     padding: 0 14px;
-    transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 0.2s linear,
-                padding 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: grid-template-rows 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.2s linear;
+}
+
+.log-card-action-tray-inner {
+    min-height: 0;
+    overflow: hidden;
 }
 
 .log-card.expanded .log-card-action-tray {
-    max-height: 170px;
+    grid-template-rows: 1fr;
     opacity: 1;
-    padding: 10px 14px;
     border-top-color: var(--card-divider);
 }
 
-/* Accordion details: weather / UV / GPS-accuracy pills on the first line, raw
-   coordinates on a muted second line. Only visible while the tile is expanded. */
+/* Accordion details: an optional place-details block (phone / website /
+   opening hours / wheelchair of an adopted place), then the weather / UV /
+   GPS-accuracy pills on the first line and the raw coordinates on a muted
+   second line. Only visible while the tile is expanded. */
 .log-card-details {
+    padding-top: 10px;
     padding-bottom: 10px;
     border-bottom: 1px solid var(--card-divider);
+}
+
+/* Contact rows of a saved place, rendered by the shared buildPlaceInfoRows():
+   compact icon + text lines separated from the weather pills by one hairline.
+   Kept lean on purpose – no per-row dividers, no chips. */
+.log-card-place-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--card-divider);
+}
+
+.log-card-place-details .place-info-row {
+    padding: 2px 0;
+}
+
+.log-card-place-details .place-info-row + .place-info-row {
+    border-top: none;
+}
+
+.log-card-place-details .place-info-row svg {
+    width: 14px;
+    height: 14px;
+    margin-top: 2px;
+}
+
+.log-card-place-details .place-info-content {
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--text-muted);
+}
+
+.log-card-place-details .place-info-link {
+    color: var(--primary-color);
 }
 
 .log-card-details-metrics {
@@ -816,6 +864,13 @@ html.i18n-loading .app-container {
     align-items: center;
     gap: 12px;
     padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .log-card-action-tray {
+        transition: none;
+    }
 }
 
 .tray-action-btn {
@@ -2063,7 +2118,7 @@ html.i18n-loading .app-container {
     border-color: var(--primary-color);
 }
 
-/* Two-row textarea: 50 characters wrap onto a second line instead of hiding
+/* Two-row textarea: 75 characters wrap onto a second line instead of hiding
    behind the field edge. Enter is blocked in locate.js, so it stays one
    logical line; resize is off to keep the saver layout stable. */
 .comment-input {

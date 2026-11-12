@@ -102,14 +102,15 @@ The application is a single-page application (SPA) with three main views:
   - **Save step:** shows the collapsible "Tag & Comment" section, the weather again, a **LOCATION** row with the chosen location (resolved address or adopted place) and the elevation (from the fetched weather data), and an OpenStreetMap snippet of the position that will be saved. When an adopted place carries contact data, a separate compact **PLACE DETAILS** box appears below the location/elevation card: phone (tap to call via `tel:` on Android/iOS), website (external link, displayed as its hostname), opening hours and wheelchair accessibility, each with an icon; the box stays hidden when none of these fields is present. On this step the fetch/refresh button is hidden (it is parked with the idle outline) and the "Preview from …" status line is hidden — the "Back" button returns to the chooser where a fresh fetch is available. "Save Location" persists the position; a "Back" button (same width, left of Save) returns to the chooser step without reloading data from the backend.
   - **Saved step:** after saving, a dedicated read-only confirmation card shows the persisted data in the same style — the tag (pill) and comment (read-only), weather, the **LOCATION** label, elevation and the map — with the fetch button (relabelled "Fetch Location") shown to the right of the "Back" button. A fresh fetch restarts the flow; the saved step fills the page, so its action row is pinned directly above the bottom navigation like the other steps. The "Preview from …" status line stays pinned at the top of the view on this step.
 - The saved coordinates are the GPS fix by default; when the user adopts a place, the saved coordinates are that place's coordinates (its latitude/longitude) and the label is set to `Name, street houseNumber` (`osmName`), plus `displayName` and the place's road, house number, city and country. Weather, elevation and accuracy always come from the GPS preview.
-- Before saving, a collapsible "TAG & COMMENT" section allows the user to select a single predefined tag and optionally enter a comment in a two-row field (max. 50 characters, single line).
+- Before saving, a collapsible "TAG & COMMENT" section allows the user to select a single predefined tag and optionally enter a comment in a two-row field (max. 75 characters, single line; longer text scrolls inside the field).
 
 ### 2.2. History View
 - This view displays the user's saved locations.
 - It has two modes: a list view and a map view.
 - The list view shows a chronological list of saved locations.
 - Each entry shows the resolved address across the full width of the tile.
-- A tile can be expanded into a **details section** (rendered above the Map / Share / Delete buttons): a weather line with the temperature and the UV-Index pills, and a GPS line with a small satellite icon, the raw coordinates rounded to four decimals (e.g. `48.1372, 11.5755`) and the GPS accuracy pill (amber when the accuracy is worse than 30 m). Only one tile is expanded at a time; tapping it again collapses it.
+- A tile can be expanded into a **details section** (rendered above the Map / Share / Delete buttons): a weather line with the temperature and the UV-Index pills, and a GPS line with a small satellite icon, the raw coordinates rounded to four decimals (e.g. `48.1372, 11.5755`) and the GPS accuracy pill (amber when the accuracy is worse than 30 m). Only one tile is expanded at a time; tapping it again collapses it. The section animates to its natural height (grid `0fr → 1fr`), so long content is never clipped.
+- When the entry was saved from a place the user picked in "Places around me" and that place carried contact data, the details section starts with a compact **place-details block** above the weather pills: phone (`tel:` link), website (external link), opening hours and wheelchair access, rendered by the same builder as the saver's PLACE DETAILS card. Entries without such data look and behave exactly as before.
 - The elevation is shown as a muted pill in the expanded details row, in front of the coordinates pill (a small solid triangle + value, e.g. `▲ 521 m`).
 - Each entry shows a tag as a pill next to the date and the comment as a line below the address (list mode only).
 - **Share** (list tiles and map popups) hands over a message whose text starts with the app name — `locate.me: <address>` — followed by a Google Maps link to the coordinates, so the recipient can see where the message comes from before the link. Where the browser's share sheet is unavailable (desktop Firefox, embedded browsers) the same message, text plus link, is copied to the clipboard and the button briefly confirms with "Copied!".
@@ -142,7 +143,7 @@ The application is a single-page application (SPA) with three main views:
 
 The backend provides a REST API with the following endpoints:
 
-- `POST /positions?userId={userId}`: Persists a new position for a user. The full position data (coordinates, address, weather, UV index, elevation) is supplied by the client in the request body; the backend stores it as-is without server-side resolution.
+- `POST /positions?userId={userId}`: Persists a new position for a user. The full position data (coordinates, address, weather, UV index, elevation, tag/comment and — for an adopted place — its contact details) is supplied by the client in the request body; the backend stores it as-is without server-side resolution.
 - `DELETE /positions/{id}?userId={userId}`: Deletes a position by its ID.
 - `GET /positions?userId={userId}&lat={lat}&lon={lon}`: Retrieves all positions for a user. If `lat` and `lon` are provided, it also calculates the distance and travel times (walking, biking, driving) to each position.
 - `GET /positions/current?userId={userId}&lat={lat}&lon={lon}`: Resolves the address (Nominatim) and weather/UV/elevation plus a short hourly forecast (Open-Meteo) for the given coordinates and returns a preview without persisting it. This is used by the Locate view to fetch the current location before saving.
@@ -152,7 +153,7 @@ The backend provides a REST API with the following endpoints:
 
 Position responses include the persisted weather-related fields `temperature`, `weatherCode`, `uvIndex`, and `elevation`. The `/positions/current` preview additionally returns a response-only `isDay` flag for the current conditions and a `forecast` array with the next `weather.forecast-hours` future hours (the current hour is skipped); each slice carries `time`, `temperature`, `weatherCode`, `uvIndex`, `precipitationProbability` and `isDay`. Neither `isDay` nor `forecast` is persisted, and they are not returned by the other endpoints. No new endpoints were introduced for UV-Index and elevation; they are persisted and returned by the existing endpoints above.
 
-`tag` and `comment` are optional fields: when set on a save (`POST /positions`) they are persisted verbatim and returned in position responses; when absent they are simply not stored.
+`tag` and `comment` are optional fields: when set on a save (`POST /positions`) they are persisted verbatim and returned in position responses; when absent they are simply not stored. The same applies to `phone`, `website`, `openingHours` and `wheelchair`: the Locate view only sends them when the saved location was an adopted place that carries them, and position responses omit them when they were never set.
 
 Geocoding/weather enrichment happens only when fetching (`GET /positions/current`). Saving (`POST /positions`) persists the client-provided data verbatim – the Locate view sends back exactly the enriched preview data it already fetched, so the backend never re-resolves an already-fetched location.
 
@@ -194,7 +195,8 @@ The main business object is the `Position` entity, which has the following attri
 - `osmCategory`, `osmType`, `addressType`, `houseNumber`, `road`, `city`, `country`: Geocoding information from OpenStreetMap (the POI metadata drives the location icon, while the address parts feed `displayName` and the short address).
 - `osmName`: The label of a place the user adopted from "Places around me" (`Name, street houseNumber`); it is not filled by reverse geocoding, so geocoding never stores a POI name.
 - `tag`: An optional predefined tag for the position (`HOME`, `WORK`, `PARKING`, `SHOPPING`, `EATING`, `LEISURE`, `FRIENDS`, `HEALTH`).
-- `comment`: An optional user-provided comment (max. 50 characters in the UI, 255 in the database).
+- `comment`: An optional user-provided comment (max. 75 characters in the UI, 255 in the database).
+- `phone`, `website`, `openingHours`, `wheelchair`: A snapshot of the contact details of the place the user picked from "Places around me" (empty for a plain GPS save). Stored on the position instead of referenced from the `places` cache, because that cache is re-written on every Geoapify fetch and may be absent — history must show what was saved, not today's cache row. Column names and lengths mirror `Place` (64 / 512 / 512 / 64).
 
 A second business object is the `Place`, which represents a cached point of interest fetched from Geoapify:
 

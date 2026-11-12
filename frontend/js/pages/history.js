@@ -23,6 +23,8 @@ import {
     formatElevation,
     shareLocation,
     showCopied,
+    buildPlaceInfoRows,
+    escapeHtml,
     PREDEFINED_TAGS,
     posMatchesFilter
 } from '../utils.js';
@@ -412,12 +414,12 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
         : '';
 
     const tagHtml = pos.tag
-        ? `<span class="log-card-tag" title="${t('history.tagTitle', { tag: pos.tag })}">
+        ? `<span class="log-card-tag" title="${escapeHtml(t('history.tagTitle', { tag: pos.tag }))}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"></path>
                 <line x1="7" y1="7" x2="7.01" y2="7"></line>
             </svg>
-            ${pos.tag}
+            ${escapeHtml(pos.tag)}
         </span>`
         : '';
 
@@ -426,7 +428,7 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
-            <span>${pos.comment}</span>
+            <span>${escapeHtml(pos.comment)}</span>
         </div>`
         : '';
 
@@ -456,6 +458,14 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
         </span>`
         : '';
 
+    // Contact details of a place the user picked from "Places around me" —
+    // snapshotted on the position at save time. Empty for a plain GPS save, so
+    // those cards render exactly as before.
+    const placeDetailsRows = buildPlaceInfoRows(pos);
+    const placeDetailsHtml = placeDetailsRows
+        ? `<div class="log-card-place-details">${placeDetailsRows}</div>`
+        : '';
+
     card.innerHTML = `
         <div class="log-card-clickable-area">
             <div class="log-card-header">
@@ -469,69 +479,72 @@ function buildHistoryCard(pos, index, activeUserId, listContainer, { checkBacken
                 </div>
             </div>
             <div class="log-card-body">
-                <div class="log-card-address address-container" title="${fullAddressForTitle}">
+                <div class="log-card-address address-container" title="${escapeHtml(fullAddressForTitle)}">
                     ${locationIcon}
-                    <span>${shortAddress}</span>
+                    <span>${escapeHtml(shortAddress)}</span>
                 </div>
                 ${commentHtml}
             </div>
             ${travelRowHtml}
         </div>
         <div class="log-card-action-tray">
-            <div class="log-card-details">
-                <div class="log-card-details-metrics">
-                    <div class="log-card-temp ${tempClass}">
-                        ${weatherIconSvg}
-                        <span>${tempFormatted}</span>
+            <div class="log-card-action-tray-inner">
+                <div class="log-card-details">
+                    ${placeDetailsHtml}
+                    <div class="log-card-details-metrics">
+                        <div class="log-card-temp ${tempClass}">
+                            ${weatherIconSvg}
+                            <span>${tempFormatted}</span>
+                        </div>
+                        ${uvHtml}
                     </div>
-                    ${uvHtml}
+                    <div class="log-card-details-gps">
+                        ${elevationHtml}
+                        ${coordsHtml}
+                        <span class="log-card-accuracy-badge${isLowAccuracy ? ' log-card-accuracy-badge--low' : ''}">
+                            <svg class="log-accuracy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="7"></circle>
+                                <line x1="12" y1="1" x2="12" y2="4"></line>
+                                <line x1="12" y1="20" x2="12" y2="23"></line>
+                                <line x1="1" y1="12" x2="4" y2="12"></line>
+                                <line x1="20" y1="12" x2="23" y2="12"></line>
+                            </svg>
+                            <span>±${roundedAccuracy}m</span>
+                        </span>
+                    </div>
                 </div>
-                <div class="log-card-details-gps">
-                    ${elevationHtml}
-                    ${coordsHtml}
-                    <span class="log-card-accuracy-badge${isLowAccuracy ? ' log-card-accuracy-badge--low' : ''}">
-                        <svg class="log-accuracy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="7"></circle>
-                            <line x1="12" y1="1" x2="12" y2="4"></line>
-                            <line x1="12" y1="20" x2="12" y2="23"></line>
-                            <line x1="1" y1="12" x2="4" y2="12"></line>
-                            <line x1="20" y1="12" x2="23" y2="12"></line>
+                <div class="log-card-tray-actions">
+                    <a href="https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}"
+                       target="_blank"
+                       rel="noopener"
+                       class="tray-action-btn btn-action-maps">
+                        <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
                         </svg>
-                        <span>±${roundedAccuracy}m</span>
-                    </span>
+                        ${t('history.maps')}
+                    </a>
+                    <button class="tray-action-btn btn-action-share"
+                            data-lat="${pos.latitude}"
+                            data-lon="${pos.longitude}"
+                            data-address="${escapeHtml(shortAddress)}">
+                        <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="18" cy="5" r="3"></circle>
+                            <circle cx="6" cy="12" r="3"></circle>
+                            <circle cx="18" cy="19" r="3"></circle>
+                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                        </svg>
+                        ${t('history.share')}
+                    </button>
+                    <button class="tray-action-btn btn-action-delete" data-id="${pos.id}">
+                        <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        ${t('history.delete')}
+                    </button>
                 </div>
-            </div>
-            <div class="log-card-tray-actions">
-                <a href="https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}"
-                   target="_blank"
-                   rel="noopener"
-                   class="tray-action-btn btn-action-maps">
-                    <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                        <circle cx="12" cy="10" r="3"></circle>
-                    </svg>
-                    ${t('history.maps')}
-                </a>
-                <button class="tray-action-btn btn-action-share"
-                        data-lat="${pos.latitude}"
-                        data-lon="${pos.longitude}"
-                        data-address="${shortAddress.replace(/"/g, '&quot;')}">
-                    <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="18" cy="5" r="3"></circle>
-                        <circle cx="6" cy="12" r="3"></circle>
-                        <circle cx="18" cy="19" r="3"></circle>
-                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                    </svg>
-                    ${t('history.share')}
-                </button>
-                <button class="tray-action-btn btn-action-delete" data-id="${pos.id}">
-                    <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    </svg>
-                    ${t('history.delete')}
-                </button>
             </div>
         </div>
     `;

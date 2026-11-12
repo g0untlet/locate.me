@@ -27,6 +27,10 @@ class PositionTest {
                 .weatherCode(WeatherCode.PARTLY_CLOUDY)
                 .tag(PositionTag.WORK)
                 .comment("Team meeting")
+                .phone("+49 89 123456")
+                .website("https://example.org")
+                .openingHours("Mo-Fr 09:00-18:00")
+                .wheelchair("yes")
                 .timestamp(now);
 
         JsonObject json = position.toJSON();
@@ -43,6 +47,10 @@ class PositionTest {
         assertThat(json.getJsonNumber("weatherCode").intValue()).isEqualTo(2);
         assertThat(json.getString("tag")).isEqualTo("WORK");
         assertThat(json.getString("comment")).isEqualTo("Team meeting");
+        assertThat(json.getString("phone")).isEqualTo("+49 89 123456");
+        assertThat(json.getString("website")).isEqualTo("https://example.org");
+        assertThat(json.getString("openingHours")).isEqualTo("Mo-Fr 09:00-18:00");
+        assertThat(json.getString("wheelchair")).isEqualTo("yes");
         assertThat(json.getString("timestamp")).isEqualTo(now.toString());
     }
 
@@ -62,6 +70,10 @@ class PositionTest {
                 .add("weatherCode", 2)
                 .add("tag", "WORK")
                 .add("comment", "Team meeting")
+                .add("phone", "+49 89 123456")
+                .add("website", "https://example.org")
+                .add("openingHours", "Mo-Fr 09:00-18:00")
+                .add("wheelchair", "yes")
                 .add("timestamp", now.toString())
                 .build();
 
@@ -79,6 +91,26 @@ class PositionTest {
         assertThat(position.weatherCode()).isEqualTo(WeatherCode.PARTLY_CLOUDY);
         assertThat(position.tag()).isEqualTo(PositionTag.WORK);
         assertThat(position.comment()).isEqualTo("Team meeting");
+        assertThat(position.phone()).isEqualTo("+49 89 123456");
+        assertThat(position.website()).isEqualTo("https://example.org");
+        assertThat(position.openingHours()).isEqualTo("Mo-Fr 09:00-18:00");
+        assertThat(position.wheelchair()).isEqualTo("yes");
         assertThat(position.timestamp()).isEqualTo(now);
+    }
+
+    @Test
+    void omitsAbsentPlaceDetails() {
+        Position position = new Position()
+                .userId("user123")
+                .latitude(48.1351)
+                .longitude(11.5820)
+                .timestamp(Instant.now());
+
+        JsonObject json = position.toJSON();
+
+        assertThat(json.containsKey("phone")).isFalse();
+        assertThat(json.containsKey("website")).isFalse();
+        assertThat(json.containsKey("openingHours")).isFalse();
+        assertThat(json.containsKey("wheelchair")).isFalse();
     }
 }

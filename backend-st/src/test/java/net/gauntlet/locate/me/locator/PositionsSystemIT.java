@@ -31,6 +31,10 @@ class PositionsSystemIT {
                 .add("displayName", "Berlin Office")
                 .add("tag", "WORK")
                 .add("comment", "Berlin meeting")
+                .add("phone", "+49 30 123456")
+                .add("website", "https://example.org/berlin")
+                .add("openingHours", "Mo-Fr 09:00-18:00")
+                .add("wheelchair", "limited")
                 .add("timestamp", Instant.now().toString())
                 .build();
 
@@ -42,6 +46,10 @@ class PositionsSystemIT {
             assertThat(created.getString("displayName")).isEqualTo("Berlin Office");
             assertThat(created.getString("tag")).isEqualTo("WORK");
             assertThat(created.getString("comment")).isEqualTo("Berlin meeting");
+            assertThat(created.getString("phone")).isEqualTo("+49 30 123456");
+            assertThat(created.getString("website")).isEqualTo("https://example.org/berlin");
+            assertThat(created.getString("openingHours")).isEqualTo("Mo-Fr 09:00-18:00");
+            assertThat(created.getString("wheelchair")).isEqualTo("limited");
             long id = created.getJsonNumber("id").longValue();
 
             // 2. Query Position via REST Client without distance parameters
@@ -52,6 +60,8 @@ class PositionsSystemIT {
                 JsonObject queried = array.getJsonObject(0);
                 assertThat(queried.getJsonNumber("id").longValue()).isEqualTo(id);
                 assertThat(queried.getString("displayName")).isEqualTo("Berlin Office");
+                assertThat(queried.getString("phone")).isEqualTo("+49 30 123456");
+                assertThat(queried.getString("openingHours")).isEqualTo("Mo-Fr 09:00-18:00");
                 assertThat(queried.containsKey("distance")).isFalse();
             }
 
