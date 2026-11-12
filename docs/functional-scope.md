@@ -102,7 +102,7 @@ The application is a single-page application (SPA) with three main views:
   - **Save step:** shows the collapsible "Tag & Comment" section, the weather again, a **LOCATION** row with the chosen location (resolved address or adopted place) and the elevation (from the fetched weather data), and an OpenStreetMap snippet of the position that will be saved. When an adopted place carries contact data, a separate compact **PLACE DETAILS** box appears below the location/elevation card: phone (tap to call via `tel:` on Android/iOS), website (external link, displayed as its hostname), opening hours and wheelchair accessibility, each with an icon; the box stays hidden when none of these fields is present. On this step the fetch/refresh button is hidden (it is parked with the idle outline) and the "Preview from …" status line is hidden — the "Back" button returns to the chooser where a fresh fetch is available. "Save Location" persists the position; a "Back" button (same width, left of Save) returns to the chooser step without reloading data from the backend.
   - **Saved step:** after saving, a dedicated read-only confirmation card shows the persisted data in the same style — the tag (pill) and comment (read-only), weather, the **LOCATION** label, elevation and the map — with the fetch button (relabelled "Fetch Location") shown to the right of the "Back" button. A fresh fetch restarts the flow; the saved step fills the page, so its action row is pinned directly above the bottom navigation like the other steps. The "Preview from …" status line stays pinned at the top of the view on this step.
 - The saved coordinates are the GPS fix by default; when the user adopts a place, the saved coordinates are that place's coordinates (its latitude/longitude) and the label is set to `Name, street houseNumber` (`osmName`), plus `displayName` and the place's road, house number, city and country. Weather, elevation and accuracy always come from the GPS preview.
-- Before saving, a collapsible "TAG & COMMENT" section allows the user to select a single predefined tag and optionally enter a comment (max. 25 characters).
+- Before saving, a collapsible "TAG & COMMENT" section allows the user to select a single predefined tag and optionally enter a comment in a two-row field (max. 50 characters, single line).
 
 ### 2.2. History View
 - This view displays the user's saved locations.
@@ -194,7 +194,7 @@ The main business object is the `Position` entity, which has the following attri
 - `osmCategory`, `osmType`, `addressType`, `houseNumber`, `road`, `city`, `country`: Geocoding information from OpenStreetMap (the POI metadata drives the location icon, while the address parts feed `displayName` and the short address).
 - `osmName`: The label of a place the user adopted from "Places around me" (`Name, street houseNumber`); it is not filled by reverse geocoding, so geocoding never stores a POI name.
 - `tag`: An optional predefined tag for the position (`HOME`, `WORK`, `PARKING`, `SHOPPING`, `EATING`, `LEISURE`, `FRIENDS`, `HEALTH`).
-- `comment`: An optional user-provided comment (max. 25 characters in the UI, 255 in the database).
+- `comment`: An optional user-provided comment (max. 50 characters in the UI, 255 in the database).
 
 A second business object is the `Place`, which represents a cached point of interest fetched from Geoapify:
 

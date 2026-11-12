@@ -260,7 +260,24 @@ function initSaveOptions() {
     });
 
     if (comment && counter) {
+        // The field is a two-row textarea (50 characters wrap onto line two),
+        // but the comment stays one logical line: Enter never inserts a break
+        // and pasted line breaks are folded to a space, so history card, saved
+        // strip and the collapsed summary render exactly as before.
+        comment.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') e.preventDefault();
+        });
         comment.addEventListener('input', () => {
+            const caret  = comment.selectionStart;
+            const before = comment.value;
+            const single = before.replace(/[\r\n]+/g, ' ');
+            if (single !== before) {
+                comment.value = single;
+                // Keep the caret roughly where the user expects it after folding.
+                const removed = before.length - single.length;
+                const pos     = Math.max(0, (caret ?? single.length) - removed);
+                comment.setSelectionRange(pos, pos);
+            }
             counter.textContent = t('saveOptions.commentCounter', { count: comment.value.length });
             updateSaveOptionsSummary();
         });

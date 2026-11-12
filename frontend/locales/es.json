@@ -60,7 +60,7 @@
 
     "saveOptions.tagComment": "Etiquetas y comentario",
     "saveOptions.commentPlaceholder": "Añadir un comentario (opcional)…",
-    "saveOptions.commentCounter": "{count}/25",
+    "saveOptions.commentCounter": "{count}/50",
 
     "places.countOne": "{count} lugar",
     "places.countOther": "{count} lugares",

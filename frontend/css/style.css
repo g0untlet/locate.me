@@ -2021,6 +2021,16 @@ html.i18n-loading .app-container {
     margin-bottom: 0;
 }
 
+/* Label + character counter share one line above the comment field, so the
+   counter never overlaps the (two-line) text. */
+.save-options-row-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+
 .tag-chips {
     display: flex;
     flex-wrap: wrap;
@@ -2053,21 +2063,22 @@ html.i18n-loading .app-container {
     border-color: var(--primary-color);
 }
 
-.comment-input-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    width: 100%;
-}
-
+/* Two-row textarea: 50 characters wrap onto a second line instead of hiding
+   behind the field edge. Enter is blocked in locate.js, so it stays one
+   logical line; resize is off to keep the saver layout stable. */
 .comment-input {
+    display: block;
     width: 100%;
-    padding: 9px 48px 9px 12px;
+    padding: 9px 12px;
+    font-family: inherit;
     font-size: 0.88rem;
+    line-height: 1.35;
     border: 1px solid var(--border-color);
     border-radius: 8px;
     background-color: var(--card-bg);
     color: var(--text-color);
+    resize: none;
+    overflow-y: auto;
     transition: var(--transition);
 }
 
@@ -2077,8 +2088,7 @@ html.i18n-loading .app-container {
 }
 
 .comment-counter {
-    position: absolute;
-    right: 10px;
+    flex-shrink: 0;
     font-size: 0.7rem;
     color: var(--text-muted);
     pointer-events: none;
