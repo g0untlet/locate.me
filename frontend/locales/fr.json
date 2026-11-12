@@ -158,7 +158,7 @@
     "settings.toggleUserId": "Afficher/masquer l'ID utilisateur",
     "settings.userIdHelp": "Laissé vide, le mode démo « user123 » sera utilisé par défaut.",
     "settings.requestUserId": "Demander votre propre ID utilisateur",
-    "settings.save": "Enregistrer les réglages",
+    "settings.invalidUserId": "Lettres et chiffres uniquement, 16 caractères au maximum.",
     "settings.saved": "Réglages enregistrés avec succès !",
     "settings.backendNotReachable": "Serveur injoignable",
     "settings.onlineSince": "En ligne depuis {date}",

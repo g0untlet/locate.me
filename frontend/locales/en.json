@@ -158,7 +158,7 @@
     "settings.toggleUserId": "Toggle user ID visibility",
     "settings.userIdHelp": "Left blank, demo \"user123\" will be used by default.",
     "settings.requestUserId": "Request your own User ID",
-    "settings.save": "Save Settings",
+    "settings.invalidUserId": "Only letters and digits, up to 16 characters.",
     "settings.saved": "Settings saved successfully!",
     "settings.backendNotReachable": "Server not reachable",
     "settings.onlineSince": "Online since {date}",
