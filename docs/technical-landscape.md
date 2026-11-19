@@ -497,10 +497,12 @@ a token; protected requests send `Authorization: Bearer <token>`. Claims are onl
 There are no sessions, cookies, refresh tokens, logout or server-side revocation
 lists — previously issued tokens stay valid until they expire.
 
-Signing/verification keys: dev/test use the checked-in key pair under
-`src/[test/]main/resources/jwt/`; PROD must provide `JWT_SIGN_KEY_LOCATION` (private
-PEM) and `JWT_PUBLIC_KEY_LOCATION` (public PEM). `JwtTokens` signs a throw-away token
-at startup, so a missing signing key fails the deployment immediately.
+Signing/verification keys: local dev/test use the checked-in key pairs
+(`backend/src/main/resources/jwt/dev-*.pem`, `backend/src/test/resources/jwt/test-*.pem`);
+deployed DEV and PROD must provide `JWT_SIGN_KEY_LOCATION` (private PEM) and
+`JWT_PUBLIC_KEY_LOCATION` (public PEM). `JwtTokens` signs a throw-away token at
+startup, so a missing signing key fails the deployment immediately. How to generate,
+verify, install and rotate the pair: see [JWT key provisioning](#jwt-key-provisioning).
 
 Passwords: bcrypt (`quarkus-elytron-security-common`, cost 10), 8–32 characters and
 at most 72 UTF-8 bytes — longer input is rejected instead of bcrypt-truncated. Login
@@ -637,6 +639,74 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
   PROD; `ALLOWED_USER_IDS` keeps working but is now bootstrap input only. A user who
   disappears from it is neither deleted nor disabled.
 - Local helpers: `start-locate-tunnel.sh`, `start-h2-tunnel.sh` (SSH tunnels; H2 Shell/console).
+
+## JWT key provisioning
+
+The backend signs and verifies RS256 bearer tokens with an RSA key pair. The
+private key stays with the backend; the public key is only used for verification.
+
+| Environment | Profile | Key source |
+|---|---|---|
+| Local development (`mvn quarkus:dev`) | `%dev` | checked in: `backend/src/main/resources/jwt/dev-private.pem` + `dev-public.pem` — no setup required |
+| Tests (`mvn verify`, `@QuarkusTest`) | `%test` | checked in: `backend/src/test/resources/jwt/test-private.pem` + `test-public.pem` |
+| Deployed DEV (`/opt/locateme/dev/backend/`, port 8090) | `prod` | own pair on the server + `JWT_SIGN_KEY_LOCATION` / `JWT_PUBLIC_KEY_LOCATION` |
+| PROD (`/opt/locateme/prod/backend/`, port 8080) | `prod` | own pair on the server + `JWT_SIGN_KEY_LOCATION` / `JWT_PUBLIC_KEY_LOCATION` |
+
+The packaged JAR runs under the `prod` profile; the `%dev` key block applies only to
+`mvn quarkus:dev`. Both deployed environments therefore need their own pair, and the
+checked-in development key must never be used there (a dev token would otherwise be
+accepted by PROD, and vice versa).
+
+**Generate a pair.** `openssl genpkey` writes a PKCS#8 private key
+(`-----BEGIN PRIVATE KEY-----`) and `openssl pkey -pubout` the matching
+SubjectPublicKeyInfo public key (`-----BEGIN PUBLIC KEY-----`); both are the formats
+SmallRye JWT expects. 2048 bit is the minimum, 3072 is a good default. Do not use a
+passphrase: the backend has no password setting for the key, so file permissions are
+the protection.
+
+```bash
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out jwt-private.pem
+openssl pkey -in jwt-private.pem -pubout -out jwt-public.pem
+```
+
+**Verify the pair.** Both `sha256sum` lines must print the same hash:
+
+```bash
+openssl pkey -in jwt-private.pem -check -noout
+openssl pkey -in jwt-private.pem -pubout -outform DER | sha256sum
+openssl pkey -pubin -in jwt-public.pem -outform DER | sha256sum
+```
+
+**Install on the server.** Keep the files outside the repository and readable only
+by the account that runs the JAR (the following is the PROD layout; use the mirrored
+`/opt/locateme/dev/backend/jwt/` paths for DEV):
+
+```bash
+install -m 600 jwt-private.pem /opt/locateme/prod/backend/jwt/private.pem
+install -m 644 jwt-public.pem  /opt/locateme/prod/backend/jwt/public.pem
+```
+
+**Export in `start-locateme-backend.sh`** (absolute paths — the JVM working directory
+is not a reliable reference):
+
+```bash
+export JWT_SIGN_KEY_LOCATION=/opt/locateme/prod/backend/jwt/private.pem
+export JWT_PUBLIC_KEY_LOCATION=/opt/locateme/prod/backend/jwt/public.pem
+```
+
+The startup log prints `JWT signing key is available`. A missing or unreadable key
+fails startup (`JwtTokens` signs a throw-away token at boot) instead of silently
+issuing tokens that nobody can verify.
+
+**Rotation.** Generate a new pair, replace both files, restart the backend. There is
+no revocation list and no multi-key support, so every previously issued token becomes
+invalid and all users must log in again. The same applies when the checked-in dev key
+is rotated.
+
+**Non-prod profile note.** If a deployed instance is ever started with
+`QUARKUS_PROFILE=dev`, the `%dev` block points at the classpath key and ignores
+`JWT_SIGN_KEY_LOCATION`. Override it with `SMALLRYE_JWT_SIGN_KEY_LOCATION` and
+`MP_JWT_VERIFY_PUBLICKEY_LOCATION` instead.
 
 ## Configuration (application.properties)
 
