@@ -91,6 +91,14 @@ public class User {
     @Column(name = "entity_version", nullable = false)
     long version;
 
+    /**
+     * Credential generation, mirrored into the JWT as the {@code ver} claim.
+     * A password change or administrative reset increments it, invalidating
+     * every token issued before the change.
+     */
+    @Column(name = "auth_epoch", nullable = false)
+    long authEpoch;
+
     // Write-only request input; never persisted, never serialized.
     @Transient
     transient String password;
@@ -226,6 +234,15 @@ public class User {
 
     public long version() {
         return this.version;
+    }
+
+    public long authEpoch() {
+        return this.authEpoch;
+    }
+
+    public User bumpAuthEpoch() {
+        this.authEpoch++;
+        return this;
     }
 
     public String password() {

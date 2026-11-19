@@ -87,6 +87,7 @@ public class UsersResource {
     @RolesAllowed("ADMIN")
     @Transactional
     public Response create(JsonObject json) {
+        this.currentUser.requireAuthenticated();
         User created = this.users.createByAdmin(adminInput(json));
         LOG.log(System.Logger.Level.DEBUG, "Administrator created user {0}", created.userId());
         return Response.created(URI.create("/api/users/" + created.userId()))
@@ -97,6 +98,7 @@ public class UsersResource {
     @GET
     @RolesAllowed("ADMIN")
     public Response list() {
+        this.currentUser.requireAuthenticated();
         JsonArrayBuilder array = Json.createArrayBuilder();
         this.users.findAll().stream().map(User::toJSON).forEach(array::add);
         return Response.ok(array.build()).build();
@@ -106,6 +108,7 @@ public class UsersResource {
     @Path("/{userId}")
     @RolesAllowed("ADMIN")
     public Response get(@PathParam("userId") String userId) {
+        this.currentUser.requireAuthenticated();
         return Response.ok(this.users.requireByUserId(userId).toJSON()).build();
     }
 
@@ -114,8 +117,25 @@ public class UsersResource {
     @RolesAllowed("ADMIN")
     @Transactional
     public Response update(@PathParam("userId") String userId, JsonObject json) {
+        this.currentUser.requireAuthenticated();
         User target = this.users.requireByUserId(userId);
         return Response.ok(this.users.updateByAdmin(target, adminInput(json)).toJSON()).build();
+    }
+
+    /**
+     * Administrative password reset (support path when a user forgot the
+     * password or lost the recovery email). Deliberately separate from the
+     * general update: a password is never changed through {@code PUT /users/{userId}}.
+     */
+    @PUT
+    @Path("/{userId}/password")
+    @RolesAllowed("ADMIN")
+    @Transactional
+    public Response resetPassword(@PathParam("userId") String userId, JsonObject json) {
+        this.currentUser.requireAuthenticated();
+        User target = this.users.requireByUserId(userId);
+        this.users.resetPassword(target, User.fromJson(json));
+        return Response.noContent().build();
     }
 
     @DELETE
@@ -123,6 +143,7 @@ public class UsersResource {
     @RolesAllowed("ADMIN")
     @Transactional
     public Response delete(@PathParam("userId") String userId) {
+        this.currentUser.requireAuthenticated();
         this.users.deactivate(this.users.requireByUserId(userId));
         return Response.noContent().build();
     }

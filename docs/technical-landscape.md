@@ -189,11 +189,11 @@ net.gauntlet.locate.me
 | `GeoapifyPlacesClient` | MicroProfile REST client → Geoapify Places API (`/v2/places`) |
 | `Geoboxing` | Bounding-box spans (`deltaLat`/`deltaLon`) + haversine distance (static util) |
 | `ClientLanguage` | `Accept-Language` → lowercased 2-letter ISO-639-1 code (static util) |
-| `UserAccounts` | Registration, one-time legacy claim, credential verification, profile/password/recovery-email changes and ADMIN CRUD; explicit field allowlisting, optimistic-locking/unique-constraint conflicts → 409, last-active-admin guard |
+| `UserAccounts` | Registration, one-time legacy claim, credential verification, profile/password/recovery-email changes, administrative password reset and ADMIN CRUD; explicit field allowlisting, optimistic-locking/unique-constraint conflicts → 409, last-active-admin guard |
 | `CurrentUser` | Resolves the request identity: verified JWT `sub` → H2 user (must be ACTIVE), else the exact demo user, else an **unmigrated** legacy account while `auth.legacy-userid-auth=true`; keeps the former 400/401 contract of the position/place endpoints |
 | `LegacyUsers` | Idempotent startup reconciliation of `allowed.user.ids` into unmigrated accounts and `auth.admin.user.ids` into ADMIN grants; never creates admins, never overwrites/deletes, skips the demo user |
 | `LoginAttempts` | Persisted failure counter + progressive cooldown (`auth.login.*`), written in its own transaction so the 401 does not roll it back; success resets it |
-| `JwtTokens` | Issues RS256 tokens (`sub`, `iat`, `exp`, `iss`, `aud`, `groups`) and verifies the signing key at startup |
+| `JwtTokens` | Issues RS256 tokens (`sub`, `iat`, `exp`, `iss`, `aud`, `groups`, `ver`) and verifies the signing key at startup |
 | `Passwords` | Policy (8–32 chars, 72 UTF-8 bytes) + bcrypt hash/verify + timing-equalizing dummy hash |
 | `UserIds` | Registration rules (`[a-z0-9_-]{3,32}`, lowercased, reserved list) and case-insensitive lookup normalization that never rewrites a legacy id |
 | `Emails` | Recovery-email trim/lowercase/format validation (≤254) |
@@ -275,6 +275,7 @@ Common errors: 400 invalid/missing `userId` or `lat`/`lon`; 401 unknown user or 
 | GET | `/api/users` | 200 list of safe projections (ADMIN) |
 | GET | `/api/users/{userId}` | 200 / 404 (ADMIN) |
 | PUT | `/api/users/{userId}` | 200 (ADMIN); path id is the target, a conflicting body `userId` → 409, passwords are never changed here |
+| PUT | `/api/users/{userId}/password` | 204 (ADMIN); body `password` (+ optional `passwordConfirmation`); hashes the new password, clears failed-login state and increments the credential generation, so all earlier tokens of that account are rejected. The support path for a forgotten password or lost recovery email |
 | DELETE | `/api/users/{userId}` | 204 → status `DISABLED` (ADMIN); the last active administrator cannot be deactivated or demoted (409) |
 
 Errors use the shared shape `{"error": "..."}`; JWT failures return 401, role failures 403, uniqueness/migration conflicts 409, authentication rate limits 429.
@@ -373,6 +374,7 @@ row; the legacy `allowed.user.ids` list is only bootstrap input.
 | `lastLoginAt` Instant | `last_login_at` | TIMESTAMP(6) WITH TIME ZONE | |
 | `createdAt`/`updatedAt` Instant | `created_at`, `updated_at` | TIMESTAMP(6) WITH TIME ZONE | server-managed |
 | `version` long | `entity_version` | BIGINT | `@Version` optimistic locking |
+| `authEpoch` long | `auth_epoch` | BIGINT | credential generation mirrored into the JWT as `ver`; incremented by a password change or an administrative reset, which invalidates earlier tokens |
 
 `positions.user_id` intentionally has **no** foreign key to `users`: positions may
 refer to the shared demo user or to accounts that no longer exist, and a constraint
@@ -424,6 +426,10 @@ Since 0.4.0 the schema is managed by **Flyway** (`quarkus-flyway`); Hibernate ru
     and `email`, hash/status/login state/timestamps/`entity_version`) and
     `user_roles` (element collection, `ON DELETE CASCADE`). Existing business data
     is untouched: no rows are migrated and `positions.user_id` stays a plain string.
+  - `V6__add_auth_epoch_to_users.sql` — `auth_epoch BIGINT NOT NULL DEFAULT 0`, the
+    per-account credential generation carried by the JWT's `ver` claim; incremented
+    on password change/reset to invalidate earlier tokens. Existing accounts start
+    at 0 and keep their current tokens.
 - **Existing databases** (DEV/PROD, already populated): on the first 0.4.0 start Flyway
   baselines them at version 1 (`quarkus.flyway.baseline-on-migrate=true`,
   `quarkus.flyway.baseline-version=1`). `V1__baseline.sql` is skipped and existing data is
@@ -492,10 +498,20 @@ Stateless signed JWT bearer tokens (RS256, `quarkus-smallrye-jwt` +
 `smallrye-jwt-build`). `POST /auth/register`, `/auth/login` and `/auth/claim` return
 a token; protected requests send `Authorization: Bearer <token>`. Claims are only
 `sub` (the permanent userId), `iat`, `exp`, `iss` (`locate.me`), `aud`
-(`locate.me-pwa`) and `groups` (USER/ADMIN). Lifetime is `auth.jwt.lifespan`
-(default 30 days); issuer/audience are verified (`mp.jwt.verify.issuer/audiences`).
-There are no sessions, cookies, refresh tokens, logout or server-side revocation
-lists — previously issued tokens stay valid until they expire.
+(`locate.me-pwa`), `groups` (USER/ADMIN) and `ver` (the account's credential
+generation). Lifetime is `auth.jwt.lifespan` (default 30 days); issuer/audience are
+verified (`mp.jwt.verify.issuer/audiences`). There are no sessions, cookies, refresh
+tokens or logout, and no token-revocation list.
+
+**Token invalidation without a session store.** `ver` mirrors `users.auth_epoch`.
+A password change (`PUT /users/me/password`) or an administrative reset
+(`PUT /users/{userId}/password`) increments the account's generation, so every token
+issued before the change is rejected with 401 on its next request — including after a
+deactivated account is reactivated. A normal login or registration issues a token with
+the current generation. This is one integer on the account, checked against the token
+that is already loaded per request, not a per-token list. A self-service password
+change therefore signs out the device that performed it; the frontend must clear the
+token and show the login screen again.
 
 Signing/verification keys: local dev/test use the checked-in key pairs
 (`backend/src/main/resources/jwt/dev-*.pem`, `backend/src/test/resources/jwt/test-*.pem`);
@@ -545,7 +561,110 @@ idempotently, never overwrites or deletes them, and skips `user123`.
   returns a token. A second claim → 409.
 - New registrations are stored directly in H2; an existing legacy id cannot be
   registered (409) and can only be upgraded through `claim`.
-- Password recovery is not implemented yet; both endpoints return 501.
+- Administrative recovery: `PUT /api/users/{userId}/password` (ADMIN) sets a new
+  password when a user forgot it or lost access to the recovery email. It clears a
+  temporary login lock and invalidates every earlier token of that account. The
+  administrator can set the recovery email through the general `PUT /users/{userId}`.
+- Self-service password recovery by email is not implemented yet; both
+  `/auth/password-reset/*` endpoints return 501.
+
+## Administrative flow
+
+ADMIN accounts come from the ops-controlled bootstrap, not from public
+registration: `auth.admin.user.ids` (env `AUTH_ADMIN_USER_IDS`) grants ADMIN to
+**existing** accounts at startup. It never creates a user and never revokes a role.
+An account listed there must therefore already exist — either already in H2 or listed
+in `ALLOWED_USER_IDS` so the legacy bootstrap creates it — and the change takes effect
+on the next restart. The grant is idempotent, case-insensitive, skips `user123` and
+logs a warning for an unknown id.
+
+### Obtaining an admin token
+
+There are no sessions and no refresh tokens; every admin call uses a normal bearer
+token from the claim/login flow.
+
+```bash
+BASE=http://localhost:8090/api        # deployed: https://<host>/api
+J='Content-Type: application/json'
+
+# First time: the bootstrapped account has no password yet.
+ADMIN_TOKEN=$(curl -s -X POST "$BASE/auth/claim" -H "$J" \
+  -d '{"userId":"adminUser","password":"admin-password-1","email":"admin@example.test"}' \
+  | jq -r .token)
+
+# Afterwards:
+ADMIN_TOKEN=$(curl -s -X POST "$BASE/auth/login" -H "$J" \
+  -d '{"userId":"adminUser","password":"admin-password-1"}' | jq -r .token)
+```
+
+`GET /api/users/me` with that token shows `"roles": ["ADMIN","USER"]`; the token's
+`groups` claim is what `@RolesAllowed("ADMIN")` checks on `/api/users/**`.
+
+### Operations
+
+Every call needs `-H "Authorization: Bearer $ADMIN_TOKEN"`.
+
+| Operation | Call |
+|---|---|
+| List accounts | `GET /api/users` |
+| Read one account | `GET /api/users/{userId}` |
+| Create an account | `POST /api/users` with `userId`, `name`, `password`, `email` and optional `roles`/`status` → `201` |
+| Update an account | `PUT /api/users/{userId}` — only `name`, `email`, `status`, `roles`; a body `userId` that differs from the path → `409`; passwords are never changed here |
+| Deactivate | `DELETE /api/users/{userId}` → status `DISABLED` (`204`); the account and its business data stay |
+| Reactivate | `PUT /api/users/{userId}` with `{"status":"ACTIVE"}` |
+| Reset a password | `PUT /api/users/{userId}/password` with `{"password":"…"}` (optional `passwordConfirmation`) → `204` |
+
+```bash
+# Support case: forgotten password and lost recovery email
+curl -i -X PUT "$BASE/users/hero123/password" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H "$J" \
+  -d '{"password":"new-password-42"}'
+
+curl -i -X PUT "$BASE/users/hero123" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H "$J" \
+  -d '{"status":"ACTIVE","email":"hero@example.test"}'
+
+curl -s "$BASE/users" -H "Authorization: Bearer $ADMIN_TOKEN" | jq
+```
+
+### Recovery runbooks
+
+| Situation | Steps |
+|---|---|
+| User forgot the password | Admin reset → give the new password to the user out-of-band → the user changes it via `PUT /users/me/password` once the frontend offers it |
+| User lost the recovery email | `PUT /users/{userId}` with the new `email`; reset the password if access is lost as well |
+| Account or token suspected compromised | `DELETE /users/{userId}` (all tokens are blocked immediately because the account is no longer ACTIVE) → `PUT /users/{userId}/password` (bumps the credential generation) → `PUT /users/{userId}` with `{"status":"ACTIVE"}`. Tokens from before the reset stay invalid after reactivation |
+| Read-only support | `GET /users`, `GET /users/{userId}` |
+
+Resetting a still-unmigrated legacy account gives it a password (its legacy
+`?userId=` fallback ends) but no recovery email; set the email with the general
+update if needed. Self-service email recovery remains deferred (`/auth/password-reset/*`
+→ 501); the admin reset is the supported path.
+
+### Rules and side effects
+
+- **The last active administrator cannot be deactivated or demoted** (`409`): grant
+  ADMIN to another account first.
+- Deactivation is preferred over deletion and there is no physical-delete endpoint, so
+  `positions.user_id` references never dangle.
+- A password change or reset bumps the account's `auth_epoch`; every token issued
+  before it is rejected (401) on its next request, including after reactivation.
+  Resetting the **admin's own** password therefore invalidates the token used for the
+  reset — log in again with the new password.
+- Every admin call re-validates the caller from H2 (exists, `ACTIVE`, matching
+  `auth_epoch`) in addition to the token signature and the ADMIN role; a stale admin
+  token gets 401 even though its `groups` claim is still valid.
+- `user123` is not an account: it cannot be listed, reset or deactivated.
+- The admin endpoints are not rate-limited (they require a valid admin token).
+- Tokens live 30 days (`auth.jwt.lifespan`) and there is no logout endpoint; a client
+  "logs out" by discarding its token. Token theft is bounded by deactivation and reset,
+  not by expiry alone.
+- Errors use `{"error":"…"}`: 400 invalid input, 401 missing/expired/stale token or a
+  disabled caller, 403 role missing, 404 unknown target, 409 conflict or last admin.
+
+Swagger UI (`/q/swagger-ui`) can replace curl locally: log in through `/auth/login`,
+click **Authorize**, paste the token, then call `/api/users/**`. It is reachable in
+PROD too (`quarkus.swagger-ui.always-include=true`).
 
 ## Rate Limiting
 

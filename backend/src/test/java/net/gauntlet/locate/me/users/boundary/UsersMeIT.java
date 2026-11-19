@@ -70,6 +70,11 @@ class UsersMeIT extends AuthTestBase {
                 .when().put("/api/users/me/password")
                 .then().statusCode(204);
 
+        // The credential generation changed, so the token used for the change is dead.
+        given().auth().oauth2(token)
+                .when().get("/api/users/me")
+                .then().statusCode(401);
+
         given().contentType(ContentType.JSON)
                 .body(credentials("tusrpassword", PASSWORD, null))
                 .post("/api/auth/login")

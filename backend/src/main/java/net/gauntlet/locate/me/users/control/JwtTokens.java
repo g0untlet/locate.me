@@ -19,7 +19,9 @@ import net.gauntlet.locate.me.users.entity.User;
  *
  * <p>Only the claims needed to identify and authorize the caller are included.
  * Credentials, recovery data, login state and business data never enter a
- * token, and no server-side session or revocation list exists.
+ * token, and no server-side session or revocation list exists. The {@code ver}
+ * claim carries the account's credential generation, so a password change or
+ * reset invalidates earlier tokens without keeping a token list.
  *
  * <p>Application scope so the startup self-check can observe {@link StartupEvent}
  * and fail fast when the signing key was not provisioned.
@@ -66,6 +68,7 @@ public class JwtTokens {
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
                 .groups(groups)
+                .claim("ver", user.authEpoch())
                 .sign();
         return new IssuedToken(token, expiresAt);
     }

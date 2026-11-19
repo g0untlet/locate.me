@@ -5,6 +5,7 @@ package net.gauntlet.locate.me.users.control;
 
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.inject.Inject;
+import jakarta.json.JsonNumber;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import net.gauntlet.locate.me.Control;
@@ -87,10 +88,28 @@ public class CurrentUser {
         }
         User user = this.users.findByUserId(userId)
                 .orElseThrow(() -> AuthErrors.unauthorized("Authentication required"));
-        if (user.status() != UserStatus.ACTIVE) {
+        if (user.status() != UserStatus.ACTIVE || tokenEpoch() != user.authEpoch()) {
             throw AuthErrors.unauthorized("Authentication required");
         }
         return user;
+    }
+
+    /**
+     * Credential generation carried by the token. A password change or an
+     * administrative reset increments the account's generation, so tokens from
+     * before the change no longer match. Missing claims (tokens from a future
+     * or foreign issuer) are rejected rather than treated as generation 0.
+     */
+    long tokenEpoch() {
+        Object claim = this.jsonWebToken.getClaim("ver");
+        // Parsed JSON numbers arrive as JsonNumber (Parsson), not java.lang.Number.
+        if (claim instanceof Number number) {
+            return number.longValue();
+        }
+        if (claim instanceof JsonNumber number) {
+            return number.longValue();
+        }
+        return -1L;
     }
 
     /**

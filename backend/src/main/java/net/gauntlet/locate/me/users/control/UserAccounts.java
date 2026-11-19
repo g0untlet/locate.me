@@ -195,8 +195,30 @@ public class UserAccounts {
         target.passwordHash(this.passwords.hash(input.password()))
                 .failedLoginAttempts(0)
                 .lockedUntil(null)
+                .bumpAuthEpoch()
                 .updatedAt(Instant.now());
         flush();
+    }
+
+    /**
+     * Administrative password reset, used when a user forgot the password or
+     * lost access to the recovery email. The administrator never sees the old
+     * password; the new one is hashed like any other. The credential generation
+     * is bumped, so all tokens of the target account stop working immediately
+     * (also after a later reactivation).
+     */
+    public void resetPassword(User target, User input) {
+        this.passwords.validate(input.password());
+        if (input.passwordConfirmation() != null && !input.passwordConfirmation().equals(input.password())) {
+            throw AuthErrors.badRequest("passwordConfirmation does not match");
+        }
+        target.passwordHash(this.passwords.hash(input.password()))
+                .failedLoginAttempts(0)
+                .lockedUntil(null)
+                .bumpAuthEpoch()
+                .updatedAt(Instant.now());
+        flush();
+        LOG.log(System.Logger.Level.INFO, "Administrator reset the password for user {0}", target.userId());
     }
 
     public void changeRecoveryEmail(User target, User input) {
