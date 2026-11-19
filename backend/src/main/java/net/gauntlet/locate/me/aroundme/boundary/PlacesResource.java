@@ -16,17 +16,16 @@ import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import io.quarkiverse.bucket4j.runtime.RateLimited;
 import net.gauntlet.locate.me.Boundary;
 import net.gauntlet.locate.me.aroundme.control.Geoboxing;
 import net.gauntlet.locate.me.aroundme.control.Places;
 import net.gauntlet.locate.me.aroundme.entity.Place;
 import net.gauntlet.locate.me.security.AdminKeyVerifier;
+import net.gauntlet.locate.me.users.control.CurrentUser;
 
 @Boundary
 @Path("/places")
@@ -40,32 +39,10 @@ public class PlacesResource {
     Places places;
 
     @Inject
-    @ConfigProperty(name = "allowed.user.ids")
-    List<String> allowedUserIds;
+    CurrentUser currentUser;
 
     @Inject
     AdminKeyVerifier adminKeyVerifier;
-
-    private void validateAndAuthorize(String userId) {
-        if (userId == null || userId.isBlank()) {
-            throw new BadRequestException("userId is mandatory");
-        }
-        if (userId.length() > 16) {
-            throw new BadRequestException("userId must be at most 16 characters long");
-        }
-        if (!userId.matches("^[a-zA-Z0-9]+$")) {
-            throw new BadRequestException("userId must be alphanumeric");
-        }
-        if (this.allowedUserIds == null || !this.allowedUserIds.contains(userId)) {
-            Response errorResponse = Response.status(Response.Status.UNAUTHORIZED)
-                    .entity(Json.createObjectBuilder()
-                            .add("error", "User is not authorized: " + userId)
-                            .build())
-                    .type(MediaType.APPLICATION_JSON)
-                    .build();
-            throw new WebApplicationException(errorResponse);
-        }
-    }
 
     private void validateCoordinates(Double lat, Double lon) {
         if (lat == null || lon == null) {
@@ -84,12 +61,12 @@ public class PlacesResource {
     @PermitAll
     @RateLimited(bucket = "pwa-standard")
     public Response getPlaces(
-            @QueryParam("userId") String userId,
+            @QueryParam("userId") String requestedUserId,
             @QueryParam("lat") Double lat,
             @QueryParam("lon") Double lon,
             @HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) String acceptLanguage) {
-        LOG.log(System.Logger.Level.DEBUG, "Received GET places request for user {0} (lat={1}, lon={2})", userId, lat, lon);
-        validateAndAuthorize(userId);
+        LOG.log(System.Logger.Level.DEBUG, "Received GET places request (lat={0}, lon={1})", lat, lon);
+        this.currentUser.resolve(requestedUserId);
         validateCoordinates(lat, lon);
 
         List<Place> list = this.places.findNear(lat, lon, acceptLanguage);

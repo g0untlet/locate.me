@@ -23,16 +23,15 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import io.quarkiverse.bucket4j.runtime.RateLimited;
 import net.gauntlet.locate.me.Boundary;
 import net.gauntlet.locate.me.locator.control.DistanceCalculator;
 import net.gauntlet.locate.me.locator.control.Positions;
 import net.gauntlet.locate.me.locator.entity.Position;
 import net.gauntlet.locate.me.security.AdminKeyVerifier;
+import net.gauntlet.locate.me.users.control.CurrentUser;
 
 @Boundary
 @Path("/positions")
@@ -49,40 +48,18 @@ public class PositionsResource {
     Validator validator;
 
     @Inject
-    @ConfigProperty(name = "allowed.user.ids")
-    List<String> allowedUserIds;
+    CurrentUser currentUser;
 
     @Inject
     AdminKeyVerifier adminKeyVerifier;
-
-    private void validateAndAuthorize(String userId) {
-        if (userId == null || userId.isBlank()) {
-            throw new BadRequestException("userId is mandatory");
-        }
-        if (userId.length() > 16) {
-            throw new BadRequestException("userId must be at most 16 characters long");
-        }
-        if (!userId.matches("^[a-zA-Z0-9]+$")) {
-            throw new BadRequestException("userId must be alphanumeric");
-        }
-        if (this.allowedUserIds == null || !this.allowedUserIds.contains(userId)) {
-            Response errorResponse = Response.status(Response.Status.UNAUTHORIZED)
-                    .entity(Json.createObjectBuilder()
-                            .add("error", "User is not authorized: " + userId)
-                            .build())
-                    .type(MediaType.APPLICATION_JSON)
-                    .build();
-            throw new WebApplicationException(errorResponse);
-        }
-    }
 
     @POST
     @Transactional
     @PermitAll
     @RateLimited(bucket = "pwa-critical")
-    public Response create(@QueryParam("userId") String userId, JsonObject json) {
+    public Response create(@QueryParam("userId") String requestedUserId, JsonObject json) {
         LOG.log(System.Logger.Level.DEBUG, "Received POST request to create position");
-        validateAndAuthorize(userId);
+        String userId = this.currentUser.resolve(requestedUserId);
         if (json == null) {
             throw new BadRequestException("Request body must not be null");
         }
@@ -114,13 +91,13 @@ public class PositionsResource {
     @Transactional
     @PermitAll
     @RateLimited(bucket = "pwa-critical")
-    public Response delete(@PathParam("id") Long id, @QueryParam("userId") String userId) {
-        LOG.log(System.Logger.Level.DEBUG, "Received DELETE request for id {0} by user {1}", id, userId);
-        validateAndAuthorize(userId);
+    public Response delete(@PathParam("id") Long id, @QueryParam("userId") String requestedUserId) {
+        LOG.log(System.Logger.Level.DEBUG, "Received DELETE request for id {0}", id);
+        String userId = this.currentUser.resolve(requestedUserId);
         if (id == null) {
             throw new BadRequestException("ID must not be null");
         }
-        this.positions.delete(id);
+        this.positions.delete(id, userId);
         return Response.noContent().build();
     }
 
@@ -128,11 +105,11 @@ public class PositionsResource {
     @PermitAll
     @RateLimited(bucket = "pwa-standard")
     public Response getPositions(
-            @QueryParam("userId") String userId,
+            @QueryParam("userId") String requestedUserId,
             @QueryParam("lat") Double lat,
             @QueryParam("lon") Double lon) {
-        LOG.log(System.Logger.Level.DEBUG, "Received GET request for user {0} (lat={1}, lon={2})", userId, lat, lon);
-        validateAndAuthorize(userId);
+        LOG.log(System.Logger.Level.DEBUG, "Received GET request (lat={0}, lon={1})", lat, lon);
+        String userId = this.currentUser.resolve(requestedUserId);
         List<Position> list = this.positions.findByUserId(userId);
 
         JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
@@ -186,11 +163,11 @@ public class PositionsResource {
     @PermitAll
     @RateLimited(bucket = "pwa-standard")
     public Response fetchCurrentPosition(
-            @QueryParam("userId") String userId,
+            @QueryParam("userId") String requestedUserId,
             @QueryParam("lat") Double lat,
             @QueryParam("lon") Double lon) {
-        LOG.log(System.Logger.Level.DEBUG, "Received GET current position request for user {0} (lat={1}, lon={2})", userId, lat, lon);
-        validateAndAuthorize(userId);
+        LOG.log(System.Logger.Level.DEBUG, "Received GET current position request (lat={0}, lon={1})", lat, lon);
+        String userId = this.currentUser.resolve(requestedUserId);
 
         if(lat == null || lon == null) {
             throw new BadRequestException("Both lat and lon query parameters are required");

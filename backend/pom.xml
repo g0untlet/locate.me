@@ -76,6 +76,22 @@
             <artifactId>quarkus-hibernate-validator</artifactId>
         </dependency>
 
+        <!-- Stateless JWT bearer authentication: verified by Quarkus, issued by SmallRye JWT Build -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-jwt</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-jwt-build</artifactId>
+        </dependency>
+
+        <!-- BcryptUtil: password hashing from the Quarkus security stack (no manual crypto) -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-elytron-security-common</artifactId>
+        </dependency>
+
         <!-- Bucket4j rate limiting (Quarkiverse, annotation-based, per-identity buckets) -->
         <dependency>
             <groupId>io.quarkiverse.bucket4j</groupId>

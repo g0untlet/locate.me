@@ -139,8 +139,14 @@ net.gauntlet.locate.me
 ├── system/                     system info feature (BCE)
 │   ├── boundary/   SystemBoundary
 │   └── control/    SystemInfo
-└── security/                   cross-cutting rate limiting (not a BCE component)
-    UserIdIdentityResolver, TooManyRequestsMapper
+├── users/                      accounts + authentication feature (BCE)
+│   ├── boundary/   AuthResource, UsersResource
+│   ├── control/    UserAccounts, CurrentUser, LegacyUsers, LoginAttempts,
+│   │               JwtTokens, Passwords, UserIds, Emails, DemoUserPolicy
+│   └── entity/     User, UserRole, UserStatus
+└── security/                   cross-cutting infrastructure (not a BCE component)
+    UserIdIdentityResolver, TooManyRequestsMapper, ExternalApiRateLimits,
+    AuthRateLimits, AuthErrors, AdminKeyVerifier
 ```
 
 ## Main Modules
@@ -150,7 +156,8 @@ net.gauntlet.locate.me
 | `locator` | Position lifecycle (create/read/delete), geocoding + weather enrichment, distance/travel-time (walking, biking, driving) |
 | `aroundme` | Places around a coordinate: one Geoapify fetch per category group + H2 cache (cache-first geoboxing lookup, deduplicated by place_id), combined distance-sorted responses |
 | `system` | Application info endpoint and startup timestamp |
-| `security` | Cross-cutting infrastructure: Bucket4j rate limiting (`UserIdIdentityResolver` segments buckets per `userId` query param, `TooManyRequestsMapper` custom 429 JSON body + `Retry-After` + INFO log) and `AdminKeyVerifier` (constant-time check of the `adminKey` query param against `admin.key` for the admin stats endpoints) |
+| `users` | Account lifecycle and authentication: registration, one-time legacy migration (`claim`), login, password/role/status state, ADMIN account operations, the shared demo policy, the legacy `allowed.user.ids` bootstrap and stateless JWT issuance |
+| `security` | Cross-cutting infrastructure: Bucket4j rate limiting (`UserIdIdentityResolver` segments the `pwa-*` buckets by token subject / `userId` query param / demo client address; `AuthRateLimits` protects the authentication endpoints; `TooManyRequestsMapper` custom 429 JSON body + `Retry-After` + INFO log), `AuthErrors` (shared JSON error shape) and `AdminKeyVerifier` (constant-time check of the `adminKey` query param against `admin.key` for the admin stats endpoints) |
 
 ---
 
@@ -165,6 +172,9 @@ net.gauntlet.locate.me
 | `WeatherCode` | WMO weather-code vocabulary incl. German descriptions (enum) |
 | `WeatherCodeConverter` | JPA AttributeConverter: `WeatherCode` ⇄ `Integer` (autoApply) |
 | `Place` | Cached Geoapify POI; persistent business state; JSON mapping (`toJSON`) |
+| `User` | Account: permanent `userId` (PK) + mirrored `user_id_lower` (case-insensitive uniqueness/lookup), name, recovery email, bcrypt hash, status, roles (`@ElementCollection`, EAGER), failed-login counter, lock, timestamps and `@Version`; JSON-P allowlisting (`toJSON` / `fromJson` / `fromAdminJson`); transient write-only credential fields |
+| `UserRole` | Authorization vocabulary (enum): USER, ADMIN — persisted as String |
+| `UserStatus` | Account lifecycle (enum): ACTIVE, DISABLED — persisted as String |
 
 ## Control Components
 
@@ -179,15 +189,26 @@ net.gauntlet.locate.me
 | `GeoapifyPlacesClient` | MicroProfile REST client → Geoapify Places API (`/v2/places`) |
 | `Geoboxing` | Bounding-box spans (`deltaLat`/`deltaLon`) + haversine distance (static util) |
 | `ClientLanguage` | `Accept-Language` → lowercased 2-letter ISO-639-1 code (static util) |
+| `UserAccounts` | Registration, one-time legacy claim, credential verification, profile/password/recovery-email changes and ADMIN CRUD; explicit field allowlisting, optimistic-locking/unique-constraint conflicts → 409, last-active-admin guard |
+| `CurrentUser` | Resolves the request identity: verified JWT `sub` → H2 user (must be ACTIVE), else the exact demo user, else an **unmigrated** legacy account while `auth.legacy-userid-auth=true`; keeps the former 400/401 contract of the position/place endpoints |
+| `LegacyUsers` | Idempotent startup reconciliation of `allowed.user.ids` into unmigrated accounts and `auth.admin.user.ids` into ADMIN grants; never creates admins, never overwrites/deletes, skips the demo user |
+| `LoginAttempts` | Persisted failure counter + progressive cooldown (`auth.login.*`), written in its own transaction so the 401 does not roll it back; success resets it |
+| `JwtTokens` | Issues RS256 tokens (`sub`, `iat`, `exp`, `iss`, `aud`, `groups`) and verifies the signing key at startup |
+| `Passwords` | Policy (8–32 chars, 72 UTF-8 bytes) + bcrypt hash/verify + timing-equalizing dummy hash |
+| `UserIds` | Registration rules (`[a-z0-9_-]{3,32}`, lowercased, reserved list) and case-insensitive lookup normalization that never rewrites a legacy id |
+| `Emails` | Recovery-email trim/lowercase/format validation (≤254) |
+| `DemoUserPolicy` | The single definition of the exact shared demo identity `user123` |
 
 ## Boundary Components
 
 | Boundary | Responsibility |
 |----------|----------|
-| `PositionsResource` | REST `/positions`: create, delete, list, current, stats (admin); validation + userId authorization; adminKey check via `AdminKeyVerifier` |
+| `PositionsResource` | REST `/positions`: create, delete, list, current, stats (admin); identity via `CurrentUser` (token subject, demo or unmigrated legacy id); delete is ownership-checked; adminKey check via `AdminKeyVerifier` |
 | `SystemBoundary` | REST `/system` → `/info` |
 | `DatabaseHealthCheck` | SmallRye readiness check (`SELECT 1`) |
-| `PlacesResource` | REST `/places`: GET list (cache-first or grouped Geoapify fetch) and stats (admin); validation + userId authorization; adminKey check via `AdminKeyVerifier`; adds response-only `distance` |
+| `PlacesResource` | REST `/places`: GET list (cache-first or grouped Geoapify fetch) and stats (admin); identity via `CurrentUser`; adminKey check via `AdminKeyVerifier`; adds response-only `distance` |
+| `AuthResource` | REST `/auth`: register, login, legacy claim, migration-status; password-reset endpoints are 501 placeholders; rate limiting via `AuthRateLimits` |
+| `UsersResource` | REST `/users`: self-service `/me` (profile, password, recovery email) requires a token; `/users[/{userId}]` CRUD requires ADMIN |
 
 ### Rules
 
@@ -200,9 +221,11 @@ net.gauntlet.locate.me
 
 # REST API Landscape
 
-Root path is `/api`. Every positions call passes the user context as the `userId`
-query parameter. Functional purpose of the endpoints is documented in
-`functional-scope.md` §3.
+Root path is `/api`. A normal user authenticates with `Authorization: Bearer <JWT>`
+and the identity comes from the verified `sub` claim; the legacy `userId` query
+parameter remains for the shared demo user and for legacy accounts that have not
+been migrated yet (see Authentication). Functional purpose of the endpoints is
+documented in `functional-scope.md` §3.
 
 ## PositionsResource (`/positions`)
 
@@ -214,7 +237,7 @@ query parameter. Functional purpose of the endpoints is documented in
 | DELETE | `/api/positions/{id}?userId=` | 204 |
 | GET | `/api/positions/stats?adminKey=` | 200 `{"total", "perUser":[{"userId", "locations"}, ...]}` — total stored positions plus per-user counts (`perUser` ordered by `userId`); requires `adminKey` == `admin.key` (env `ADMIN_KEY`), otherwise 401; **not** rate-limited |
 
-Common errors: 400 invalid/missing `userId` or body; 401 userId not in allow-list (or invalid/missing `adminKey` on `/stats`); 429 per-user rate limit exceeded (`pwa-critical`: writes/deletes) — `Retry-After` header + JSON body `{"error":"TOO_MANY_REQUESTS","status":429}`.
+Common errors: 400 invalid/missing `userId` or body; 401 unknown user, migrated account without a token, or invalid/missing `adminKey` on `/stats`; 429 per-user rate limit exceeded (`pwa-critical`: writes/deletes) — `Retry-After` header + JSON body `{"error":"TOO_MANY_REQUESTS","status":429}`. With a valid token the `userId` query parameter is ignored, and `DELETE` only removes a position owned by the authenticated user.
 
 ## SystemBoundary (`/system`)
 
@@ -227,7 +250,34 @@ Common errors: 400 invalid/missing `userId` or body; 401 userId not in allow-lis
 | GET | `/api/places?userId=&lat=&lon=` | 200 places cached around the coordinate, served nearest-first; the `Accept-Language` header (optional) selects the Geoapify `lang`; cache-first lookup via a geoboxing box (`aroundme.cache-radius`), one Geoapify request per category group + combined upsert on cache miss; each place includes a response-only `distance` (meters) and `direction` (8-point compass `N/NE/E/SE/S/SW/W/NW`, empty when distance < 1 m) |
 | GET | `/api/places/stats?adminKey=` | 200 `{"count", "perCity":[{"city", "places"}, ...]}` — places-cache entry count plus per-city breakdown (`perCity` ordered by `city`; places without a city count toward `count` but are omitted from `perCity`); requires `adminKey` == `admin.key` (env `ADMIN_KEY`), otherwise 401; **not** rate-limited |
 
-Common errors: 400 invalid/missing `userId` or `lat`/`lon`; 401 userId not in allow-list (or invalid/missing `adminKey` on `/stats`); 429 per-user rate limit exceeded (`pwa-standard`: reads) — `Retry-After` header + JSON body `{"error":"TOO_MANY_REQUESTS","status":429}`; 503 Geoapify unavailable (all category-group requests failed).
+Common errors: 400 invalid/missing `userId` or `lat`/`lon`; 401 unknown user or migrated account without a token (or invalid/missing `adminKey` on `/stats`); 429 per-user rate limit exceeded (`pwa-standard`: reads) — `Retry-After` header + JSON body `{"error":"TOO_MANY_REQUESTS","status":429}`; 503 Geoapify unavailable (all category-group requests failed).
+
+## AuthResource (`/auth`, public)
+
+| Method | Endpoint | Notes |
+|----------|----------|----------|
+| POST | `/api/auth/register` | 201 `{token, tokenType, userId, expiresAt}`; body reads only `userId`, `name`, `password`, `email`; 400 invalid/reserved/duplicate email, 409 duplicate `userId`; sets ACTIVE/USER and returns a JWT immediately |
+| POST | `/api/auth/login` | 200 token envelope; reads only `userId`, `password`; 401 `Invalid credentials` for unknown, unmigrated, disabled, locked and wrong-password accounts; 429 rate limit |
+| POST | `/api/auth/claim` | 200 token envelope; body reads only `userId`, `password`, `email`; migrates an unmigrated legacy account once (identifier, roles and business data preserved); 403 demo/disabled, 404 unknown, 409 already migrated or email taken |
+| GET | `/api/auth/migration-status/{userId}` | 200 `{"migrationRequired": bool}` — true only for an existing ACTIVE legacy account without a password (never the demo user, never an unknown id) |
+| POST | `/api/auth/password-reset/request` | 501 `{"error":"Password reset is not available yet"}` (contract placeholder) |
+| POST | `/api/auth/password-reset/confirm` | 501 (contract placeholder) |
+
+## UsersResource (`/users`)
+
+| Method | Endpoint | Notes |
+|----------|----------|----------|
+| GET | `/api/users/me` | 200 safe `User` projection (no hash, counters, lock or version); requires a token |
+| PUT | `/api/users/me` | 200; only `name` is read — `userId`, `email`, `status`, `roles` and security state in the body are ignored |
+| PUT | `/api/users/me/password` | 204; `currentPassword` + `password` (optional `passwordConfirmation`), resets failed-login state |
+| PUT | `/api/users/me/recovery-email` | 204; `currentPassword` + `email`, case-insensitive uniqueness |
+| POST | `/api/users` | 201 (ADMIN); the only way to assign roles/status at creation |
+| GET | `/api/users` | 200 list of safe projections (ADMIN) |
+| GET | `/api/users/{userId}` | 200 / 404 (ADMIN) |
+| PUT | `/api/users/{userId}` | 200 (ADMIN); path id is the target, a conflicting body `userId` → 409, passwords are never changed here |
+| DELETE | `/api/users/{userId}` | 204 → status `DISABLED` (ADMIN); the last active administrator cannot be deactivated or demoted (409) |
+
+Errors use the shared shape `{"error": "..."}`; JWT failures return 401, role failures 403, uniqueness/migration conflicts 409, authentication rate limits 429.
 
 ## Health & Tooling
 
@@ -304,6 +354,35 @@ imported. Unnamed POIs are skipped entirely (`Places.toPlace` returns `null` and
 the fetch logs the skipped count at DEBUG), so `name` stays non-blank and no
 synthetic fallback names are stored.
 
+## Entity: `User` (table `users`)
+
+Normal user account. The shared demo identity `user123` is deliberately **not** a
+row; the legacy `allowed.user.ids` list is only bootstrap input.
+
+| Attribute (Java) | DB Column | DB Type | Notes |
+|-------------|-------------|-------------|-------------|
+| `userId` String | `user_id` | VARCHAR(32) | PK; permanent identity and login name, never rewritten |
+| `userIdLower` String | `user_id_lower` | VARCHAR(32) | not null, unique; lower-cased mirror for case-insensitive lookup/uniqueness |
+| `name` String | `name` | VARCHAR(128) | optional display name |
+| `email` String | `email` | VARCHAR(254) | unique, lower-cased; recovery address only, never a login name |
+| `passwordHash` String | `password_hash` | VARCHAR(255) | bcrypt; `NULL` = unmigrated legacy account |
+| `status` UserStatus | `status` | VARCHAR(32) | `ACTIVE` / `DISABLED`, string |
+| `roles` Set\<UserRole\> | `user_roles` table | VARCHAR(32) | `@ElementCollection(EAGER)`, PK `(user_id, role)`, FK `ON DELETE CASCADE` |
+| `failedLoginAttempts` int | `failed_login_attempts` | INTEGER | not null, default 0 |
+| `lockedUntil` Instant | `locked_until` | TIMESTAMP(6) WITH TIME ZONE | temporary cooldown |
+| `lastLoginAt` Instant | `last_login_at` | TIMESTAMP(6) WITH TIME ZONE | |
+| `createdAt`/`updatedAt` Instant | `created_at`, `updated_at` | TIMESTAMP(6) WITH TIME ZONE | server-managed |
+| `version` long | `entity_version` | BIGINT | `@Version` optimistic locking |
+
+`positions.user_id` intentionally has **no** foreign key to `users`: positions may
+refer to the shared demo user or to accounts that no longer exist, and a constraint
+would orphan or block existing business data.
+
+### Enumerations
+
+- `UserStatus`: ACTIVE, DISABLED; persisted as String.
+- `UserRole`: USER, ADMIN; persisted as String in `user_roles`.
+
 ---
 
 # Persistence
@@ -319,6 +398,8 @@ DEV/tests: in-memory (`jdbc:h2:mem:locator_dev`, `jdbc:h2:mem:locator_test`). Cr
 |---------|---------|
 | `positions` | All saved positions |
 | `places` | Deduplicated cache of Geoapify POIs (keyed by place_id) |
+| `users` | Normal user accounts and their authentication state |
+| `user_roles` | Roles per account (element collection; cascades on user deletion) |
 | `flyway_schema_history` | Flyway bookkeeping (applied migration versions/checksums) |
 
 ## Schema Management
@@ -339,6 +420,10 @@ Since 0.4.0 the schema is managed by **Flyway** (`quarkus-flyway`); Hibernate ru
   - `V4__add_place_details_to_positions.sql` — snapshots the contact metadata of an
     adopted place onto the position (`phone`, `website`, `opening_hours`,
     `wheelchair`), so History can render it without touching the `places` cache.
+  - `V5__create_users_table.sql` — `users` (PK `user_id`, unique `user_id_lower`
+    and `email`, hash/status/login state/timestamps/`entity_version`) and
+    `user_roles` (element collection, `ON DELETE CASCADE`). Existing business data
+    is untouched: no rows are migrated and `positions.user_id` stays a plain string.
 - **Existing databases** (DEV/PROD, already populated): on the first 0.4.0 start Flyway
   baselines them at version 1 (`quarkus.flyway.baseline-on-migrate=true`,
   `quarkus.flyway.baseline-version=1`). `V1__baseline.sql` is skipped and existing data is
@@ -403,14 +488,62 @@ in memory (see `Places.findCached`).
 
 ## Authentication
 
-None — private application for a trusted, small user base; not publicly exposed (Caddy2).
+Stateless signed JWT bearer tokens (RS256, `quarkus-smallrye-jwt` +
+`smallrye-jwt-build`). `POST /auth/register`, `/auth/login` and `/auth/claim` return
+a token; protected requests send `Authorization: Bearer <token>`. Claims are only
+`sub` (the permanent userId), `iat`, `exp`, `iss` (`locate.me`), `aud`
+(`locate.me-pwa`) and `groups` (USER/ADMIN). Lifetime is `auth.jwt.lifespan`
+(default 30 days); issuer/audience are verified (`mp.jwt.verify.issuer/audiences`).
+There are no sessions, cookies, refresh tokens, logout or server-side revocation
+lists — previously issued tokens stay valid until they expire.
+
+Signing/verification keys: dev/test use the checked-in key pair under
+`src/[test/]main/resources/jwt/`; PROD must provide `JWT_SIGN_KEY_LOCATION` (private
+PEM) and `JWT_PUBLIC_KEY_LOCATION` (public PEM). `JwtTokens` signs a throw-away token
+at startup, so a missing signing key fails the deployment immediately.
+
+Passwords: bcrypt (`quarkus-elytron-security-common`, cost 10), 8–32 characters and
+at most 72 UTF-8 bytes — longer input is rejected instead of bcrypt-truncated. Login
+failures are counted per account and escalate a temporary cooldown (1/5/15 minutes
+after every five failures); a successful login resets the state. Unknown,
+unmigrated, disabled, locked and wrong-password accounts all return the same
+`401 {"error":"Invalid credentials"}`.
+
+The shared demo user `user123` is the only unauthenticated identity: it is never
+stored as an account, has no password/email/role/JWT, cannot register or claim, and
+its requests are rate-limited per client address. It is defined solely by
+`DemoUserPolicy`.
 
 ## Authorization
 
-The `userId` query parameter is validated against `allowed.user.ids` (per profile,
-overridable via env `ALLOWED_USER_IDS`): 400 on missing/non-alphanumeric/>16 chars,
-401 on unknown user. The same `validateAndAuthorize` pattern is used by
-`PositionsResource` and `PlacesResource`.
+`CurrentUser` resolves a protected request from the verified token `sub`, loads the
+account from H2 and requires `ACTIVE`. `@Authenticated`/`@RolesAllowed("ADMIN")`
+guard `/users/**`; the position and place endpoints are `@PermitAll` for the
+transition and resolve their identity as follows:
+
+1. valid bearer token → its `sub` (a client-supplied `userId` is ignored);
+2. exact `user123` → the shared demo identity;
+3. `auth.legacy-userid-auth=true` **and** an existing `ACTIVE` account with
+   `passwordHash == null` → that legacy id (former 400/401 contract preserved);
+4. otherwise 401.
+
+A migrated account therefore cannot fall back to the query parameter. The legacy
+`allowed.user.ids` configuration no longer authorizes anything by itself: it is read
+once at startup by `LegacyUsers`, which creates missing **unmigrated** accounts
+idempotently, never overwrites or deletes them, and skips `user123`.
+`auth.admin.user.ids` grants ADMIN to existing accounts only.
+
+## Account bootstrap and migration
+
+- `GET /api/auth/migration-status/{userId}` tells the frontend whether a one-time
+  migration is needed.
+- `POST /api/auth/claim` is the migration: it loads the existing account, requires
+  `passwordHash == null`, validates a new password and recovery email, sets the hash
+  and email, preserves the identifier, roles and every business relationship, and
+  returns a token. A second claim → 409.
+- New registrations are stored directly in H2; an existing legacy id cannot be
+  registered (409) and can only be upgraded through `claim`.
+- Password recovery is not implemented yet; both endpoints return 501.
 
 ## Rate Limiting
 
@@ -420,10 +553,17 @@ the backend from request flooding (e.g. a misbehaving client or a scripted attac
 
 - **Buckets** — `pwa-standard` (reads: `GET /positions`, `GET /positions/current`,
   `GET /places`) and `pwa-critical` (writes/deletes: `POST /positions`,
-  `DELETE /positions/{id}`). Both are `shared=true` pools keyed by the `userId` query
-  parameter (`UserIdIdentityResolver`, fallback key `unknown` for missing/blank IDs so
-  floods of invalid IDs share one bounded bucket instead of creating one per identity).
-  Limits: 10 reads / 30 s and 5 writes+deletes / 30 s per user (token-bucket).
+  `DELETE /positions/{id}`). Both are `shared=true` pools keyed by
+  `UserIdIdentityResolver`: the verified token subject when authenticated, otherwise
+  the `userId` query parameter; the demo user is keyed by client address, and
+  missing/blank ids share the bounded `unknown` bucket. Limits: 10 reads / 30 s and
+  5 writes+deletes / 30 s per user (token-bucket).
+- **Authentication endpoints** — `security.AuthRateLimits` creates the buckets
+  programmatically (the annotation resolver needs a `userId` query parameter that
+  login/registration do not have), keyed by the client address and, where useful, the
+  userId: login 5/min, registration 3/h, claim 5/h, migration-status 10/min, demo
+  requests 20/min (`auth.rate-limit.*`). Exhaustion returns the same 429 response.
+  The registry is bounded; buckets are in memory and reset on restart.
 - **Enforcement** — the interceptor consumes a token before the endpoint method runs;
   on exhaustion a `RateLimitException` is thrown and mapped by `TooManyRequestsMapper`
   (a `@Provider` registered at `@Priority(Priorities.USER - 1)` so it wins over the
@@ -448,10 +588,11 @@ the backend from request flooding (e.g. a misbehaving client or a scripted attac
   never throttled and the online/offline indicator stays reliable; the admin-only stats
   endpoints (`GET /api/positions/stats`, `GET /api/places/stats`) are exempt as they
   require the secret `adminKey`.
-- **Tests** — the IT suite keeps `quarkus.rate-limiter.enabled=false`
-  (`src/test/resources/application.properties`); `RateLimitIT` re-enables it with tiny
-  limits via a `@TestProfile` and asserts the 429 status, JSON body and `Retry-After`
-  for both levels. The general IT suite uses very high `external-api.*` limits;
+- **Tests** — the IT suite keeps `quarkus.rate-limiter.enabled=false` and very high
+  `auth.rate-limit.*` values (`src/test/resources/application.properties`);
+  `RateLimitIT` re-enables the `pwa-*` buckets and `AuthRateLimitIT` shrinks the
+  authentication buckets, both via `@TestProfile`, asserting the 429 status, JSON body
+  and `Retry-After`. The general IT suite uses very high `external-api.*` limits;
   `ExternalApiRateLimitIT` overrides them with one-token buckets and asserts the 429 for
   the Geoapify and Nominatim call paths, while `ExternalApiRateLimitsTest` covers all
   three global buckets directly.
@@ -491,6 +632,10 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 - `deploy-frontend-dev.sh`: `rsync -avz --delete` frontend → DEV.
 - Server management: `start-locateme-backend.sh prod|dev` / `stop-locateme-backend.sh`
   set `ALLOWED_USER_IDS` + `QUARKUS_DATASOURCE_JDBC_URL` and restart the current JAR.
+  For the authentication release they must additionally provide
+  `JWT_SIGN_KEY_LOCATION` (private PEM) and `JWT_PUBLIC_KEY_LOCATION` (public PEM) in
+  PROD; `ALLOWED_USER_IDS` keeps working but is now bootstrap input only. A user who
+  disappears from it is neither deleted nor disabled.
 - Local helpers: `start-locate-tunnel.sh`, `start-h2-tunnel.sh` (SSH tunnels; H2 Shell/console).
 
 ## Configuration (application.properties)
@@ -502,7 +647,16 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 | `quarkus.hibernate-orm.schema-management.strategy` | `none` (schema owned by Flyway; non-deprecated replacement for `quarkus.hibernate-orm.database.generation`) |
 | `quarkus.flyway.migrate-at-start` | `true` — apply pending migrations on startup |
 | `quarkus.flyway.baseline-on-migrate`, `quarkus.flyway.baseline-version` | `true` / `1` — baseline existing non-empty DBs at v1, skipping `V1__baseline.sql` |
-| `allowed.user.ids` (+ `%dev`, `%test`) | Authorized users per profile |
+| `allowed.user.ids` (+ `%dev`, `%test`) | **Bootstrap only**: read once at startup by `LegacyUsers` to create missing unmigrated accounts (trim, ignore blanks, case-insensitive de-dupe, skip `user123`); never authorizes a request and never deletes/disables |
+| `auth.admin.user.ids` (+ `%dev`, `%test`) | Ops-controlled ADMIN bootstrap (`${AUTH_ADMIN_USER_IDS:}`): grants ADMIN to existing accounts, never creates or demotes |
+| `auth.jwt.issuer`, `auth.jwt.audience`, `auth.jwt.lifespan` | Token issuance: `locate.me`, `locate.me-pwa`, 30 days |
+| `mp.jwt.verify.issuer`, `mp.jwt.verify.audiences` | Token verification on every bearer request |
+| `%dev/%test.smallrye.jwt.sign.key.location`, `%dev/%test.mp.jwt.verify.publickey.location` | Dev/test RS256 key pair (`jwt/dev-*.pem`, `jwt/test-*.pem`); PROD `smallrye.jwt.sign.key.location=${JWT_SIGN_KEY_LOCATION}`, `mp.jwt.verify.publickey.location=${JWT_PUBLIC_KEY_LOCATION}` |
+| `auth.legacy-userid-auth` | `true` while the frontend still sends `?userId=`; allows only the demo user and **unmigrated** legacy accounts. Set to `false` after the frontend migration |
+| `auth.password.min-length`, `auth.password.max-length`, `auth.password.bcrypt-cost` | Password policy (8 / 32 / 10); no silent bcrypt truncation (72 UTF-8 bytes max) |
+| `auth.login.max-failed-attempts`, `auth.login.cooldowns` | 5 failures, then 1/5/15 minute temporary cooldowns; reset on success |
+| `auth.rate-limit.login.*`, `auth.rate-limit.registration.*`, `auth.rate-limit.claim.*`, `auth.rate-limit.migration-status.*`, `auth.rate-limit.demo.*` | Per-client authentication buckets: login 5/min, registration 3/h, claim 5/h, migration-status 10/min, demo 20/min |
+| `quarkus.http.proxy.proxy-address-forwarding` | `true` — trust the Caddy `X-Forwarded-For` so the per-client authentication limits see the real address |
 | `admin.key` (+ `%dev`, `%test`) | Single admin key for the stats endpoints: `${ADMIN_KEY:change-me}` (env-var overridable in prod), dev `dev-admin-key`, test `test-admin-key` |
 | `nominatim_uri/mp-rest/url`, `weather_uri/mp-rest/url` | REST client base URLs |
 | `nominatim.format`, `nominatim.zoom`, `nominatim.layer` | Nominatim reverse params: format (`jsonv2`), address granularity (`18`), layer filter (`address`; accepted `address,poi,railway,natural,manmade`; overridable via env `NOMINATIM_LAYER`). The layer filter does not hide POI names — a shop with a house number is served from the address layer — so `Positions` composes the label from the address parts, ignores `name` and uses `display_name` only as a fallback when no address part exists |
@@ -533,8 +687,8 @@ Maven; Quarkus platform BOM 3.33.3.1; uber-jar artifact.
 | Test Type | Scope |
 |------------|------------|
 | Architecture (ArchUnit) | `BceArchitectureTest` — enforces the BCE rules during unit tests (Surefire): component/layer package structure, boundary/control/entity membership, dependency direction (no control→boundary, no entity→boundary/control), `EntityManager` only in controls, `@Transactional` only in boundary, JAX-RS boundary methods return `Response`, no constructor injection, REST clients end with `Client`, no prohibited class suffixes. Documented exceptions: `DatabaseHealthCheck` (health check in boundary), `SystemInfo` (`@ApplicationScoped` control), `security` infra package, static-util/REST-client interfaces in control |
-| Integration tests (IT) | REST + persistence + enrichment on in-memory H2 (`PositionsResourceIT`, incl. `createWithTagAndComment` and `createWithInvalidTag`; `PlacesResourceIT` — cache hit/miss, distance sorting, dedup, unnamed-place filtering, language) |
-| Unit tests | `DistanceCalculatorTest`, `GeoboxingTest`, `ClientLanguageTest` |
+| Integration tests (IT) | REST + persistence + enrichment on in-memory H2 (`PositionsResourceIT`, incl. `createWithTagAndComment` and `createWithInvalidTag`; `PlacesResourceIT` — cache hit/miss, distance sorting, dedup, unnamed-place filtering, language). Authentication (`AuthRegistrationIT`, `AuthLoginIT`, `AuthClaimIT`, `JwtAuthorizationIT`, `UsersMeIT`, `UsersAdminIT`, `DemoUserIT`, `AuthRateLimitIT`, `PositionsJwtIT`) covers registration/duplicates, the generic 401 + cooldown, legacy claim and its effect on the old query-parameter path, token validation/disabled accounts, self-service fields/password/recovery email, admin CRUD + last-admin guard, the demo policy, the auth buckets and token-vs-query identity resolution; the pre-existing positions/places suites double as the regression proof that the legacy fallback still works |
+| Unit tests | `DistanceCalculatorTest`, `GeoboxingTest`, `ClientLanguageTest`, `UserIdsTest`, `EmailsTest`, `PasswordsTest`, `LegacyUsersTest`, `UserTest` |
 | System tests (`backend-st`) | Run against a live backend on 8090 (`PositionsSystemIT` + `PositionsResourceClient`) |
 | Manual E2E | Real devices/browsers against DEV (Android Chrome/Brave, iOS Safari) |
 
