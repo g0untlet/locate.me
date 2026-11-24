@@ -17,7 +17,7 @@ const SHELL = ['/', '/index.html', '/games/breakout/index.html'];
 const ASSETS = [
     '/app.js?v=0.5.0_rc2_1',
     '/css/style.css?v=0.5.0_rc2_1',
-    '/games/breakout/breakout.css?v=0.5.0_rc2_8', '/games/breakout/breakout.js?v=0.5.0_rc2_6',
+    '/games/breakout/breakout.css?v=0.5.0_rc2_8', '/games/breakout/breakout.js?v=0.5.0_rc2_7',
     '/js/config.js?v=0.3.1_34', '/js/utils.js', '/js/api.js', '/js/state.js',
     '/js/i18n.js', '/js/release-notes.js', '/js/ui/toast.js', '/js/ui/badge.js',
     '/js/ui/status.js', '/js/ui/map.js', '/js/ui/install.js',

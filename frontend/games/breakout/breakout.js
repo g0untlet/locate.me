@@ -46,6 +46,56 @@
     const ROW_COLORS = ['#fb7185', '#fcd34d', '#4ade80', '#7ec8e3', '#72b2dc', '#1a5f8c'];
     const ROW_POINTS = [60, 50, 40, 30, 20, 10];
 
+    /* Levels 1–2 stay full; from level 3 the layouts cycle through dense,
+       left-right symmetric shapes. '1' = brick, '0' = gap. */
+    const FULL_LAYOUT = [
+        '111111111',
+        '111111111',
+        '111111111',
+        '111111111',
+        '111111111',
+        '111111111'
+    ];
+
+    const SYMMETRIC_LAYOUTS = [
+        // Gate – bottom-centre opening
+        [
+            '111111111',
+            '111111111',
+            '111111111',
+            '111111111',
+            '111000111',
+            '111000111'
+        ],
+        // Gem – clipped top/bottom corners
+        [
+            '011111110',
+            '111111111',
+            '111111111',
+            '111111111',
+            '111111111',
+            '011111110'
+        ],
+        // Fortress – central opening
+        [
+            '111111111',
+            '111111111',
+            '111000111',
+            '111000111',
+            '111111111',
+            '111111111'
+        ],
+        // Wave – alternating wide and narrow rows
+        [
+            '111111111',
+            '011111110',
+            '111111111',
+            '011111110',
+            '111111111',
+            '011111110'
+        ]
+    ];
+
     const POWER_TYPES = {
         wide: { label: 'W', color: '#4ade80', message: 'WIDE PADDLE' },
         multi: { label: 'M', color: '#7ec8e3', message: 'MULTIBALL' },
@@ -416,10 +466,17 @@
     function buildBricks(level) {
         state.bricks = [];
         const armorModulo = level >= 6 ? 5 : level >= 4 ? 6 : level >= 2 ? 7 : 0;
+        const layout = level <= 2
+            ? FULL_LAYOUT
+            : SYMMETRIC_LAYOUTS[(level - 3) % SYMMETRIC_LAYOUTS.length];
 
         for (let row = 0; row < BRICK_ROWS; row++) {
             for (let col = 0; col < BRICK_COLS; col++) {
-                const armored = armorModulo > 0 && (row + col + level) % armorModulo === 0;
+                if (layout[row][col] !== '1') continue;
+
+                const mirrorCol = Math.min(col, BRICK_COLS - 1 - col);
+                const armored = armorModulo > 0 &&
+                    (row + mirrorCol + level) % armorModulo === 0;
                 const maxHp = armored ? 2 : 1;
 
                 state.bricks.push({
