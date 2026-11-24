@@ -112,7 +112,7 @@ html.i18n-loading .app-container {
    ========================================================================== */
 .app-container {
     background-color: var(--card-bg);
-    padding: calc(env(safe-area-inset-top, 20px) + 15px) 20px calc(env(safe-area-inset-bottom, 0px) + 88px) 20px;
+    padding: calc(env(safe-area-inset-top, 20px) + 15px) 20px calc(env(safe-area-inset-bottom, 0px) + 88px + var(--nav-viewport-lift, 0px)) 20px;
     box-shadow: var(--shadow);
     width: 100%;
     position: relative;
@@ -137,7 +137,7 @@ html.i18n-loading .app-container {
            top and bottom were clipped by body{overflow:hidden}. */
         height: min(640px, calc(100dvh - 40px));
         border-radius: var(--border-radius);
-        padding: 30px 20px 93px 20px;
+        padding: 30px 20px calc(93px + var(--nav-viewport-lift, 0px)) 20px;
     }
 }
 
@@ -1080,7 +1080,7 @@ html.i18n-loading .app-container {
     position: absolute;
     left: 12px;
     right: 12px;
-    bottom: calc(env(safe-area-inset-bottom, 5px) + 10px);
+    bottom: calc(env(safe-area-inset-bottom, 5px) + 10px + var(--nav-viewport-lift, 0px));
     height: auto;
     padding: 8px;
     background-color: var(--surface-subtle);

@@ -113,6 +113,53 @@ function initViewportZoomGuards() {
 }
 
 /* ==========================================================================
+   Bottom Navigation: Android standalone reload guard
+   A full reload inside an installed PWA can leave the layout viewport taller
+   than the visible area, which clips the absolutely positioned bottom nav.
+   This guard only lifts the nav when it is actually below the visual viewport,
+   so normal iPhone and Android loads are untouched.
+   ========================================================================== */
+const NAV_SAFE_GAP = 10;
+let navCheckTimer = null;
+
+function keepBottomNavVisible() {
+    const nav = document.querySelector('.bottom-nav');
+    if (!nav) return;
+
+    document.documentElement.style.removeProperty('--nav-viewport-lift');
+
+    const viewport = window.visualViewport;
+    const visibleBottom = viewport
+        ? viewport.offsetTop + viewport.height
+        : window.innerHeight;
+    if (!visibleBottom) return;
+
+    const overflow = nav.getBoundingClientRect().bottom - visibleBottom;
+    if (overflow > 1) {
+        document.documentElement.style.setProperty(
+            '--nav-viewport-lift',
+            Math.ceil(overflow) + NAV_SAFE_GAP + 'px'
+        );
+    }
+}
+
+function scheduleBottomNavCheck(delay) {
+    window.clearTimeout(navCheckTimer);
+    navCheckTimer = window.setTimeout(keepBottomNavVisible, delay || 0);
+}
+
+window.addEventListener('pageshow', () => scheduleBottomNavCheck(0));
+window.addEventListener('orientationchange', () => scheduleBottomNavCheck(150));
+window.addEventListener('resize', () => {
+    const active = document.activeElement;
+    if (active && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)) return;
+    scheduleBottomNavCheck(100);
+});
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') scheduleBottomNavCheck(0);
+});
+
+/* ==========================================================================
    App Bootstrap
    ========================================================================== */
 document.addEventListener('DOMContentLoaded', async () => {
@@ -165,6 +212,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // One-time "What's new" after the app has launched at least once and no
     // install banner is competing for the user's attention.
     maybeShowReleaseNotes();
+
+    // Check the bottom nav once layout has settled (Android PWA reload issue).
+    keepBottomNavVisible();
+    window.requestAnimationFrame(keepBottomNavVisible);
+    scheduleBottomNavCheck(250);
 });
 
 // Trigger 3: Event-driven recovery when app moves back into foreground

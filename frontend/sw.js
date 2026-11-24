@@ -13,10 +13,11 @@ importScripts('https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox
    SW and are therefore not precached. Precache is only the offline fallback:
    the Network-First routes remain the only serving strategy, so content is
    always fresh while online. */
-const SHELL = ['/', '/index.html'];
+const SHELL = ['/', '/index.html', '/games/breakout/index.html'];
 const ASSETS = [
-    '/app.js?v=0.4.5_7',
-    '/css/style.css?v=0.5.0_rc1_3',
+    '/app.js?v=0.5.0_rc2_1',
+    '/css/style.css?v=0.5.0_rc2_1',
+    '/games/breakout/breakout.css?v=0.5.0_rc2_8', '/games/breakout/breakout.js?v=0.5.0_rc2_7',
     '/js/config.js?v=0.3.1_34', '/js/utils.js', '/js/api.js', '/js/state.js',
     '/js/i18n.js', '/js/release-notes.js', '/js/ui/toast.js', '/js/ui/badge.js',
     '/js/ui/status.js', '/js/ui/map.js', '/js/ui/install.js',

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0b1220">
+    <title>Breakout — locate.me</title>
+    <script>
+        /* Standalone theme hand-off from the app: #theme=light|dark.
+           A fragment is used on purpose so the service worker's cached
+           navigation URL stays exactly /games/breakout/index.html. Without a
+           value the game follows the operating system. */
+        (function () {
+            var hash = window.location.hash.replace(/^#/, '');
+            var requested = new URLSearchParams(window.location.search).get('theme') ||
+                new URLSearchParams(hash).get('theme');
+            var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var dark = requested === 'dark' || (requested !== 'light' && systemDark);
+            document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+            document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+            var meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.setAttribute('content', dark ? '#1e293b' : '#cbd5e1');
+        })();
+    </script>
+    <link rel="stylesheet" href="breakout.css?v=0.5.0_rc2_8">
+</head>
+<body>
+    <div class="bp-app" id="bp-app">
+        <header class="bp-header">
+            <a class="bp-back" href="../../index.html" aria-label="Back to locate.me">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M19 12H5"></path>
+                    <path d="m12 19-7-7 7-7"></path>
+                </svg>
+                <span>locate.me</span>
+            </a>
+            <h1 class="bp-title">Breakout</h1>
+            <div class="bp-actions">
+                <button class="bp-icon-btn" id="bp-pause" type="button" aria-label="Pause game" title="Pause game" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                        <rect x="6" y="5" width="4" height="14" rx="1"></rect>
+                        <rect x="14" y="5" width="4" height="14" rx="1"></rect>
+                    </svg>
+                </button>
+                <button class="bp-icon-btn" id="bp-fullscreen" type="button" aria-label="Enter fullscreen" title="Enter fullscreen">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M8 3H5a2 2 0 0 0-2 2v3"></path>
+                        <path d="M16 3h3a2 2 0 0 1 2 2v3"></path>
+                        <path d="M8 21H5a2 2 0 0 1-2-2v-3"></path>
+                        <path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
+                    </svg>
+                </button>
+                <button class="bp-icon-btn" id="bp-mute" type="button" aria-label="Mute sound" title="Mute sound" aria-pressed="false">
+                    <svg class="bp-sound-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                    </svg>
+                    <svg class="bp-sound-off hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                        <line x1="23" y1="9" x2="17" y2="15"></line>
+                        <line x1="17" y1="9" x2="23" y2="15"></line>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <section class="bp-hud" aria-label="Game statistics">
+            <div class="bp-stat bp-stat--high">
+                <span class="bp-stat-label">
+                    <svg class="bp-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+                        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+                        <path d="M4 22h16"></path>
+                        <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path>
+                        <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path>
+                        <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
+                    </svg>
+                    <span>HIGH</span>
+                </span>
+                <span class="bp-stat-value" id="bp-high">000000</span>
+            </div>
+            <div class="bp-stat bp-stat--community">
+                <span class="bp-stat-label">
+                    <svg class="bp-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M2 12h20"></path>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                    </svg>
+                    <span>COMMUNITY HIGH</span>
+                </span>
+                <span class="bp-stat-value bp-stat-value--text" id="bp-community">coming soon</span>
+            </div>
+            <div class="bp-stat bp-stat--community-hero">
+                <span class="bp-stat-label">
+                    <svg class="bp-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7z"></path>
+                        <path d="M5 20h14"></path>
+                    </svg>
+                    <span>COMMUNITY HERO</span>
+                </span>
+                <span class="bp-stat-value bp-stat-value--text" id="bp-community-hero">coming soon</span>
+            </div>
+            <div class="bp-stat bp-stat--score">
+                <span class="bp-stat-label">
+                    <svg class="bp-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                    <span>SCORE</span>
+                </span>
+                <span class="bp-stat-value" id="bp-score">000000</span>
+            </div>
+            <div class="bp-stat bp-stat--level">
+                <span class="bp-stat-label">
+                    <svg class="bp-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+                        <line x1="4" y1="22" x2="4" y2="15"></line>
+                    </svg>
+                    <span>LEVEL</span>
+                </span>
+                <span class="bp-stat-value" id="bp-level">01</span>
+            </div>
+            <div class="bp-stat bp-stat--lives">
+                <span class="bp-stat-label">
+                    <svg class="bp-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
+                    <span>LIVES</span>
+                </span>
+                <span class="bp-stat-value" id="bp-lives">3</span>
+            </div>
+        </section>
+
+        <main class="bp-stage" id="bp-stage">
+            <div class="bp-canvas-wrap" id="bp-canvas-wrap">
+                <canvas id="bp-canvas" width="480" height="640" role="img" aria-label="Breakout playfield">Your browser does not support the HTML canvas element.</canvas>
+                <div class="bp-scanlines" aria-hidden="true"></div>
+                <div class="bp-vignette" aria-hidden="true"></div>
+                <div class="bp-message" id="bp-message" aria-hidden="true"></div>
+
+                <div class="bp-overlay" id="bp-overlay">
+                    <div class="bp-overlay-card">
+                        <p class="bp-overlay-kicker" id="bp-overlay-kicker">INSERT COIN</p>
+                        <h2 class="bp-overlay-title" id="bp-overlay-title">Breakout</h2>
+                        <p class="bp-overlay-text" id="bp-overlay-text">Clear every brick. Keep the ball alive.</p>
+                        <button class="bp-primary" id="bp-overlay-action" type="button">Start</button>
+                        <p class="bp-overlay-hint" id="bp-overlay-hint">Hold the arrows to move</p>
+                        <noscript><p class="bp-overlay-hint">Breakout needs JavaScript to run.</p></noscript>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div class="bp-controls">
+            <button class="bp-pad" id="bp-left" type="button" aria-label="Move paddle left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M15 18l-6-6 6-6"></path>
+                </svg>
+            </button>
+            <div class="bp-controls-center">
+                <span class="bp-hold-hint">Hold to move</span>
+                <span class="bp-key-hint"><kbd>←</kbd><kbd>→</kbd> move · <kbd>Space</kbd> launch · <kbd>P</kbd> pause</span>
+            </div>
+            <button class="bp-pad" id="bp-right" type="button" aria-label="Move paddle right">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M9 18l6-6-6-6"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div class="bp-sr-only" id="bp-announcer" aria-live="polite"></div>
+    </div>
+
+    <script src="breakout.js?v=0.5.0_rc2_7" defer></script>
+</body>
+</html>
