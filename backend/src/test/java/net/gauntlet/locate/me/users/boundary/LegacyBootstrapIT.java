@@ -32,6 +32,23 @@ class LegacyBootstrapIT extends AuthTestBase {
     }
 
     @Test
+    void adminProjectionShowsWhichAccountsStillNeedToMigrate() {
+        String admin = adminToken();
+
+        given().auth().oauth2(admin)
+                .when().get("/api/users/validUser")
+                .then()
+                .statusCode(200)
+                .body("hasPassword", is(false));
+
+        given().auth().oauth2(admin)
+                .when().get("/api/users/adminUser")
+                .then()
+                .statusCode(200)
+                .body("hasPassword", is(true));
+    }
+
+    @Test
     void repeatedBootstrapDoesNotCreateDuplicatesOrOverwriteAMigratedAccount() {
         String token = claim("legacyHero", PASSWORD, "legacyhero@example.test");
 

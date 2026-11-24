@@ -13,7 +13,7 @@
 - Changing or resetting a password signs out all devices of that account: every token issued before the change stops working.
 - The legacy `userId` query parameter is still accepted for the shared demo user and, during the transition, for legacy accounts that have not been migrated yet. Migrated and newly registered users must use their token.
 - Administrators can create, list, update, deactivate and reset the password of accounts, set a user's recovery email and may grant the ADMIN role. Accounts are deactivated rather than deleted, so business data is never orphaned, and the last active administrator cannot be deactivated or demoted.
-- Administrator accounts are provisioned operationally through `AUTH_ADMIN_USER_IDS` (an existing account, granted at the next backend start), not through public registration.
+- Administrator accounts are provisioned operationally through `AUTH_ADMIN_USER_IDS` (an existing account, granted at the next backend start), not through public registration. The account list shows whether an account still needs migration (`hasPassword`), and the operator can temporarily disable the one-time claim while the frontend migration screen is not yet available.
 - If an account or token is suspected to be compromised, an administrator deactivates the account (all its requests are blocked immediately), resets the password and reactivates it; tokens issued before the reset stay invalid.
 
 ### 1.2. Geolocation

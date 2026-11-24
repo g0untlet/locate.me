@@ -36,6 +36,7 @@ class UserTest {
         assertThat(json.getString("email")).isEqualTo("hero@example.de");
         assertThat(json.getString("status")).isEqualTo("ACTIVE");
         assertThat(json.getJsonArray("roles")).hasSize(2);
+        assertThat(json.getBoolean("hasPassword")).isTrue();
         assertThat(json.containsKey("passwordHash")).isFalse();
         assertThat(json.containsKey("password")).isFalse();
         assertThat(json.containsKey("currentPassword")).isFalse();
@@ -44,6 +45,17 @@ class UserTest {
         assertThat(json.containsKey("lockedUntil")).isFalse();
         assertThat(json.containsKey("version")).isFalse();
         assertThat(json.containsKey("userIdLower")).isFalse();
+    }
+
+    @Test
+    void jsonProjectionReportsWhetherAPasswordExistsWithoutExposingIt() {
+        JsonObject migrated = new User().userId("migrated").passwordHash("$2a$10$not-a-real-hash").toJSON();
+        JsonObject legacy = new User().userId("legacy").toJSON();
+
+        assertThat(migrated.getBoolean("hasPassword")).isTrue();
+        assertThat(legacy.getBoolean("hasPassword")).isFalse();
+        assertThat(migrated.containsKey("passwordHash")).isFalse();
+        assertThat(legacy.containsKey("passwordHash")).isFalse();
     }
 
     @Test

@@ -267,13 +267,13 @@ Common errors: 400 invalid/missing `userId` or `lat`/`lon`; 401 unknown user or 
 
 | Method | Endpoint | Notes |
 |----------|----------|----------|
-| GET | `/api/users/me` | 200 safe `User` projection (no hash, counters, lock or version); requires a token |
+| GET | `/api/users/me` | 200 safe `User` projection incl. the non-sensitive `hasPassword` flag (no hash, counters, lock or version); requires a token |
 | PUT | `/api/users/me` | 200; only `name` is read — `userId`, `email`, `status`, `roles` and security state in the body are ignored |
 | PUT | `/api/users/me/password` | 204; `currentPassword` + `password` (optional `passwordConfirmation`), resets failed-login state |
 | PUT | `/api/users/me/recovery-email` | 204; `currentPassword` + `email`, case-insensitive uniqueness |
 | POST | `/api/users` | 201 (ADMIN); the only way to assign roles/status at creation |
-| GET | `/api/users` | 200 list of safe projections (ADMIN) |
-| GET | `/api/users/{userId}` | 200 / 404 (ADMIN) |
+| GET | `/api/users` | 200 list of safe projections incl. `hasPassword` (ADMIN) — the cutover view for who still needs to claim |
+| GET | `/api/users/{userId}` | 200 / 404 (ADMIN), same projection |
 | PUT | `/api/users/{userId}` | 200 (ADMIN); path id is the target, a conflicting body `userId` → 409, passwords are never changed here |
 | PUT | `/api/users/{userId}/password` | 204 (ADMIN); body `password` (+ optional `passwordConfirmation`); hashes the new password, clears failed-login state and increments the credential generation, so all earlier tokens of that account are rejected. The support path for a forgotten password or lost recovery email |
 | DELETE | `/api/users/{userId}` | 204 → status `DISABLED` (ADMIN); the last active administrator cannot be deactivated or demoted (409) |
@@ -547,8 +547,10 @@ transition and resolve their identity as follows:
 
 A migrated account therefore cannot fall back to the query parameter. The legacy
 `allowed.user.ids` configuration no longer authorizes anything by itself: it is read
-once at startup by `LegacyUsers`, which creates missing **unmigrated** accounts
-idempotently, never overwrites or deletes them, and skips `user123`.
+on **every startup** by `LegacyUsers`, which creates missing **unmigrated** accounts
+idempotently, never overwrites or deletes them, and skips `user123`. Adding an ID
+therefore creates the account at the next restart; removing one does **not** delete,
+disable or revoke an existing account (deactivate it through the admin API instead).
 `auth.admin.user.ids` grants ADMIN to existing accounts only.
 
 ## Account bootstrap and migration
@@ -559,6 +561,10 @@ idempotently, never overwrites or deletes them, and skips `user123`.
   `passwordHash == null`, validates a new password and recovery email, sets the hash
   and email, preserves the identifier, roles and every business relationship, and
   returns a token. A second claim → 409.
+- `auth.claim.enabled` (default `true`, env `AUTH_CLAIM_ENABLED`) is an operational
+  gate: when `false`, claim returns `503 {"error":"Account migration is temporarily
+  disabled"}` while login, registration and migration-status keep working. PROD keeps
+  it disabled until the frontend migration UI is live.
 - New registrations are stored directly in H2; an existing legacy id cannot be
   registered (409) and can only be upgraded through `claim`.
 - Administrative recovery: `PUT /api/users/{userId}/password` (ADMIN) sets a new
@@ -662,9 +668,24 @@ update if needed. Self-service email recovery remains deferred (`/auth/password-
 - Errors use `{"error":"…"}`: 400 invalid input, 401 missing/expired/stale token or a
   disabled caller, 403 role missing, 404 unknown target, 409 conflict or last admin.
 
+### Claim gate and migration progress
+
+A deployment that carries the backend before the frontend (PROD) sets
+`AUTH_CLAIM_ENABLED=false`: the one-time claim — the only public path that turns a
+guessable legacy id into an account — stays unavailable, while login, registration,
+admin operations and `migration-status` keep working. Enable it (`true`) for the
+frontend cutover. `GET /api/users` shows a non-sensitive `hasPassword` flag per
+account: `false` means the account is still an unmigrated legacy account, `true`
+means it has been claimed or registered. That is the list to watch during the
+migration.
+
 Swagger UI (`/q/swagger-ui`) can replace curl locally: log in through `/auth/login`,
 click **Authorize**, paste the token, then call `/api/users/**`. It is reachable in
 PROD too (`quarkus.swagger-ui.always-include=true`).
+
+A copy-pasteable `mvn quarkus:dev` walkthrough of the whole flow — demo, legacy,
+register/login, claim, self-service, admin reset, claim gate and rate limits — lives
+in [api-auth-walkthrough.md](api-auth-walkthrough.md).
 
 ## Rate Limiting
 
@@ -836,8 +857,9 @@ is rotated.
 | `quarkus.hibernate-orm.schema-management.strategy` | `none` (schema owned by Flyway; non-deprecated replacement for `quarkus.hibernate-orm.database.generation`) |
 | `quarkus.flyway.migrate-at-start` | `true` — apply pending migrations on startup |
 | `quarkus.flyway.baseline-on-migrate`, `quarkus.flyway.baseline-version` | `true` / `1` — baseline existing non-empty DBs at v1, skipping `V1__baseline.sql` |
-| `allowed.user.ids` (+ `%dev`, `%test`) | **Bootstrap only**: read once at startup by `LegacyUsers` to create missing unmigrated accounts (trim, ignore blanks, case-insensitive de-dupe, skip `user123`); never authorizes a request and never deletes/disables |
+| `allowed.user.ids` (+ `%dev`, `%test`) | **Bootstrap only**: read on **every startup** by `LegacyUsers` to create missing unmigrated accounts (trim, ignore blanks, case-insensitive de-dupe, skip `user123`). Adding an ID imports it at the next restart; removing one never deletes, disables or revokes an existing account. Never authorizes a request |
 | `auth.admin.user.ids` (+ `%dev`, `%test`) | Ops-controlled ADMIN bootstrap (`${AUTH_ADMIN_USER_IDS:}`): grants ADMIN to existing accounts, never creates or demotes |
+| `auth.claim.enabled` (`${AUTH_CLAIM_ENABLED:true}`) | Operational gate for the one-time legacy claim. `false` → `POST /api/auth/claim` returns 503; login, registration and migration-status keep working. PROD keeps it `false` until the frontend migration UI is live |
 | `auth.jwt.issuer`, `auth.jwt.audience`, `auth.jwt.lifespan` | Token issuance: `locate.me`, `locate.me-pwa`, 30 days |
 | `mp.jwt.verify.issuer`, `mp.jwt.verify.audiences` | Token verification on every bearer request |
 | `%dev/%test.smallrye.jwt.sign.key.location`, `%dev/%test.mp.jwt.verify.publickey.location` | Dev/test RS256 key pair (`jwt/dev-*.pem`, `jwt/test-*.pem`); PROD `smallrye.jwt.sign.key.location=${JWT_SIGN_KEY_LOCATION}`, `mp.jwt.verify.publickey.location=${JWT_PUBLIC_KEY_LOCATION}` |

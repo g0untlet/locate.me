@@ -22,11 +22,18 @@ GitHub: https://github.com/g0untlet/locate.me
 - [Functional Scope](./docs/functional-scope.md)
 - [Technical Landscape](./docs/technical-landscape.md)
 - [Change Log](./docs/changelog.md)
+- [Open Todos](./docs/todo.md)
+- [API Auth Walkthrough](./docs/api-auth-walkthrough.md)
 
 Read only the section(s) relevant to the change (grep by heading). Read a whole document only when the task genuinely spans the architecture.
 
+## Todo Tracking
+- `docs/todo.md` lists planned work only, grouped by area.
+- Read it when starting work. When an item is implemented, add its changelog row and delete the item from `docs/todo.md` in the same change.
+- The changelog is the record of what shipped; never leave implemented items in the todo list.
+
 ## Repo Map
-- `backend/` Quarkus service, BCE components `aroundme/`, `locator/`, `security/`, `system/` (each boundary/control/entity).
+- `backend/` Quarkus service, BCE components `aroundme/`, `locator/`, `security/`, `system/`, `users/` (each boundary/control/entity).
 - `backend/src/main/resources/db/migration/` Flyway. Never edit an applied migration (checksum) — add a new `V<n>__*.sql`.
 - `backend-st/` out-of-process system tests (REST client → :8090).
 - `frontend/` PWA, no bundler: `index.html` (APP_VERSION/APP_BUILD), `sw.js` (precache), `js/`, `locales/`, `css/style.css`.
@@ -34,7 +41,7 @@ Read only the section(s) relevant to the change (grep by heading). Read a whole 
 - Project skills in `.agents/skills/`: `bce-architecture`, `bce-reviewer`, `pwa-frontend`, `website-maintenance`, `documentation-maintenance`, `quarkus-coding-security` — load the matching one before editing that area.
 
 ## Build & Test
-- Backend: `cd backend && mvn -B clean verify` (~4 min; 58 unit + 61 integration tests).
+- Backend: `cd backend && mvn -B clean verify` (~5 min; 83 unit + 118 integration tests).
 - Dev mode: `cd backend && GEOAPIFY_API_KEY=<key> mvn quarkus:dev` → http://localhost:8090
 - System tests: `cd backend-st && mvn -B clean verify` — requires the backend on :8090.
 - Java 25 + Maven 3.9+; there is no CI, tests run locally.

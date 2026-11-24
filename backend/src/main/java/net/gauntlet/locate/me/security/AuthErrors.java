@@ -40,6 +40,10 @@ public final class AuthErrors {
         return error(Response.Status.CONFLICT, message);
     }
 
+    public static WebApplicationException serviceUnavailable(String message) {
+        return error(Response.Status.SERVICE_UNAVAILABLE, message);
+    }
+
     private static WebApplicationException error(Response.Status status, String message) {
         return new WebApplicationException(Response.status(status)
                 .entity(Json.createObjectBuilder().add("error", message).build())

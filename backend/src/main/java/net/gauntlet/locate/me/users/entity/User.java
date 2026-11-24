@@ -281,7 +281,10 @@ public class User {
         JsonObjectBuilder builder = Json.createObjectBuilder()
                 .add("userId", this.userId)
                 .add("status", this.status != null ? this.status.name() : UserStatus.ACTIVE.name())
-                .add("roles", rolesArray());
+                .add("roles", rolesArray())
+                // Non-sensitive migration indicator for the admin list: true once
+                // the account has a password (i.e. it has been migrated or registered).
+                .add("hasPassword", this.passwordHash != null);
         if (this.name != null) {
             builder.add("name", this.name);
         }

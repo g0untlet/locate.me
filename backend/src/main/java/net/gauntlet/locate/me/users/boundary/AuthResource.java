@@ -16,7 +16,9 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import net.gauntlet.locate.me.Boundary;
+import net.gauntlet.locate.me.security.AuthErrors;
 import net.gauntlet.locate.me.security.AuthRateLimits;
 import net.gauntlet.locate.me.users.control.DemoUserPolicy;
 import net.gauntlet.locate.me.users.control.JwtTokens;
@@ -50,6 +52,14 @@ public class AuthResource {
     @Inject
     AuthRateLimits rateLimits;
 
+    /**
+     * Operational gate for the one-time legacy claim. Claim is the only public
+     * path that turns a known legacy id into an account, so a deployment can sit
+     * in PROD with it disabled until the frontend migration UI is live.
+     */
+    @ConfigProperty(name = "auth.claim.enabled", defaultValue = "true")
+    boolean claimEnabled;
+
     @POST
     @Path("/register")
     @PermitAll
@@ -75,6 +85,9 @@ public class AuthResource {
     @PermitAll
     @Transactional
     public Response claim(JsonObject json) {
+        if (!this.claimEnabled) {
+            throw AuthErrors.serviceUnavailable("Account migration is temporarily disabled");
+        }
         User input = User.fromJson(json);
         this.rateLimits.checkClaim(input.userId());
         User migrated = this.users.claim(input);
