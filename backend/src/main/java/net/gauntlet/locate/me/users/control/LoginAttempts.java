@@ -52,7 +52,7 @@ public class LoginAttempts {
                 user.lockedUntil(Instant.now().plus(cooldown(attempts)));
             }
             user.updatedAt(Instant.now());
-            LOG.log(System.Logger.Level.DEBUG, "Recorded failed login attempt {0} for user {1}", attempts, user.userId());
+            LOG.log(System.Logger.Level.INFO, "Failed login attempt {0} for user {1}", attempts, user.userId());
         });
     }
 

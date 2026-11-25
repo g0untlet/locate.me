@@ -41,7 +41,7 @@ Read only the section(s) relevant to the change (grep by heading). Read a whole 
 - Project skills in `.agents/skills/`: `bce-architecture`, `bce-reviewer`, `pwa-frontend`, `website-maintenance`, `documentation-maintenance`, `quarkus-coding-security` — load the matching one before editing that area.
 
 ## Build & Test
-- Backend: `cd backend && mvn -B clean verify` (~5 min; 83 unit + 118 integration tests).
+- Backend: `cd backend && mvn -B clean verify` (~5 min; 86 unit + 118 integration tests).
 - Dev mode: `cd backend && GEOAPIFY_API_KEY=<key> mvn quarkus:dev` → http://localhost:8090
 - System tests: `cd backend-st && mvn -B clean verify` — requires the backend on :8090.
 - Java 25 + Maven 3.9+; there is no CI, tests run locally.

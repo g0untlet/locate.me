@@ -23,6 +23,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import net.gauntlet.locate.me.Boundary;
+import net.gauntlet.locate.me.security.LogValues;
 import net.gauntlet.locate.me.users.control.CurrentUser;
 import net.gauntlet.locate.me.users.control.UserAccounts;
 import net.gauntlet.locate.me.users.entity.User;
@@ -53,7 +54,9 @@ public class UsersResource {
     @Path("/me")
     @Authenticated
     public Response me() {
-        return Response.ok(this.currentUser.requireAuthenticated().toJSON()).build();
+        User user = this.currentUser.requireAuthenticated();
+        LOG.log(System.Logger.Level.INFO, "GET /api/users/me userId={0}", user.userId());
+        return Response.ok(user.toJSON()).build();
     }
 
     @PUT
@@ -62,6 +65,7 @@ public class UsersResource {
     @Transactional
     public Response updateMe(JsonObject json) {
         User target = this.currentUser.requireAuthenticated();
+        LOG.log(System.Logger.Level.INFO, "PUT /api/users/me userId={0}", target.userId());
         return Response.ok(this.users.updateProfile(target, User.fromJson(json)).toJSON()).build();
     }
 
@@ -70,7 +74,9 @@ public class UsersResource {
     @Authenticated
     @Transactional
     public Response changePassword(JsonObject json) {
-        this.users.changePassword(this.currentUser.requireAuthenticated(), User.fromJson(json));
+        User target = this.currentUser.requireAuthenticated();
+        LOG.log(System.Logger.Level.INFO, "PUT /api/users/me/password userId={0}", target.userId());
+        this.users.changePassword(target, User.fromJson(json));
         return Response.noContent().build();
     }
 
@@ -79,7 +85,9 @@ public class UsersResource {
     @Authenticated
     @Transactional
     public Response changeRecoveryEmail(JsonObject json) {
-        this.users.changeRecoveryEmail(this.currentUser.requireAuthenticated(), User.fromJson(json));
+        User target = this.currentUser.requireAuthenticated();
+        LOG.log(System.Logger.Level.INFO, "PUT /api/users/me/recovery-email userId={0}", target.userId());
+        this.users.changeRecoveryEmail(target, User.fromJson(json));
         return Response.noContent().build();
     }
 
@@ -87,9 +95,11 @@ public class UsersResource {
     @RolesAllowed("ADMIN")
     @Transactional
     public Response create(JsonObject json) {
-        this.currentUser.requireAuthenticated();
-        User created = this.users.createByAdmin(adminInput(json));
-        LOG.log(System.Logger.Level.DEBUG, "Administrator created user {0}", created.userId());
+        User admin = this.currentUser.requireAuthenticated();
+        User input = adminInput(json);
+        LOG.log(System.Logger.Level.INFO,
+                "POST /api/users admin={0} target={1}", admin.userId(), LogValues.safe(input.userId()));
+        User created = this.users.createByAdmin(input);
         return Response.created(URI.create("/api/users/" + created.userId()))
                 .entity(created.toJSON())
                 .build();
@@ -98,7 +108,8 @@ public class UsersResource {
     @GET
     @RolesAllowed("ADMIN")
     public Response list() {
-        this.currentUser.requireAuthenticated();
+        User admin = this.currentUser.requireAuthenticated();
+        LOG.log(System.Logger.Level.INFO, "GET /api/users admin={0}", admin.userId());
         JsonArrayBuilder array = Json.createArrayBuilder();
         this.users.findAll().stream().map(User::toJSON).forEach(array::add);
         return Response.ok(array.build()).build();
@@ -108,7 +119,9 @@ public class UsersResource {
     @Path("/{userId}")
     @RolesAllowed("ADMIN")
     public Response get(@PathParam("userId") String userId) {
-        this.currentUser.requireAuthenticated();
+        User admin = this.currentUser.requireAuthenticated();
+        LOG.log(System.Logger.Level.INFO,
+                "GET /api/users/{0} admin={1}", LogValues.safe(userId), admin.userId());
         return Response.ok(this.users.requireByUserId(userId).toJSON()).build();
     }
 
@@ -117,7 +130,9 @@ public class UsersResource {
     @RolesAllowed("ADMIN")
     @Transactional
     public Response update(@PathParam("userId") String userId, JsonObject json) {
-        this.currentUser.requireAuthenticated();
+        User admin = this.currentUser.requireAuthenticated();
+        LOG.log(System.Logger.Level.INFO,
+                "PUT /api/users/{0} admin={1}", LogValues.safe(userId), admin.userId());
         User target = this.users.requireByUserId(userId);
         return Response.ok(this.users.updateByAdmin(target, adminInput(json)).toJSON()).build();
     }
@@ -132,7 +147,9 @@ public class UsersResource {
     @RolesAllowed("ADMIN")
     @Transactional
     public Response resetPassword(@PathParam("userId") String userId, JsonObject json) {
-        this.currentUser.requireAuthenticated();
+        User admin = this.currentUser.requireAuthenticated();
+        LOG.log(System.Logger.Level.INFO,
+                "PUT /api/users/{0}/password admin={1}", LogValues.safe(userId), admin.userId());
         User target = this.users.requireByUserId(userId);
         this.users.resetPassword(target, User.fromJson(json));
         return Response.noContent().build();
@@ -143,7 +160,9 @@ public class UsersResource {
     @RolesAllowed("ADMIN")
     @Transactional
     public Response delete(@PathParam("userId") String userId) {
-        this.currentUser.requireAuthenticated();
+        User admin = this.currentUser.requireAuthenticated();
+        LOG.log(System.Logger.Level.INFO,
+                "DELETE /api/users/{0} admin={1}", LogValues.safe(userId), admin.userId());
         this.users.deactivate(this.users.requireByUserId(userId));
         return Response.noContent().build();
     }

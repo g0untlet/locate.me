@@ -20,6 +20,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import net.gauntlet.locate.me.Boundary;
 import net.gauntlet.locate.me.security.AuthErrors;
 import net.gauntlet.locate.me.security.AuthRateLimits;
+import net.gauntlet.locate.me.security.LogValues;
 import net.gauntlet.locate.me.users.control.DemoUserPolicy;
 import net.gauntlet.locate.me.users.control.JwtTokens;
 import net.gauntlet.locate.me.users.control.UserAccounts;
@@ -65,9 +66,10 @@ public class AuthResource {
     @PermitAll
     @Transactional
     public Response register(JsonObject json) {
+        User input = User.fromJson(json);
+        LOG.log(System.Logger.Level.INFO, "POST /api/auth/register userId={0}", LogValues.safe(input.userId()));
         this.rateLimits.checkRegistration();
-        User created = this.users.register(User.fromJson(json));
-        LOG.log(System.Logger.Level.DEBUG, "Registered user {0}", created.userId());
+        User created = this.users.register(input);
         return tokenResponse(Response.Status.CREATED, created);
     }
 
@@ -75,8 +77,10 @@ public class AuthResource {
     @Path("/login")
     @PermitAll
     public Response login(JsonObject json) {
+        User input = User.fromJson(json);
+        LOG.log(System.Logger.Level.INFO, "POST /api/auth/login userId={0}", LogValues.safe(input.userId()));
         this.rateLimits.checkLogin();
-        User user = this.users.authenticate(User.fromJson(json));
+        User user = this.users.authenticate(input);
         return tokenResponse(Response.Status.OK, user);
     }
 
@@ -85,10 +89,11 @@ public class AuthResource {
     @PermitAll
     @Transactional
     public Response claim(JsonObject json) {
+        User input = User.fromJson(json);
+        LOG.log(System.Logger.Level.INFO, "POST /api/auth/claim userId={0}", LogValues.safe(input.userId()));
         if (!this.claimEnabled) {
             throw AuthErrors.serviceUnavailable("Account migration is temporarily disabled");
         }
-        User input = User.fromJson(json);
         this.rateLimits.checkClaim(input.userId());
         User migrated = this.users.claim(input);
         return tokenResponse(Response.Status.OK, migrated);
@@ -110,6 +115,9 @@ public class AuthResource {
                 .filter(user -> user.status() == UserStatus.ACTIVE)
                 .filter(user -> user.passwordHash() == null)
                 .isPresent();
+        LOG.log(System.Logger.Level.INFO,
+                "GET /api/auth/migration-status userId={0} migrationRequired={1}",
+                LogValues.safe(userId), required);
         return Response.ok(Json.createObjectBuilder()
                 .add("migrationRequired", required)
                 .build()).build();
@@ -119,6 +127,10 @@ public class AuthResource {
     @Path("/password-reset/request")
     @PermitAll
     public Response requestPasswordReset(JsonObject json) {
+        User input = User.fromJson(json);
+        LOG.log(System.Logger.Level.INFO,
+                "POST /api/auth/password-reset/request userId={0} (not implemented)",
+                LogValues.safe(input.userId()));
         return passwordResetNotImplemented();
     }
 
@@ -126,6 +138,7 @@ public class AuthResource {
     @Path("/password-reset/confirm")
     @PermitAll
     public Response confirmPasswordReset(JsonObject json) {
+        LOG.log(System.Logger.Level.INFO, "POST /api/auth/password-reset/confirm (not implemented)");
         return passwordResetNotImplemented();
     }
 

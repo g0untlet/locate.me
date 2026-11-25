@@ -26,6 +26,12 @@ run the curl blocks in a **second terminal** and define the variables there. Wai
 the dev terminal prints `Listening on: http://0.0.0.0:8090`, or use the readiness loop
 below (`000` instead of an HTTP status means the server is not reachable).
 
+While you run the blocks, the dev terminal prints one **INFO** line per user/auth call
+(`POST /api/auth/login userId=…`, `PUT /api/users/{userId}/password admin=…`, …) plus
+the control outcome (`Registered new user …`, `Migrated legacy user …`, `User …
+logged in`, `Failed login attempt …`). Credentials are never logged; follow those
+lines to see which step actually executed.
+
 `GEOAPIFY_API_KEY` is not needed for this walkthrough.
 
 > **Never run this against PROD.** `POST /auth/claim` is irreversible: it gives the

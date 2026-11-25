@@ -27,6 +27,8 @@ import net.gauntlet.locate.me.users.entity.UserStatus;
 @Control
 public class CurrentUser {
 
+    static final System.Logger LOG = System.getLogger(CurrentUser.class.getName());
+
     @Inject
     SecurityIdentity identity;
 
@@ -48,11 +50,14 @@ public class CurrentUser {
      */
     public String resolve(String queryUserId) {
         if (isAuthenticated()) {
-            return requireActiveTokenUser().userId();
+            User user = requireActiveTokenUser();
+            LOG.log(System.Logger.Level.DEBUG, "Identity resolved as {0} via bearer token", user.userId());
+            return user.userId();
         }
         requireLegacyFormat(queryUserId);
         if (DemoUserPolicy.isDemo(queryUserId)) {
             this.rateLimits.checkDemo();
+            LOG.log(System.Logger.Level.DEBUG, "Identity resolved as {0} via demo user", queryUserId);
             return queryUserId;
         }
         if (!this.legacyUseridAuth) {
@@ -63,6 +68,7 @@ public class CurrentUser {
         if (user.passwordHash() != null || user.status() != UserStatus.ACTIVE) {
             throw AuthErrors.unauthorized("User is not authorized");
         }
+        LOG.log(System.Logger.Level.DEBUG, "Identity resolved as {0} via legacy fallback", user.userId());
         return user.userId();
     }
 

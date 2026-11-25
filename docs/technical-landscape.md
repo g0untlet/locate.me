@@ -752,6 +752,30 @@ Parameterized JPQL only; database never exposed to clients; no secrets in the
 frontend; TLS terminated by Caddy2. Coordinates are personal data — scope is
 self-hosted and private.
 
+## Logging
+
+The user and authentication endpoints emit one INFO line per request at the
+boundary, with the actor/target only — never credentials:
+
+- `POST /api/auth/register|login|claim userId=…`
+- `GET /api/auth/migration-status userId=… migrationRequired=…`
+- `POST /api/auth/password-reset/request|confirm … (not implemented)`
+- `GET|PUT /api/users/me[/password|/recovery-email] userId=…`
+- `POST|GET|PUT|DELETE /api/users[/{userId}[/password]] admin=… target=…`
+
+The controls add the outcome at INFO: registered, migrated, logged in, failed login
+attempt `n`, profile updated, password changed, recovery email changed, administrator
+created/updated/deactivated/password reset, plus the startup bootstrap summary. At
+DEBUG (the project package runs at DEBUG in DEV) the identity resolution adds
+`Identity resolved as … via bearer token | legacy fallback | demo user`, which makes
+the transition mode explicit.
+
+Never logged: passwords, password hashes, reset tokens, JWTs, recovery email
+addresses, `admin.key` or signing keys. Request-supplied identifiers pass through
+`security.LogValues.safe` (CR/LF/TAB replaced, capped at 64 characters), so a crafted
+userId cannot forge log lines or flood the log. Failed logins are rate-limited, which
+also bounds their log volume.
+
 ---
 
 # Build & Deployment
@@ -899,7 +923,7 @@ is rotated.
 |------------|------------|
 | Architecture (ArchUnit) | `BceArchitectureTest` — enforces the BCE rules during unit tests (Surefire): component/layer package structure, boundary/control/entity membership, dependency direction (no control→boundary, no entity→boundary/control), `EntityManager` only in controls, `@Transactional` only in boundary, JAX-RS boundary methods return `Response`, no constructor injection, REST clients end with `Client`, no prohibited class suffixes. Documented exceptions: `DatabaseHealthCheck` (health check in boundary), `SystemInfo` (`@ApplicationScoped` control), `security` infra package, static-util/REST-client interfaces in control |
 | Integration tests (IT) | REST + persistence + enrichment on in-memory H2 (`PositionsResourceIT`, incl. `createWithTagAndComment` and `createWithInvalidTag`; `PlacesResourceIT` — cache hit/miss, distance sorting, dedup, unnamed-place filtering, language). Authentication (`AuthRegistrationIT`, `AuthLoginIT`, `AuthClaimIT`, `JwtAuthorizationIT`, `UsersMeIT`, `UsersAdminIT`, `DemoUserIT`, `AuthRateLimitIT`, `PositionsJwtIT`) covers registration/duplicates, the generic 401 + cooldown, legacy claim and its effect on the old query-parameter path, token validation/disabled accounts, self-service fields/password/recovery email, admin CRUD + last-admin guard, the demo policy, the auth buckets and token-vs-query identity resolution; the pre-existing positions/places suites double as the regression proof that the legacy fallback still works |
-| Unit tests | `DistanceCalculatorTest`, `GeoboxingTest`, `ClientLanguageTest`, `UserIdsTest`, `EmailsTest`, `PasswordsTest`, `LegacyUsersTest`, `UserTest` |
+| Unit tests | `DistanceCalculatorTest`, `GeoboxingTest`, `ClientLanguageTest`, `UserIdsTest`, `EmailsTest`, `PasswordsTest`, `LegacyUsersTest`, `UserTest`, `LogValuesTest` |
 | System tests (`backend-st`) | Run against a live backend on 8090 (`PositionsSystemIT` + `PositionsResourceClient`) |
 | Manual E2E | Real devices/browsers against DEV (Android Chrome/Brave, iOS Safari) |
 

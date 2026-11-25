@@ -183,6 +183,7 @@ public class UserAccounts {
         }
         target.updatedAt(Instant.now());
         flush();
+        LOG.log(System.Logger.Level.INFO, "Profile updated for user {0}", target.userId());
         return target;
     }
 
@@ -198,6 +199,7 @@ public class UserAccounts {
                 .bumpAuthEpoch()
                 .updatedAt(Instant.now());
         flush();
+        LOG.log(System.Logger.Level.INFO, "Password changed for user {0}", target.userId());
     }
 
     /**
@@ -230,6 +232,7 @@ public class UserAccounts {
         }
         target.email(email).updatedAt(Instant.now());
         flush();
+        LOG.log(System.Logger.Level.INFO, "Recovery email changed for user {0}", target.userId());
     }
 
     public User createByAdmin(User input) {
@@ -284,6 +287,7 @@ public class UserAccounts {
         }
         target.status(status).roles(roles).updatedAt(Instant.now());
         flush();
+        LOG.log(System.Logger.Level.INFO, "Administrator updated user {0}", target.userId());
         return target;
     }
 
