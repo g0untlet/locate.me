@@ -66,8 +66,12 @@ public abstract class AuthTestBase {
     }
 
     public String claim(String userId, String password, String email) {
+        return claim(userId, password, email, null);
+    }
+
+    public String claim(String userId, String password, String email, String name) {
         return given().contentType(ContentType.JSON)
-                .body(credentials(userId, password, email))
+                .body(credentials(userId, password, email, name))
                 .post("/api/auth/claim")
                 .then()
                 .log().ifValidationFails()
@@ -102,6 +106,10 @@ public abstract class AuthTestBase {
     }
 
     public static String credentials(String userId, String password, String email) {
+        return credentials(userId, password, email, null);
+    }
+
+    public static String credentials(String userId, String password, String email, String name) {
         JsonObjectBuilder builder = Json.createObjectBuilder();
         if (userId != null) {
             builder.add("userId", userId);
@@ -111,6 +119,9 @@ public abstract class AuthTestBase {
         }
         if (email != null) {
             builder.add("email", email);
+        }
+        if (name != null) {
+            builder.add("name", name);
         }
         return builder.build().toString();
     }

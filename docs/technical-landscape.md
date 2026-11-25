@@ -111,7 +111,9 @@ chosen id the active identity.
 
 Every 401 from a business endpoint clears the session and reopens the login panel
 (expiry, password change or admin reset); the auth endpoints themselves are called
-without a token, so a wrong password is a normal error. Settings still owns the
+without a token, so a wrong password is a normal error. Both password fields have an
+eye toggle (masked again when the panel opens or closes), and a rate-limited auth
+request reports the `Retry-After` wait instead of a generic message. Settings still owns the
 identity switch: changing the stored id clears the session and re-evaluates the gate,
 and a Settings button opens the panel for demo users or to switch accounts. Business calls keep sending
 `?userId=` **only** as the service-worker history cache key — the backend ignores it
@@ -280,7 +282,7 @@ Common errors: 400 invalid/missing `userId` or `lat`/`lon`; 401 unknown user or 
 |----------|----------|----------|
 | POST | `/api/auth/register` | 201 `{token, tokenType, userId, expiresAt}`; body reads only `userId`, `name`, `password`, `email`; 400 invalid/reserved/duplicate email, 409 duplicate `userId`; sets ACTIVE/USER and returns a JWT immediately |
 | POST | `/api/auth/login` | 200 token envelope; reads only `userId`, `password`; 401 `Invalid credentials` for unknown, unmigrated, disabled, locked and wrong-password accounts; 429 rate limit |
-| POST | `/api/auth/claim` | 200 token envelope; body reads only `userId`, `password`, `email`; migrates an unmigrated legacy account once (identifier, roles and business data preserved); 403 demo/disabled, 404 unknown, 409 already migrated or email taken |
+| POST | `/api/auth/claim` | 200 token envelope; body reads `userId`, `password`, `email` and an optional `name` (display name); migrates an unmigrated legacy account once (identifier, roles and business data preserved); 403 demo/disabled, 404 unknown, 409 already migrated or email taken |
 | GET | `/api/auth/migration-status/{userId}` | 200 `{"migrationRequired": bool}` — true only for an existing ACTIVE legacy account without a password (never the demo user, never an unknown id) |
 | POST | `/api/auth/password-reset/request` | 501 `{"error":"Password reset is not available yet"}` (contract placeholder) |
 | POST | `/api/auth/password-reset/confirm` | 501 (contract placeholder) |
@@ -580,9 +582,9 @@ disable or revoke an existing account (deactivate it through the admin API inste
 - `GET /api/auth/migration-status/{userId}` tells the frontend whether a one-time
   migration is needed.
 - `POST /api/auth/claim` is the migration: it loads the existing account, requires
-  `passwordHash == null`, validates a new password and recovery email, sets the hash
-  and email, preserves the identifier, roles and every business relationship, and
-  returns a token. A second claim → 409.
+  `passwordHash == null`, validates a new password and recovery email, stores the
+  optional display name, sets the hash and email, preserves the identifier, roles and
+  every business relationship, and returns a token. A second claim → 409.
 - `auth.claim.enabled` (default `true`, env `AUTH_CLAIM_ENABLED`) is an operational
   gate: when `false`, claim returns `503 {"error":"Account migration is temporarily
   disabled"}` while login, registration and migration-status keep working. PROD keeps

@@ -48,8 +48,14 @@ export function initAuthPage(dependencies) {
         nameGroup: document.getElementById('auth-name-group'),
         name: document.getElementById('auth-name'),
         password: document.getElementById('auth-password'),
+        passwordToggle: document.getElementById('auth-password-toggle'),
+        passwordEye: document.getElementById('auth-password-eye'),
+        passwordEyeOff: document.getElementById('auth-password-eye-off'),
         password2Group: document.getElementById('auth-password2-group'),
         password2: document.getElementById('auth-password2'),
+        password2Toggle: document.getElementById('auth-password2-toggle'),
+        password2Eye: document.getElementById('auth-password2-eye'),
+        password2EyeOff: document.getElementById('auth-password2-eye-off'),
         emailGroup: document.getElementById('auth-email-group'),
         email: document.getElementById('auth-email'),
         status: document.getElementById('auth-status'),
@@ -68,6 +74,8 @@ export function initAuthPage(dependencies) {
     el.secondary.addEventListener('click', onSecondary);
     el.demo.addEventListener('click', useDemo);
     el.later.addEventListener('click', hide);
+    wirePasswordToggle(el.password, el.passwordToggle, el.passwordEye, el.passwordEyeOff);
+    wirePasswordToggle(el.password2, el.password2Toggle, el.password2Eye, el.password2EyeOff);
     window.addEventListener('locateme:session-expired', onSessionExpired);
 
     return {
@@ -125,6 +133,7 @@ function open(nextMode, { userId = '', message = '' } = {}) {
     // session (opened from Settings) — there is nothing to fix.
     dismissible = nextMode === 'claim' || readSession() !== null;
     el.form.reset();
+    resetPasswordVisibility();
     el.userId.value = currentUserId;
     el.gate.classList.remove('hidden');
     setStatus(message, null);
@@ -139,7 +148,8 @@ function configureMode() {
     el.userId.readOnly = isClaim;
     el.userId.classList.toggle('settings-input--readonly', isClaim);
     el.userIdHelp.classList.toggle('hidden', !isRegister);
-    el.nameGroup.classList.toggle('hidden', !isRegister);
+    // The optional display name is collected during the one-time claim too.
+    el.nameGroup.classList.toggle('hidden', !(isClaim || isRegister));
     el.password2Group.classList.toggle('hidden', !needsNewPassword);
     el.emailGroup.classList.toggle('hidden', !needsNewPassword);
     el.later.classList.toggle('hidden', !dismissible);
@@ -172,12 +182,42 @@ function configureMode() {
 }
 
 function hide() {
-    if (!el || !el.gate) return;
+    if (!el || !el.gate || el.gate.classList.contains('hidden')) return;
     el.gate.classList.add('hidden');
     el.form.reset();
+    resetPasswordVisibility();
     el.userId.value = '';
     currentUserId = '';
     setStatus('', null);
+    // Let the bootstrap show the "What's new" dialog now that the panel is
+    // gone (it is suppressed while the gate is open to avoid stacking two
+    // overlays, but existing users should still see why the account matters).
+    window.dispatchEvent(new Event('locateme:auth-gate-closed'));
+}
+
+/* ==========================================================================
+   Internal: password visibility toggles (eye icon), one per password field.
+   Visibility is reset whenever the panel opens or closes, so a password is
+   never left in clear text on screen.
+   ========================================================================== */
+function wirePasswordToggle(input, button, eye, eyeOff) {
+    if (!input || !button) return;
+    button.addEventListener('click', () => {
+        const show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        if (eye) eye.classList.toggle('hidden', show);
+        if (eyeOff) eyeOff.classList.toggle('hidden', !show);
+    });
+}
+
+function resetPasswordVisibility() {
+    [[el.password, el.passwordEye, el.passwordEyeOff],
+     [el.password2, el.password2Eye, el.password2EyeOff]].forEach(([input, eye, eyeOff]) => {
+        if (!input) return;
+        input.type = 'password';
+        if (eye) eye.classList.remove('hidden');
+        if (eyeOff) eyeOff.classList.add('hidden');
+    });
 }
 
 /* ==========================================================================
@@ -241,6 +281,7 @@ async function onSubmit(event) {
         const result = mode === 'claim'
             ? await apiClaim({
                 userId: currentUserId,
+                name: input.name || undefined,
                 password: input.password,
                 passwordConfirmation: input.password2,
                 email: input.email
@@ -322,7 +363,7 @@ function validate(input) {
 
 function errorMessage(error) {
     if (!error || !error.status) return t('auth.errorNetwork');
-    if (error.status === 429) return t('errors.tooManyRequests');
+    if (error.status === 429) return rateLimitMessage(error.retryAfter);
 
     if (mode === 'login' && error.status === 401) return t('auth.errorInvalidCredentials');
     if (mode === 'register' && error.status === 409) return t('auth.errorUserTaken');
@@ -337,6 +378,16 @@ function errorMessage(error) {
     if (error.status === 400) return t('auth.errorInvalidInput');
     if (error.status === 401) return t('auth.errorInvalidCredentials');
     return t('auth.errorGeneric');
+}
+
+function rateLimitMessage(retryAfter) {
+    if (!Number.isFinite(retryAfter) || retryAfter <= 0) {
+        return t('errors.tooManyRequests');
+    }
+    if (retryAfter < 60) {
+        return t('auth.errorRateLimitedSeconds', { seconds: Math.ceil(retryAfter) });
+    }
+    return t('auth.errorRateLimitedMinutes', { minutes: Math.ceil(retryAfter / 60) });
 }
 
 function setStatus(text, kind) {

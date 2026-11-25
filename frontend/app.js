@@ -242,6 +242,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!opened) maybeShowReleaseNotes();
     });
 
+    // If the gate was open, show the notes once it closes (claim/login/demo or
+    // "Not now"), so the change is explained rather than skipped forever.
+    window.addEventListener('locateme:auth-gate-closed', maybeShowReleaseNotes);
+
     // Check the bottom nav once layout has settled (Android PWA reload issue).
     keepBottomNavVisible();
     window.requestAnimationFrame(keepBottomNavVisible);

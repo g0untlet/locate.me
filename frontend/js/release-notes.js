@@ -10,73 +10,73 @@
    ========================================================================== */
 
 export const RELEASE_NOTES = {
-    version: '0.5.0_rc3',
+    version: '0.5.0_rc4',
     date: '2026-11-25',
     en: {
-        tagline: 'Your own account — the shared demo stays as it is.',
+        tagline: 'Your places stay — now with a real account.',
         items: [
             {
-                title: 'Accounts',
-                text: 'Secure your user ID with a password and a recovery email.'
+                title: 'Secure your existing account',
+                text: 'Set a password and a recovery email once for your existing user ID, so nobody else can use it.'
             },
             {
-                title: 'Create an account',
-                text: 'New here? Create your own account right in the app.'
+                title: 'New users',
+                text: 'Create your own account right in the app — no need to ask for an ID anymore.'
             },
             {
-                title: 'Demo unchanged',
-                text: 'The shared demo user123 still works without an account.'
+                title: 'Your locations stay yours',
+                text: 'Your user ID stays the same and keeps every saved place; it simply becomes your login name.'
             }
         ]
     },
     de: {
-        tagline: 'Dein eigenes Konto — die gemeinsame Demo bleibt, wie sie ist.',
+        tagline: 'Deine Orte bleiben — jetzt mit einem echten Konto.',
         items: [
             {
-                title: 'Konten',
-                text: 'Sichere deine Benutzer-ID mit einem Passwort und einer Wiederherstellungs-E-Mail.'
+                title: 'Bestehendes Konto absichern',
+                text: 'Lege einmalig ein Passwort und eine Wiederherstellungs-E-Mail für deine bestehende Benutzer-ID fest, damit niemand sonst sie nutzen kann.'
             },
             {
-                title: 'Konto erstellen',
-                text: 'Neu hier? Erstelle dein eigenes Konto direkt in der App.'
+                title: 'Neue Nutzer',
+                text: 'Erstelle dein eigenes Konto direkt in der App — du musst keine ID mehr anfragen.'
             },
             {
-                title: 'Demo unverändert',
-                text: 'Der Demo-Benutzer user123 funktioniert weiterhin ohne Konto.'
+                title: 'Deine Orte bleiben deine',
+                text: 'Deine Benutzer-ID bleibt gleich und behält alle gespeicherten Orte; sie wird nur dein Anmeldename.'
             }
         ]
     },
     es: {
-        tagline: 'Tu propia cuenta: la demo compartida sigue igual.',
+        tagline: 'Tus lugares se quedan — ahora con una cuenta de verdad.',
         items: [
             {
-                title: 'Cuentas',
-                text: 'Protege tu ID de usuario con una contraseña y un correo de recuperación.'
+                title: 'Protege tu cuenta actual',
+                text: 'Define una vez una contraseña y un correo de recuperación para tu ID actual, para que nadie más pueda usarlo.'
             },
             {
-                title: 'Crear una cuenta',
-                text: '¿Eres nuevo? Crea tu propia cuenta desde la app.'
+                title: 'Nuevos usuarios',
+                text: 'Crea tu propia cuenta desde la app; ya no hace falta pedir un ID.'
             },
             {
-                title: 'Demo sin cambios',
-                text: 'El usuario de demo user123 sigue funcionando sin cuenta.'
+                title: 'Tus lugares siguen siendo tuyos',
+                text: 'Tu ID de usuario sigue igual y conserva todos los lugares guardados; solo pasa a ser tu nombre de inicio de sesión.'
             }
         ]
     },
     fr: {
-        tagline: 'Votre propre compte — la démo partagée reste inchangée.',
+        tagline: 'Vos lieux restent — désormais avec un vrai compte.',
         items: [
             {
-                title: 'Comptes',
-                text: 'Sécurisez votre ID utilisateur avec un mot de passe et un e-mail de récupération.'
+                title: 'Sécurisez votre compte existant',
+                text: 'Définissez une fois un mot de passe et un e-mail de récupération pour votre ID actuel, afin que personne d’autre ne puisse l’utiliser.'
             },
             {
-                title: 'Créer un compte',
-                text: 'Nouveau ? Créez votre propre compte directement dans l’app.'
+                title: 'Nouveaux utilisateurs',
+                text: 'Créez votre propre compte directement dans l’app — plus besoin de demander un ID.'
             },
             {
-                title: 'Démo inchangée',
-                text: 'L’utilisateur de démo user123 fonctionne toujours sans compte.'
+                title: 'Vos lieux restent les vôtres',
+                text: 'Votre ID utilisateur reste le même et conserve tous les lieux enregistrés ; il devient simplement votre identifiant de connexion.'
             }
         ]
     }
