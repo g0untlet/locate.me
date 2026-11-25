@@ -3,10 +3,18 @@
 ## 1. Functional Areas
 
 ### 1.1. User Management
-- The application supports multiple users, identified by a `userId`.
+- Every user is identified by a permanent `userId`, which is also the login name. A `userId` never changes, so all saved locations stay attached to it.
 - The `userId` is stored in the browser's local storage.
-- A default `userId` of "user123" is used if none is set.
-- The backend validates the `userId` against a list of allowed users.
+- A default `userId` of "user123" is used if none is set. `user123` is a shared demo identity: it needs no registration, password or recovery email, and its saved locations are shared demo data.
+- Normal accounts live in the H2 database. Registration needs a `userId`, a password and a recovery email; the recovery email is used only for password recovery and is never a login name.
+- Existing users from the legacy `allowed.user.ids` list are imported as unmigrated accounts. Such a user migrates once by choosing a password and recovery email; the `userId` and all existing saved locations are preserved.
+- Authentication is stateless: registration, migration and login return a signed JWT that is sent as `Authorization: Bearer <token>`. There are no sessions, cookies, refresh tokens or logout.
+- Password recovery by email is not implemented yet (HTTP 501); the recovery email is already stored for the later implementation. Until then an administrator can reset a password for a user who forgot it or lost access to the recovery email.
+- Changing or resetting a password signs out all devices of that account: every token issued before the change stops working.
+- The legacy `userId` query parameter is still accepted for the shared demo user and, during the transition, for legacy accounts that have not been migrated yet. Migrated and newly registered users must use their token.
+- Administrators can create, list, update, deactivate and reset the password of accounts, set a user's recovery email and may grant the ADMIN role. Accounts are deactivated rather than deleted, so business data is never orphaned, and the last active administrator cannot be deactivated or demoted.
+- Administrator accounts are provisioned operationally through `AUTH_ADMIN_USER_IDS` (an existing account, granted at the next backend start), not through public registration. The account list shows whether an account still needs migration (`hasPassword`), and the operator can temporarily disable the one-time claim while the frontend migration screen is not yet available.
+- If an account or token is suspected to be compromised, an administrator deactivates the account (all its requests are blocked immediately), resets the password and reactivates it; tokens issued before the reset stay invalid.
 
 ### 1.2. Geolocation
 - The application can fetch the user's current geographical coordinates (latitude and longitude).
@@ -141,7 +149,7 @@ The application is a single-page application (SPA) with three main views:
 
 ## 3. Backend Services
 
-The backend provides a REST API with the following endpoints:
+The backend provides a REST API with the following endpoints. Until the frontend adopts authentication, the position and place endpoints keep accepting the legacy `userId` query parameter for the shared demo user and for unmigrated legacy accounts; a request that carries a bearer token is executed for the token's `sub` instead. The account endpoints (`/auth/register`, `/auth/login`, `/auth/claim`, `/auth/migration-status/{userId}`, `/users/me`, `/users`) are described in §1.1 and the technical landscape; password recovery is not implemented yet (HTTP 501).
 
 - `POST /positions?userId={userId}`: Persists a new position for a user. The full position data (coordinates, address, weather, UV index, elevation, tag/comment and — for an adopted place — its contact details) is supplied by the client in the request body; the backend stores it as-is without server-side resolution.
 - `DELETE /positions/{id}?userId={userId}`: Deletes a position by its ID.

@@ -302,12 +302,17 @@ public class Positions {
         return position;
     }
 
-    public void delete(Long id) {
-        LOG.log(System.Logger.Level.DEBUG, "Deleting position with id {0}", id);
+    public void delete(Long id, String userId) {
+        LOG.log(System.Logger.Level.DEBUG, "Deleting position with id {0} for user {1}", id, userId);
         Position position = this.em.find(Position.class, id);
-        if (position != null) {
-            this.em.remove(position);
+        // Ownership is part of the authorization: knowing a position id must not
+        // allow deleting another user's record. A foreign or unknown id is
+        // ignored, matching the previous idempotent delete semantics.
+        if (position == null || !position.userId().equals(userId)) {
+            LOG.log(System.Logger.Level.WARNING, "Ignoring delete of position {0} for user {1}", id, userId);
+            return;
         }
+        this.em.remove(position);
     }
 
     public List<Position> findByUserId(String userId) {

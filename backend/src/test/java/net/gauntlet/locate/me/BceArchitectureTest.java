@@ -69,6 +69,9 @@ public class BceArchitectureTest {
             .orShould().resideInAPackage("..system.boundary")
             .orShould().resideInAPackage("..system.control")
             .orShould().resideInAPackage("..system.entity")
+            .orShould().resideInAPackage("..users.boundary")
+            .orShould().resideInAPackage("..users.control")
+            .orShould().resideInAPackage("..users.entity")
             .orShould().resideInAPackage("..security");
 
     /* ------------------------------------------------------------------
