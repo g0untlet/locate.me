@@ -10,6 +10,8 @@ import { initInstallPrompt } from './js/ui/install.js';
 import { requestHeadingPermission } from './js/ui/compass.js';
 import { maybeShowReleaseNotes, openReleaseNotes } from './js/ui/release-notes.js';
 import { initSettingsPage } from './js/pages/settings.js';
+import { initAuthPage } from './js/pages/auth.js';
+import { clearSession } from './js/auth.js';
 import { initLocatePage, resetLocatePage } from './js/pages/locate.js';
 import {
     fetchAndRenderHistory,
@@ -174,12 +176,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     initInstallPrompt();
 
+    // The auth gate owns the claim/login/register panel. The backend decides
+    // which mode applies; failures keep the app on its current (legacy/demo)
+    // path instead of blocking it.
+    const authPage = initAuthPage({ getActiveUserId });
+
+    // Identity changes from the auth panel (login, claim, register, demo) or
+    // from the Settings user-id field refresh the per-user UI/state.
+    window.addEventListener('locateme:identity-changed', (event) => {
+        const userId = event.detail && event.detail.userId ? event.detail.userId : '';
+        updateDemoModeNote();
+        silentBadgeSync(userId || getActiveUserId(), checkBackendStatus);
+        resetLocatePage();
+        const historyPage = document.getElementById('page-history');
+        if (historyPage && !historyPage.classList.contains('hidden')) {
+            showHistorySkeleton();
+            fetchAndRenderHistory({ getActiveUserId, checkBackendStatus });
+        }
+    });
+
     initSettingsPage({
         onSave: (userId) => {
+            // A new identity never inherits the previous account's token.
+            clearSession();
             silentBadgeSync(userId, checkBackendStatus);
             updateDemoModeNote();
+            authPage.evaluate();
         },
-        getActiveUserId
+        getActiveUserId,
+        onOpenAccount: () => authPage.open()
     });
 
     initLocatePage({
@@ -210,8 +235,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     checkBackendStatus();
 
     // One-time "What's new" after the app has launched at least once and no
-    // install banner is competing for the user's attention.
-    maybeShowReleaseNotes();
+    // install banner is competing for the user's attention. If the auth gate
+    // opens (claim/login/register), skip it for this launch instead of
+    // stacking two overlays; it will be shown on the next launch.
+    authPage.evaluate().then((opened) => {
+        if (!opened) maybeShowReleaseNotes();
+    });
 
     // Check the bottom nav once layout has settled (Android PWA reload issue).
     keepBottomNavVisible();

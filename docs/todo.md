@@ -5,9 +5,9 @@ Planned work only, grouped by area. When an item is implemented, add its row to
 
 ## Frontend
 
-- [ ] Auth-ready release (legacy fallback stays on): claim/login/demo panel, JWT + expiry storage, `Authorization` header in `js/api.js`, 401 → login, identity read-only in Settings + sign out, change-password and recovery-email forms, service-worker history cache key, i18n (en/de/es/fr), cache-busters.
-- [ ] Migration push for existing users: `GET /auth/migration-status/{userId}` prompt on startup and the claim flow; keep it optional while `AUTH_LEGACY_USERID_AUTH=true`.
-- [ ] Post-cutover cleanup: remove the free-text `userId` field, add the registration entry point, update the "What's new" release notes.
+- [ ] Auth slice 2: read-only identity + explicit sign-out in Settings, change-password and recovery-email forms; remove the free-text user-id field at the cutover.
+- [ ] Migration push for existing users: keep the claim prompt visible until each account is migrated; keep it optional while `AUTH_LEGACY_USERID_AUTH=true`.
+- [ ] Post-cutover cleanup: update the "What's new" release notes for the auth rollout.
 
 ## Backend
 

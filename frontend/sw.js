@@ -15,14 +15,15 @@ importScripts('https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox
    always fresh while online. */
 const SHELL = ['/', '/index.html', '/games/breakout/index.html'];
 const ASSETS = [
-    '/app.js?v=0.5.0_rc2_1',
-    '/css/style.css?v=0.5.0_rc2_1',
+    '/app.js?v=0.5.0_rc3_1',
+    '/css/style.css?v=0.5.0_rc3_1',
     '/games/breakout/breakout.css?v=0.5.0_rc2_8', '/games/breakout/breakout.js?v=0.5.0_rc2_7',
     '/js/config.js?v=0.3.1_34', '/js/utils.js', '/js/api.js', '/js/state.js',
-    '/js/i18n.js', '/js/release-notes.js', '/js/ui/toast.js', '/js/ui/badge.js',
+    '/js/auth.js', '/js/i18n.js', '/js/release-notes.js', '/js/ui/toast.js', '/js/ui/badge.js',
     '/js/ui/status.js', '/js/ui/map.js', '/js/ui/install.js',
     '/js/ui/compass.js', '/js/ui/release-notes.js',
-    '/js/pages/settings.js', '/js/pages/locate.js', '/js/pages/history.js'
+    '/js/pages/settings.js', '/js/pages/locate.js', '/js/pages/history.js',
+    '/js/pages/auth.js'
 ];
 
 // Locale dictionaries (fetched at runtime by js/i18n.js). Precached into their

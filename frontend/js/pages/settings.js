@@ -7,10 +7,10 @@ import { t, getLanguage, setLanguage } from '../i18n.js';
    direkter Modulimport nötig.
    ========================================================================== */
 
-/* Mirrors the backend check in PositionsResource: alphanumeric, at most 16
-   characters. Validated inline so a typo cannot silently switch every request
-   to an unknown user. */
-const USER_ID_PATTERN   = /^[A-Za-z0-9]{1,16}$/;
+/* Accepts both legacy ids (alphanumeric, ≤16) and the new account ids
+   (`[a-z0-9_-]{3,32}`, the backend normalizes to lowercase). Validated inline
+   so a typo cannot silently switch every request to an unknown user. */
+const USER_ID_PATTERN   = /^[A-Za-z0-9_-]{1,32}$/;
 const SAVE_DEBOUNCE_MS  = 600;
 const STATUS_VISIBLE_MS = 2000;
 
@@ -24,9 +24,23 @@ function initRequestUserIdLink() {
     if (link) link.href = 'mailto:' + codes.map(c => String.fromCharCode(c)).join('');
 }
 
-export function initSettingsPage({ onSave, getActiveUserId }) {
+export function initSettingsPage({ onSave, getActiveUserId, onOpenAccount }) {
 
     initRequestUserIdLink();
+
+    const accountButton = document.getElementById('settings-account-btn');
+    if (accountButton && onOpenAccount) {
+        accountButton.addEventListener('click', onOpenAccount);
+    }
+
+    // Login, claim, registration and the demo path change the active id from
+    // the auth panel; keep the field in sync.
+    window.addEventListener('locateme:identity-changed', (event) => {
+        const input = document.getElementById('username-input');
+        if (input) {
+            input.value = (event.detail && event.detail.userId) || '';
+        }
+    });
 
     // --- Dark-Mode-Toggle --- 
     const darkToggle = document.getElementById('dark-mode-toggle'); 

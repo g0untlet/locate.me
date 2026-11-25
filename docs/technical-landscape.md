@@ -73,7 +73,9 @@ Browser (PWA) --HTTPS--> Caddy2 --/api--> Quarkus REST (Boundary /api)
   strategy, so there is no staleness risk).
 - History offline fallback: `GET /api/positions` is routed Network-First (cache
   `locateme-history`) with a per-user normalized cache key (pathname + `userId`,
-  ignoring `lat`/`lon`). Cached responses carry the `X-LocateMe-Cache` header; the
+  ignoring `lat`/`lon`). The frontend keeps sending `?userId=` on this call even when a
+  bearer token is present, purely so this key stays per-user (the backend ignores the
+  parameter in that case). Cached responses carry the `X-LocateMe-Cache` header; the
   History page shows a slim offline banner when data comes from cache. Other API calls
   (POST/DELETE, `/positions/current`, `/system/info`) are not cached.
 - Leaflet offline map: the cdnjs Leaflet JS/CSS are precached (`THIRD_PARTY`) and routed
@@ -89,11 +91,31 @@ Browser (PWA) --HTTPS--> Caddy2 --/api--> Quarkus REST (Boundary /api)
 | `sw.js` | Service worker: Workbox Network-First caching (app shell, same-origin JS/CSS) |
 | `js/release-notes.js` | App-local latest-release notes (EN/DE/ES/FR) for the “What's new” dialog |
 | `js/config.js` | API base URL resolution (dev port vs. relative proxy paths) |
-| `js/api.js` | Fetch wrappers for all REST endpoints |
+| `js/auth.js` | Bearer-token session storage (`token`, `expiresAt`, `userId`); expired/malformed sessions and sessions of another identity are dropped |
+| `js/api.js` | Fetch wrappers for all REST endpoints; adds the bearer token, keeps `?userId=` as the service-worker cache key and turns a 401 into the session-expired event; the public auth endpoints never send a token |
 | `js/state.js` | Central mutable state (maps, cached fix, history data) |
 | `js/utils.js` | Formatting helpers (relative/weekday dates, address, weather text/icons, UV level, elevation, travel-time formatting + walk/bike/drive icons), the shared place-detail renderer (`buildPlaceInfoRows` — phone/website/opening hours/wheelchair rows used by the saver card, the places-list accordion and the History card) plus `escapeHtml`, and compass helpers (`bearingDegrees`, `compassPoint`, `directionShort`, `directionName` — client-side port of the backend `Geoboxing`, localizes the 8-point direction; `arrowRotation`/`shortestPathRotation` for heading-relative arrow angles; `distanceMeters` haversine for the live-movement gate) |
 | `js/ui/` | Reusable UI: `status.js`, `badge.js`, `toast.js`, `map.js` (Leaflet wrapper), `install.js` (PWA install banner / iOS hint), `compass.js` (shared device-heading source: `deviceorientation` + `deviceorientationabsolute` with tilt-compensated `computeYawDeg`, `subscribeHeading`/`getHeading`/`hasHeading`, `requestHeadingPermission` for the iOS motion-sensor gate), `release-notes.js` (once-per-version “What's new” dialog with first-launch and install-banner guards) |
-| `js/pages/` | Screens: `locate.js`, `history.js`, `settings.js` (deps injected) |
+| `js/pages/` | Screens: `locate.js`, `history.js`, `settings.js`, `auth.js` (claim/login/register/demo gate; deps injected) |
+
+### Authentication gate (frontend)
+
+On launch the app resolves the active `userId` from local storage. The shared demo
+`user123` never prompts. A valid stored session opens the app directly; otherwise the
+app asks `GET /auth/migration-status/{userId}` and opens the **claim** panel for an
+unmigrated legacy account or the **login** panel for a migrated/registered one, with a
+link to self-registration. **Not now** is offered only while the legacy fallback is
+enabled and leaves the app on the `?userId=` path; the panel appears again on the next
+launch. Registration (`POST /auth/register`) stores the returned token and makes the
+chosen id the active identity.
+
+Every 401 from a business endpoint clears the session and reopens the login panel
+(expiry, password change or admin reset); the auth endpoints themselves are called
+without a token, so a wrong password is a normal error. Settings still owns the
+identity switch: changing the stored id clears the session and re-evaluates the gate,
+and a Settings button opens the panel for demo users or to switch accounts. Business calls keep sending
+`?userId=` **only** as the service-worker history cache key — the backend ignores it
+when a bearer token is present.
 
 ## Navigation / Routing
 
@@ -113,7 +135,7 @@ Browser (PWA) --HTTPS--> Caddy2 --/api--> Quarkus REST (Boundary /api)
 
 | Storage | Usage |
 |------------------|---------|
-| Local Storage | `userId` (active user), `theme` (light/dark) |
+| Local Storage | `userId` (active user), `theme` (light/dark), `locate-me.auth` (`{token, userId, expiresAt}` bearer session), `lang`, release-notes/install flags, `locate.me.lastFix.<userId>` |
 
 ---
 

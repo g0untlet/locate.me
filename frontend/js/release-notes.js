@@ -10,73 +10,73 @@
    ========================================================================== */
 
 export const RELEASE_NOTES = {
-    version: '0.5.0_rc1',
-    date: '2026-11-12',
+    version: '0.5.0_rc3',
+    date: '2026-11-25',
     en: {
-        tagline: 'Place details in your history — right where you saved them.',
+        tagline: 'Your own account — the shared demo stays as it is.',
         items: [
             {
-                title: 'Details in History',
-                text: 'Unfold a saved place to see its opening hours, phone, website and accessibility.'
+                title: 'Accounts',
+                text: 'Secure your user ID with a password and a recovery email.'
             },
             {
-                title: 'Longer comments',
-                text: 'Comments now hold 75 characters and get two lines while saving.'
+                title: 'Create an account',
+                text: 'New here? Create your own account right in the app.'
             },
             {
-                title: 'Safer history',
-                text: 'Saved comments are shown as plain text, so nothing in them can run.'
+                title: 'Demo unchanged',
+                text: 'The shared demo user123 still works without an account.'
             }
         ]
     },
     de: {
-        tagline: 'Ortsdetails im Verlauf — genau dort, wo du sie gespeichert hast.',
+        tagline: 'Dein eigenes Konto — die gemeinsame Demo bleibt, wie sie ist.',
         items: [
             {
-                title: 'Details im Verlauf',
-                text: 'Klappe einen gespeicherten Ort auf und sieh Öffnungszeiten, Telefon, Website und Barrierefreiheit.'
+                title: 'Konten',
+                text: 'Sichere deine Benutzer-ID mit einem Passwort und einer Wiederherstellungs-E-Mail.'
             },
             {
-                title: 'Längere Kommentare',
-                text: 'Kommentare fassen jetzt 75 Zeichen und haben beim Speichern zwei Zeilen.'
+                title: 'Konto erstellen',
+                text: 'Neu hier? Erstelle dein eigenes Konto direkt in der App.'
             },
             {
-                title: 'Sicherer Verlauf',
-                text: 'Gespeicherte Kommentare werden nur als Text angezeigt — nichts darin kann ausgeführt werden.'
+                title: 'Demo unverändert',
+                text: 'Der Demo-Benutzer user123 funktioniert weiterhin ohne Konto.'
             }
         ]
     },
     es: {
-        tagline: 'Los detalles de tus lugares, dentro del historial.',
+        tagline: 'Tu propia cuenta: la demo compartida sigue igual.',
         items: [
             {
-                title: 'Detalles en el historial',
-                text: 'Despliega un lugar guardado para ver su horario, teléfono, web y accesibilidad.'
+                title: 'Cuentas',
+                text: 'Protege tu ID de usuario con una contraseña y un correo de recuperación.'
             },
             {
-                title: 'Comentarios más largos',
-                text: 'Los comentarios admiten ahora 75 caracteres y ocupan dos líneas al guardar.'
+                title: 'Crear una cuenta',
+                text: '¿Eres nuevo? Crea tu propia cuenta desde la app.'
             },
             {
-                title: 'Historial más seguro',
-                text: 'Los comentarios guardados se muestran como texto plano, así que nada de lo que contienen puede ejecutarse.'
+                title: 'Demo sin cambios',
+                text: 'El usuario de demo user123 sigue funcionando sin cuenta.'
             }
         ]
     },
     fr: {
-        tagline: 'Les détails de vos lieux, directement dans l’historique.',
+        tagline: 'Votre propre compte — la démo partagée reste inchangée.',
         items: [
             {
-                title: 'Détails dans l’historique',
-                text: 'Dépliez un lieu enregistré pour voir horaires, téléphone, site web et accessibilité.'
+                title: 'Comptes',
+                text: 'Sécurisez votre ID utilisateur avec un mot de passe et un e-mail de récupération.'
             },
             {
-                title: 'Commentaires plus longs',
-                text: 'Les commentaires vont désormais jusqu’à 75 caractères et disposent de deux lignes lors de l’enregistrement.'
+                title: 'Créer un compte',
+                text: 'Nouveau ? Créez votre propre compte directement dans l’app.'
             },
             {
-                title: 'Historique plus sûr',
-                text: 'Les commentaires enregistrés s’affichent en texte brut : rien de ce qu’ils contiennent ne peut s’exécuter.'
+                title: 'Démo inchangée',
+                text: 'L’utilisateur de démo user123 fonctionne toujours sans compte.'
             }
         ]
     }

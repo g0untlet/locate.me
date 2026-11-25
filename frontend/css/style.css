@@ -3157,6 +3157,97 @@ button.attribution-link.attribution-version:focus-visible {
     }
 }
 
+/* ==========================================================================
+   Authentication gate (claim / login / create account / demo)
+   Absolute overlay inside .app-container: it covers the phone frame (including
+   the bottom navigation) and never the desktop outside it. The card scrolls
+   internally so the on-screen keyboard cannot hide the submit button.
+   ========================================================================== */
+.auth-gate {
+    position: absolute;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background-color: rgba(15, 23, 42, 0.45);
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 360px;
+    max-height: 100%;
+    overflow-y: auto;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 20px 16px;
+}
+
+.auth-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--primary-dark);
+    margin-bottom: 8px;
+}
+
+.auth-intro {
+    font-size: 0.88rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+}
+
+.auth-form .form-group {
+    margin-bottom: 14px;
+}
+
+.auth-status {
+    min-height: 18px;
+    margin-bottom: 6px;
+}
+
+.auth-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.auth-actions .track-btn {
+    max-width: none;
+    margin-bottom: 4px;
+}
+
+.auth-link {
+    background: none;
+    border: none;
+    padding: 6px;
+    color: var(--primary-dark);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.auth-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.auth-later {
+    color: var(--text-muted);
+}
+
+.settings-input--readonly {
+    opacity: 0.7;
+}
+
 @media (max-width: 480px) {
     .release-notes-header {
         padding: 22px 18px 14px;
