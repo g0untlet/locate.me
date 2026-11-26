@@ -267,14 +267,20 @@ body {
     text-overflow: ellipsis;
 }
 
-.bp-stat--community .bp-stat-value--text,
 .bp-stat--community-hero .bp-stat-value--text {
-    color: var(--bp-muted);
+    min-width: 0;
+    color: var(--bp-text-strong);
     font-family: var(--bp-font);
     font-size: 0.72rem;
     font-weight: 600;
     letter-spacing: 0;
     white-space: nowrap;
+}
+
+/* Dashes until the backend answers (or when it cannot be reached). */
+.bp-stat--community .bp-stat-value.is-pending,
+.bp-stat--community-hero .bp-stat-value.is-pending {
+    color: var(--bp-muted);
 }
 
 /* ==========================================================================

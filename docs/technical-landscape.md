@@ -97,6 +97,7 @@ Browser (PWA) --HTTPS--> Caddy2 --/api--> Quarkus REST (Boundary /api)
 | `js/utils.js` | Formatting helpers (relative/weekday dates, address, weather text/icons, UV level, elevation, travel-time formatting + walk/bike/drive icons), the shared place-detail renderer (`buildPlaceInfoRows` — phone/website/opening hours/wheelchair rows used by the saver card, the places-list accordion and the History card) plus `escapeHtml`, and compass helpers (`bearingDegrees`, `compassPoint`, `directionShort`, `directionName` — client-side port of the backend `Geoboxing`, localizes the 8-point direction; `arrowRotation`/`shortestPathRotation` for heading-relative arrow angles; `distanceMeters` haversine for the live-movement gate) |
 | `js/ui/` | Reusable UI: `status.js`, `badge.js`, `toast.js`, `map.js` (Leaflet wrapper), `install.js` (PWA install banner / iOS hint), `compass.js` (shared device-heading source: `deviceorientation` + `deviceorientationabsolute` with tilt-compensated `computeYawDeg`, `subscribeHeading`/`getHeading`/`hasHeading`, `requestHeadingPermission` for the iOS motion-sensor gate), `release-notes.js` (once-per-version “What's new” dialog with first-launch and install-banner guards) |
 | `js/pages/` | Screens: `locate.js`, `history.js`, `settings.js`, `auth.js` (claim/login/register/demo gate; deps injected) |
+| `games/breakout/` | Standalone Breakout easter egg (`index.html`, `breakout.js`, `breakout.css`), linked from Settings; imports nothing from the app, reads `userId` / `locate-me.auth` directly and calls the game highscore endpoint (GET on start, POST on a new best) best-effort — dashes on failure — while keeping a local fallback high score |
 
 ### Authentication gate (frontend)
 
@@ -137,7 +138,7 @@ when a bearer token is present.
 
 | Storage | Usage |
 |------------------|---------|
-| Local Storage | `userId` (active user), `theme` (light/dark), `locate-me.auth` (`{token, userId, expiresAt}` bearer session), `lang`, release-notes/install flags, `locate.me.lastFix.<userId>` |
+| Local Storage | `userId` (active user), `theme` (light/dark), `locate-me.auth` (`{token, userId, expiresAt}` bearer session), `lang`, release-notes/install flags, `locate.me.lastFix.<userId>`, and the game's own `locate-me.breakout.highscore` / `locate-me.breakout.muted` (the high score is only an offline fallback once the backend answered) |
 
 ---
 
@@ -168,6 +169,10 @@ net.gauntlet.locate.me
 │   ├── control/    UserAccounts, CurrentUser, LegacyUsers, LoginAttempts,
 │   │               JwtTokens, Passwords, UserIds, Emails, DemoUserPolicy
 │   └── entity/     User, UserRole, UserStatus
+├── game/                       game high scores feature (BCE)
+│   ├── boundary/   GameScoresResource
+│   ├── control/    GameScores
+│   └── entity/     GameHighscore
 └── security/                   cross-cutting infrastructure (not a BCE component)
     UserIdIdentityResolver, TooManyRequestsMapper, ExternalApiRateLimits,
     AuthRateLimits, AuthErrors, AdminKeyVerifier
@@ -181,6 +186,7 @@ net.gauntlet.locate.me
 | `aroundme` | Places around a coordinate: one Geoapify fetch per category group + H2 cache (cache-first geoboxing lookup, deduplicated by place_id), combined distance-sorted responses |
 | `system` | Application info endpoint and startup timestamp |
 | `users` | Account lifecycle and authentication: registration, one-time legacy migration (`claim`), login, password/role/status state, ADMIN account operations, the shared demo policy, the legacy `allowed.user.ids` bootstrap and stateless JWT issuance |
+| `game` | Personal best per `(user, game)` and the community high score derived from those rows (highest score, earliest achievement on a tie); nickname resolved from the account at read time |
 | `security` | Cross-cutting infrastructure: Bucket4j rate limiting (`UserIdIdentityResolver` segments the `pwa-*` buckets by token subject / `userId` query param / demo client address; `AuthRateLimits` protects the authentication endpoints; `TooManyRequestsMapper` custom 429 JSON body + `Retry-After` + INFO log), `AuthErrors` (shared JSON error shape) and `AdminKeyVerifier` (constant-time check of the `adminKey` query param against `admin.key` for the admin stats endpoints) |
 
 ---
@@ -199,6 +205,7 @@ net.gauntlet.locate.me
 | `User` | Account: permanent `userId` (PK) + mirrored `user_id_lower` (case-insensitive uniqueness/lookup), name, recovery email, bcrypt hash, status, roles (`@ElementCollection`, EAGER), failed-login counter, lock, timestamps and `@Version`; JSON-P allowlisting (`toJSON` / `fromJson` / `fromAdminJson`); transient write-only credential fields |
 | `UserRole` | Authorization vocabulary (enum): USER, ADMIN — persisted as String |
 | `UserStatus` | Account lifecycle (enum): ACTIVE, DISABLED — persisted as String |
+| `GameHighscore` | One row per `(userId, game)`: personal best, server timestamp and optional city; `game` is plain text (not an enum) so future games need no migration; JSON projection `toJSON` and a `fromJson` that reads only `score` / `city` (never the identity) |
 
 ## Control Components
 
@@ -222,6 +229,7 @@ net.gauntlet.locate.me
 | `UserIds` | Registration rules (`[a-z0-9_-]{3,32}`, lowercased, reserved list) and case-insensitive lookup normalization that never rewrites a legacy id |
 | `Emails` | Recovery-email trim/lowercase/format validation (≤254) |
 | `DemoUserPolicy` | The single definition of the exact shared demo identity `user123` |
+| `GameScores` | Game-key validation (`[a-z0-9_-]{1,32}`, lower-cased), personal best lookup, community best (`ORDER BY score DESC, achievedAt ASC, userId ASC LIMIT 1`) and an upsert that only replaces a strictly higher score with the server timestamp; sole `EntityManager` access for `game_highscores` |
 
 ## Boundary Components
 
@@ -233,6 +241,7 @@ net.gauntlet.locate.me
 | `PlacesResource` | REST `/places`: GET list (cache-first or grouped Geoapify fetch) and stats (admin); identity via `CurrentUser`; adminKey check via `AdminKeyVerifier`; adds response-only `distance` |
 | `AuthResource` | REST `/auth`: register, login, legacy claim, migration-status; password-reset endpoints are 501 placeholders; rate limiting via `AuthRateLimits` |
 | `UsersResource` | REST `/users`: self-service `/me` (profile, password, recovery email) requires a token; `/users[/{userId}]` CRUD requires ADMIN |
+| `GameScoresResource` | REST `/games/{game}/highscore`: public GET (personal + community view), POST records the caller's best via `CurrentUser` (token, demo or unmigrated legacy id) and returns the refreshed views; nickname resolved through `UserAccounts.displayName` with `anonymous` fallback; `pwa-standard` / `pwa-critical` buckets |
 
 ### Rules
 
@@ -303,6 +312,26 @@ Common errors: 400 invalid/missing `userId` or `lat`/`lon`; 401 unknown user or 
 | DELETE | `/api/users/{userId}` | 204 → status `DISABLED` (ADMIN); the last active administrator cannot be deactivated or demoted (409) |
 
 Errors use the shared shape `{"error": "..."}`; JWT failures return 401, role failures 403, uniqueness/migration conflicts 409, authentication rate limits 429.
+
+## GameScoresResource (`/games`)
+
+| Method | Endpoint | Notes |
+|----------|----------|----------|
+| GET | `/api/games/{game}/highscore?userId=` | 200 `{game, personal:{score, achievedAt, city}, community:{score, userId, nickname, achievedAt, city}}`; `userId` only selects the personal view (case-insensitive) and may be omitted; public; `pwa-standard` |
+| POST | `/api/games/{game}/highscore?userId=` | 200 same shape after the upsert; body reads only `score` (1–1,000,000,000) and optional `city` (≤128 chars); only a strictly higher score replaces the caller's row and the timestamp is the server time; identity via `CurrentUser` (token, demo or unmigrated legacy); `pwa-critical` |
+
+The community view is derived from all personal rows of the game: highest score
+first, then the earliest `achievedAt`, then the `userId` as a deterministic
+tie-break. The winner's `nickname` is resolved from the account on every read
+(`UserAccounts.displayName`), and is `anonymous` for the demo user, an unmigrated
+legacy account or an account without a display name — it is never stored in the
+score row, so a rename is reflected immediately. A game without rows answers
+`personal.score: 0` / `community.score: 0` with `nickname: "anonymous"`.
+
+Common errors: 400 invalid game key, missing identity (`userId` absent and no
+token), invalid/missing score or over-long city; 401 a migrated account without a
+token; 409 a concurrent insert lost the `(user_id, game)` unique constraint (the
+next read shows the winner); 429 rate limit exceeded.
 
 ## Health & Tooling
 
@@ -409,6 +438,24 @@ would orphan or block existing business data.
 - `UserStatus`: ACTIVE, DISABLED; persisted as String.
 - `UserRole`: USER, ADMIN; persisted as String in `user_roles`.
 
+## Entity: `GameHighscore` (table `game_highscores`)
+
+One row per account and game. The community high score is a query over these rows,
+never a second record that could drift.
+
+| Attribute (Java) | DB Column | DB Type | Notes |
+|-------------|-------------|-------------|-------------|
+| `id` Long | `id` | BIGINT identity | surrogate PK, so no `@IdClass` |
+| `userId` String | `user_id` | VARCHAR(32) | not null; plain text, **no FK** to `users` (demo/legacy scores must outlive an account) |
+| `game` String | `game` | VARCHAR(32) | not null; plain text key (`breakout`), deliberately not an enum |
+| `score` long | `score` | BIGINT | not null; personal best, strictly increasing |
+| `achievedAt` Instant | `achieved_at` | TIMESTAMP(6) WITH TIME ZONE | not null; server timestamp of the score that counts |
+| `city` String | `city` | VARCHAR(128) | nullable; reserved for later display — the game does not send it yet, so it stays null |
+
+Constraints: unique `(user_id, game)` and index `idx_game_highscores_game_score
+(game, score)` for the community query. `GameHighscore.toJSON` projects the row;
+`nickname` is added by the boundary from the account, not persisted.
+
 ---
 
 # Persistence
@@ -426,6 +473,7 @@ DEV/tests: in-memory (`jdbc:h2:mem:locator_dev`, `jdbc:h2:mem:locator_test`). Cr
 | `places` | Deduplicated cache of Geoapify POIs (keyed by place_id) |
 | `users` | Normal user accounts and their authentication state |
 | `user_roles` | Roles per account (element collection; cascades on user deletion) |
+| `game_highscores` | Personal best per `(user_id, game)`; the community best is derived from these rows |
 | `flyway_schema_history` | Flyway bookkeeping (applied migration versions/checksums) |
 
 ## Schema Management
@@ -454,6 +502,10 @@ Since 0.4.0 the schema is managed by **Flyway** (`quarkus-flyway`); Hibernate ru
     per-account credential generation carried by the JWT's `ver` claim; incremented
     on password change/reset to invalidate earlier tokens. Existing accounts start
     at 0 and keep their current tokens.
+  - `V7__create_game_highscores.sql` — `game_highscores` with the unique
+    `(user_id, game)` constraint and `idx_game_highscores_game_score (game, score)`;
+    no FK to `users` (demo and legacy scores, account deactivation). `game` is a
+    plain text key, so more games need no further migration.
 - **Existing databases** (DEV/PROD, already populated): on the first 0.4.0 start Flyway
   baselines them at version 1 (`quarkus.flyway.baseline-on-migrate=true`,
   `quarkus.flyway.baseline-version=1`). `V1__baseline.sql` is skipped and existing data is
@@ -490,6 +542,11 @@ The places cache is queried with a geoboxing range query
 are then verified against the exact haversine distance (≤ `aroundme.cache-radius`),
 sorted ascending and capped at `aroundme.max-places × number of category groups`
 in memory (see `Places.findCached`).
+
+The game scores are looked up per `(game, LOWER(user_id))` for the personal view
+and, for the community view, with a single `ORDER BY score DESC, achieved_at ASC,
+user_id ASC LIMIT 1` query (served by `idx_game_highscores_game_score` for the
+ordering prefix).
 
 ---
 
@@ -718,8 +775,9 @@ config namespace `quarkus.rate-limiter.*`) throttles requests **per user** to pr
 the backend from request flooding (e.g. a misbehaving client or a scripted attack).
 
 - **Buckets** — `pwa-standard` (reads: `GET /positions`, `GET /positions/current`,
-  `GET /places`) and `pwa-critical` (writes/deletes: `POST /positions`,
-  `DELETE /positions/{id}`). Both are `shared=true` pools keyed by
+  `GET /places`, `GET /games/{game}/highscore`) and `pwa-critical` (writes/deletes:
+  `POST /positions`, `DELETE /positions/{id}`, `POST /games/{game}/highscore`). Both
+  are `shared=true` pools keyed by
   `UserIdIdentityResolver`: the verified token subject when authenticated, otherwise
   the `userId` query parameter; the demo user is keyed by client address, and
   missing/blank ids share the bounded `unknown` bucket. Limits: 10 reads / 30 s and
@@ -786,6 +844,7 @@ boundary, with the actor/target only — never credentials:
 - `POST /api/auth/password-reset/request|confirm … (not implemented)`
 - `GET|PUT /api/users/me[/password|/recovery-email] userId=…`
 - `POST|GET|PUT|DELETE /api/users[/{userId}[/password]] admin=… target=…`
+- `POST /api/games/{game}/highscore userId=… game=… score=… (new personal best | ignored)` — a recorded best is INFO, an ignored lower/equal submission DEBUG
 
 The controls add the outcome at INFO: registered, migrated, logged in, failed login
 attempt `n`, profile updated, password changed, recovery email changed, administrator

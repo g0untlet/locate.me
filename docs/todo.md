@@ -21,18 +21,29 @@ before the cutover if self-recovery is required first).
   from the session, the login/claim panel, or demo); flip
   `AUTH_LEGACY_USERID_AUTH=false` once the users have claimed.
   `LegacyFallbackDisabledIT` already covers the backend side.
-- [ ] **DEV acceptance of slice 1 / frontend 0.5.0_rc4** (pending): claim,
-  login, register and demo on a real device; 401/expiry; Settings id saved on
-  blur/Enter/hide; What's New and the nickname label.
+- [ ] **DEV acceptance of slice 1 + Breakout community high score / frontend
+  0.5.0_rc5** (pending): claim, login, register and demo on a real device;
+  401/expiry; Settings id saved on blur/Enter/hide; What's New and the nickname
+  label; Breakout loads the personal/community cards, submits a new best and
+  falls back to dashes offline.
 
 ## Backend
 
-- [ ] **Slice 4 — email-based password reset**: `V7__create_password_reset_tokens`,
+- [ ] **Slice 4 — email-based password reset**: `V8__create_password_reset_tokens`,
   hashed single-use tokens with a 30-minute expiry, `quarkus-mailer` SMTP
   delivery, implement `/auth/password-reset/*`, frontend reset page.
 - [ ] `backend-st` system tests for register/login/claim against a live backend.
 - [ ] Retire `allowed.user.ids` from the start scripts once registration ships
   (existing accounts are unaffected).
+
+## Games
+
+- [ ] Decide how to use the stored `city` of the community high score (e.g.
+  show it in the Breakout HUD) — it is recorded but not displayed yet.
+- [ ] Optional: a one-time "import my local high score" action for accounts whose
+  best only ever lived in the browser. Deliberately not automatic: the old
+  localStorage key is per device, not per user, and could attribute another
+  person's score.
 
 ## Ops / Cutover
 

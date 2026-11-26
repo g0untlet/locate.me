@@ -56,8 +56,12 @@ public abstract class AuthTestBase {
     }
 
     public String register(String userId, String password, String email) {
+        return register(userId, password, email, null);
+    }
+
+    public String register(String userId, String password, String email, String name) {
         return given().contentType(ContentType.JSON)
-                .body(credentials(userId, password, email))
+                .body(credentials(userId, password, email, name))
                 .post("/api/auth/register")
                 .then()
                 .log().ifValidationFails()

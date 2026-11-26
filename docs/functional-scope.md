@@ -99,6 +99,14 @@ The condition shown (current and for each forecast hour) is mapped from the WMO 
 - The dialog links to the full website release notes (EN/DE/ES); French users are linked to the English page.
 - The application version shown in Settings is a button: tapping it re-opens this dialog on demand at any time, bypassing the once-per-version check (a second dialog is never stacked while one is open).
 
+### 1.10. Games (Easter Egg)
+- Breakout (`frontend/games/breakout/`) is a standalone, dependency-free arcade game linked from Settings. It imports nothing from the app and keeps working offline.
+- The game keeps a **personal high score per account and game** in the backend, so it survives a cleared browser, a reinstall or a second device. The browser's local value is only an offline fallback.
+- On start the HIGH card shows the account's personal best. **COMMUNITY HIGH** and **COMMUNITY HERO** show the best score of all accounts and the nickname of the account that set it; an account without a display name appears as `anonymous`. If the backend cannot be reached at startup, both cards show a dash and the game uses the local fallback.
+- A new personal best is submitted once at game over. Only a strictly higher score replaces the stored one, and the backend uses its own timestamp, so a stale device can never overwrite a better score.
+- A city for the score is already part of the data model and the API for later use; the game does not send it yet, so it stays empty.
+- The endpoints are rate-limited, but scores are client-supplied and cannot be verified — there is no anti-cheat (acceptable for a private easter egg). The shared demo user and unmigrated legacy accounts may submit anonymously.
+
 ## 2. User Interface
 
 The application is a single-page application (SPA) with three main views:
@@ -160,6 +168,8 @@ The backend provides a REST API with the following endpoints. Until the frontend
 - `GET /places?userId={userId}&lat={lat}&lon={lon}`: Returns cached places around the given coordinate, nearest-first. On a cache miss the backend fetches from the Geoapify Places API — one request per `|`-separated category group — combines the results (deduplicated by place ID) and stores them. An optional `Accept-Language` header selects the language of POI names. Each place includes a response-only `distance` (meters) to the given coordinate.
 - `GET /positions/stats?adminKey={adminKey}`: Admin-only. Returns the total number of stored positions together with the number per user as `{"total": ..., "perUser": [{"userId": ..., "locations": ...}]}` (`perUser` ordered by `userId`). Requires the `adminKey` query parameter to match the configured `admin.key` (overridable via the `ADMIN_KEY` environment variable); a missing or mismatched key returns `401 Unauthorized`. Not rate-limited.
 - `GET /places/stats?adminKey={adminKey}`: Admin-only. Returns the number of entries in the places cache together with a per-city breakdown as `{"count": ..., "perCity": [{"city": ..., "places": ...}]}` (`perCity` ordered by `city`). Places without a city are included in `count` but omitted from `perCity`. Requires the `adminKey` query parameter (same check as above); a missing or mismatched key returns `401 Unauthorized`. Not rate-limited.
+- `GET /games/{game}/highscore?userId={userId}`: Public. Returns the caller's personal best (`personal`) and the community best (`community`) for one game. A game without scores answers `personal.score: 0` and `community.score: 0` with `nickname: "anonymous"`. The winner's nickname is resolved from the account on every read (never stored in the score row), so a later rename is reflected.
+- `POST /games/{game}/highscore?userId={userId}`: Records `{score, city?}` as the caller's personal best — only a strictly higher score replaces the stored one, with a server timestamp — and returns the same shape as the GET. Identity follows the position/place policy (token, shared demo or unmigrated legacy account); a request without an identity is rejected. `game` matches `[a-z0-9_-]{1,32}` and `score` must be between 1 and 1,000,000,000.
 
 Position responses include the persisted weather-related fields `temperature`, `weatherCode`, `uvIndex`, and `elevation`. The `/positions/current` preview additionally returns a response-only `isDay` flag for the current conditions and a `forecast` array with the next `weather.forecast-hours` future hours (the current hour is skipped); each slice carries `time`, `temperature`, `weatherCode`, `uvIndex`, `precipitationProbability` and `isDay`. Neither `isDay` nor `forecast` is persisted, and they are not returned by the other endpoints. No new endpoints were introduced for UV-Index and elevation; they are persisted and returned by the existing endpoints above.
 
@@ -178,7 +188,8 @@ the online/offline status indicator stays reliable, and the admin-only stats
 endpoints (`GET /positions/stats`, `GET /places/stats`) are exempt as they require
 the secret `adminKey`. Limits:
 `pwa-standard` = 10 reads / 30 s, `pwa-critical` = 5 writes+deletes / 30 s, both as
-shared pools keyed by `userId`.
+shared pools keyed by `userId`. The game endpoints use the same buckets
+(`GET /games/{game}/highscore` reads, `POST /games/{game}/highscore` writes).
 
 On top of these per-user request limits, outgoing calls to external services are
 protected by **global** token buckets shared by all users, because the providers
@@ -219,6 +230,15 @@ A second business object is the `Place`, which represents a cached point of inte
 - `formattedAddress`, `street`, `houseNumber`, `postcode`, `city`, `country`: Address attributes.
 - `phone`, `website`, `openingHours`, `wheelchair`: Additional POI metadata.
 
+A third business object is the `GameHighscore`, the best score of one account in one game:
+
+- Stored once per `(userId, game)` with a surrogate `id`. The **community** high score is derived from these rows (highest score; the earliest achievement wins a tie) — there is no separate leaderboard record that could drift from the personal bests.
+- `game`: A plain text key (e.g. `breakout`), not an enum, so future games need no schema change.
+- `score`: The personal best; only a strictly higher submission replaces it.
+- `achievedAt`: Server timestamp of the score that currently counts.
+- `city`: The city of that score, nullable and not shown yet.
+- The nickname is **not** stored; it is resolved from the account on read, so a rename is reflected and a missing name falls back to `anonymous`.
+
 ### 4.1. Managing the Tag Vocabulary (`PositionTag`)
 
 The selectable tags are defined by the `PositionTag` enum on the backend and mirrored in the `PREDEFINED_TAGS` list in the frontend (`frontend/js/pages/locate.js`).
@@ -246,8 +266,8 @@ every functional area is implemented as a set of boundaries (REST resources),
 controls (business logic) and entities (business objects). This documentation
 describes the system from a functional point of view; the complete technical
 component breakdown lives in `docs/technical-landscape.md` → ECB Architecture.
-Each feature — `locator` for positions, `aroundme` for places — is a separate BCE
-component.
+Each feature — `locator` for positions, `aroundme` for places, `users` for accounts
+and `game` for the game high scores — is a separate BCE component.
 
 ## 6. Change Log
 

@@ -10,8 +10,8 @@
    ========================================================================== */
 
 export const RELEASE_NOTES = {
-    version: '0.5.0_rc4',
-    date: '2026-11-25',
+    version: '0.5.0_rc5',
+    date: '2026-11-26',
     en: {
         tagline: 'Your places stay — now with a real account.',
         items: [
@@ -26,6 +26,10 @@ export const RELEASE_NOTES = {
             {
                 title: 'Your locations stay yours',
                 text: 'Your user ID stays the same and keeps every saved place; it simply becomes your login name.'
+            },
+            {
+                title: 'Breakout with a community high score',
+                text: 'The hidden Breakout game now keeps your personal best on your account and shows the best score and nickname of the whole community.'
             }
         ]
     },
@@ -43,6 +47,10 @@ export const RELEASE_NOTES = {
             {
                 title: 'Deine Orte bleiben deine',
                 text: 'Deine Benutzer-ID bleibt gleich und behält alle gespeicherten Orte; sie wird nur dein Anmeldename.'
+            },
+            {
+                title: 'Breakout mit Community-Highscore',
+                text: 'Das versteckte Breakout-Spiel speichert deinen persönlichen Rekord jetzt im Konto und zeigt den besten Score und Namen der ganzen Community.'
             }
         ]
     },
@@ -60,6 +68,10 @@ export const RELEASE_NOTES = {
             {
                 title: 'Tus lugares siguen siendo tuyos',
                 text: 'Tu ID de usuario sigue igual y conserva todos los lugares guardados; solo pasa a ser tu nombre de inicio de sesión.'
+            },
+            {
+                title: 'Breakout con récord comunitario',
+                text: 'El Breakout oculto ahora guarda tu mejor marca en tu cuenta y muestra la mejor puntuación y el nombre de toda la comunidad.'
             }
         ]
     },
@@ -77,6 +89,10 @@ export const RELEASE_NOTES = {
             {
                 title: 'Vos lieux restent les vôtres',
                 text: 'Votre ID utilisateur reste le même et conserve tous les lieux enregistrés ; il devient simplement votre identifiant de connexion.'
+            },
+            {
+                title: 'Breakout avec un record communautaire',
+                text: 'Le Breakout caché enregistre désormais votre meilleur score dans votre compte et affiche le meilleur score et le pseudo de toute la communauté.'
             }
         ]
     }

@@ -71,6 +71,17 @@ public class UserAccounts {
         return findByUserId(userId).orElseThrow(() -> AuthErrors.notFound("User not found"));
     }
 
+    /**
+     * The account's current display name (nickname), when one is set. Used by
+     * the game high-score projection; the shared demo has no row and therefore
+     * no nickname.
+     */
+    public Optional<String> displayName(String userId) {
+        return findByUserId(userId)
+                .map(User::name)
+                .filter(name -> name != null && !name.isBlank());
+    }
+
     public List<User> findAll() {
         return this.em.createQuery("SELECT u FROM User u ORDER BY u.userIdLower", User.class).getResultList();
     }

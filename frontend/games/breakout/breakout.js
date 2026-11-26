@@ -3,7 +3,9 @@
    Standalone, dependency-free arcade game. This file deliberately imports
    nothing from the app and exposes nothing globally. All state lives inside
    this IIFE; the only persisted values are the game's own namespaced
-   localStorage keys (high score and mute preference).
+   localStorage keys (high score and mute preference). The community high
+   score is loaded from and submitted to the backend on a best-effort basis,
+   so the game stays fully playable offline.
    ========================================================================== */
 (function () {
     'use strict';
@@ -145,6 +147,83 @@
     }
 
     /* ------------------------------------------------------------------
+       Community high score
+       The backend keeps the personal best of every account and derives the
+       community best from those rows. This file is standalone, so it repeats
+       the two small pieces it needs from the app: the active userId and the
+       API base. The local high score key stays an offline fallback only.
+       ------------------------------------------------------------------ */
+    const GAME = 'breakout';
+    const DEMO_USER_ID = 'user123';
+    const SESSION_KEY = 'locate-me.auth';
+    const API_PATH = '/api';
+    const PENDING = '\u2014';
+
+    /* Same rule as js/config.js: local dev serves the PWA on :8000 and the
+       Quarkus dev server on :8080; everywhere else the API is proxied. */
+    function apiBase() {
+        if (window.location.port === '8000') return 'http://localhost:8090';
+        if (window.location.port === '8080') return 'http://localhost:8080';
+        return '';
+    }
+
+    function activeUserId() {
+        const saved = readStorage('userId');
+        return (saved && saved.trim() !== '') ? saved.trim() : DEMO_USER_ID;
+    }
+
+    /* Mirrors js/auth.js readSession(): only an unexpired token that belongs
+       to the active identity may be sent. Anything else falls back to the
+       legacy userId parameter (demo and unmigrated accounts). */
+    function authToken() {
+        let raw;
+        try {
+            raw = window.localStorage.getItem(SESSION_KEY);
+        } catch (e) {
+            return null;
+        }
+        if (!raw) return null;
+
+        let session;
+        try {
+            session = JSON.parse(raw);
+        } catch (e) {
+            return null;
+        }
+        if (!session
+            || typeof session.token !== 'string' || session.token === ''
+            || typeof session.userId !== 'string' || session.userId === ''
+            || typeof session.expiresAt !== 'string') {
+            return null;
+        }
+
+        const expires = Date.parse(session.expiresAt);
+        if (!Number.isFinite(expires) || expires <= Date.now()) return null;
+        if (session.userId.toLowerCase() !== activeUserId().toLowerCase()) return null;
+        return session.token;
+    }
+
+    function highscoreRequest(method, body) {
+        const headers = { Accept: 'application/json' };
+        const token = authToken();
+        if (token) headers.Authorization = 'Bearer ' + token;
+        if (body) headers['Content-Type'] = 'application/json';
+
+        const url = apiBase() + API_PATH + '/games/' + GAME +
+            '/highscore?userId=' + encodeURIComponent(activeUserId());
+        return fetch(url, {
+            method: method,
+            headers: headers,
+            body: body ? JSON.stringify(body) : undefined,
+            cache: 'no-store',
+            credentials: 'omit'
+        }).then(function (response) {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            return response.json();
+        });
+    }
+
+    /* ------------------------------------------------------------------
        DOM references
        ------------------------------------------------------------------ */
     const app = $('bp-app');
@@ -155,6 +234,8 @@
 
     const scoreEl = $('bp-score');
     const highEl = $('bp-high');
+    const communityEl = $('bp-community');
+    const communityHeroEl = $('bp-community-hero');
     const levelEl = $('bp-level');
     const livesEl = $('bp-lives');
 
@@ -222,6 +303,14 @@
     let resizeScheduled = false;
     let resizeObserver = null;
 
+    /* Community view: null until the backend answered. The game never blocks
+       on it, so the arcade stays playable offline and for the demo user. */
+    const community = {
+        score: null,
+        nickname: null
+    };
+    let submittedHigh = 0;
+
     /* ------------------------------------------------------------------
        HUD, overlay and announcements
        ------------------------------------------------------------------ */
@@ -230,6 +319,72 @@
         highEl.textContent = formatScore(state.high);
         levelEl.textContent = String(state.level).padStart(2, '0');
         livesEl.textContent = String(Math.max(0, state.lives));
+    }
+
+    function renderCommunity() {
+        if (community.score === null) {
+            communityEl.textContent = PENDING;
+            communityEl.classList.add('is-pending');
+        } else {
+            communityEl.textContent = formatScore(community.score);
+            communityEl.classList.remove('is-pending');
+        }
+
+        const nickname = community.nickname;
+        communityHeroEl.textContent = nickname || PENDING;
+        communityHeroEl.title = nickname || '';
+        communityHeroEl.classList.toggle('is-pending', !nickname);
+    }
+
+    function applyHighscore(payload, initial) {
+        if (!payload) return;
+        const personal = payload.personal;
+        const best = payload.community;
+
+        if (personal && typeof personal.score === 'number') {
+            // The first successful answer is authoritative for the HIGH card,
+            // so a local leftover from another device or identity cannot mask
+            // it. Later answers only raise it, never lower a score the player
+            // just achieved.
+            if (initial && state.score === 0 && !state.newHigh) {
+                state.high = personal.score;
+                writeStorage(STORAGE_HIGH, String(state.high));
+                updateHud();
+            } else if (personal.score > state.high) {
+                state.high = personal.score;
+                writeStorage(STORAGE_HIGH, String(state.high));
+                updateHud();
+            }
+        }
+
+        if (best && typeof best.score === 'number') {
+            community.score = best.score;
+            community.nickname = (typeof best.nickname === 'string' && best.nickname !== '')
+                ? best.nickname
+                : 'anonymous';
+            renderCommunity();
+        }
+    }
+
+    function loadHighscore() {
+        renderCommunity();
+        highscoreRequest('GET').then(function (payload) {
+            applyHighscore(payload, true);
+        }).catch(function () {
+            /* Offline or rejected: keep the cached high and show dashes. */
+        });
+    }
+
+    function submitHighscore() {
+        const score = state.high;
+        if (!(score > 0) || score <= submittedHigh) return;
+        submittedHigh = score;
+        highscoreRequest('POST', { score: score }).then(function (payload) {
+            applyHighscore(payload, false);
+        }).catch(function () {
+            /* Best effort: the next game over retries this score. */
+            submittedHigh = 0;
+        });
     }
 
     function showOverlay(config) {
@@ -635,6 +790,7 @@
             saveHighScore();
 
             const newHigh = state.newHigh;
+            if (newHigh) submitHighscore();
             showOverlay({
                 kicker: 'GAME OVER',
                 title: newHigh ? 'New high score' : 'Game over',
@@ -1565,6 +1721,7 @@
         updateHud();
         updateMuteButton();
         updatePauseButton();
+        loadHighscore();
 
         // When embedded, the host owns the way back; keep the game chrome clean.
         try {
