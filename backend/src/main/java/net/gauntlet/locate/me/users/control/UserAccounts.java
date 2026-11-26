@@ -143,6 +143,10 @@ public class UserAccounts {
                 .failedLoginAttempts(0)
                 .lockedUntil(null)
                 .updatedAt(Instant.now());
+        // Optional display name; leaving it out keeps any existing value.
+        if (input.name() != null) {
+            user.name(normalizeName(input.name()));
+        }
         if (user.roles().isEmpty()) {
             user.addRole(UserRole.USER);
         }

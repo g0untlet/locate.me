@@ -10,73 +10,73 @@
    ========================================================================== */
 
 export const RELEASE_NOTES = {
-    version: '0.5.0_rc1',
-    date: '2026-11-12',
+    version: '0.5.0_rc4',
+    date: '2026-11-25',
     en: {
-        tagline: 'Place details in your history — right where you saved them.',
+        tagline: 'Your places stay — now with a real account.',
         items: [
             {
-                title: 'Details in History',
-                text: 'Unfold a saved place to see its opening hours, phone, website and accessibility.'
+                title: 'Secure your existing account',
+                text: 'Set a password and a recovery email once for your existing user ID, so nobody else can use it.'
             },
             {
-                title: 'Longer comments',
-                text: 'Comments now hold 75 characters and get two lines while saving.'
+                title: 'New users',
+                text: 'Create your own account right in the app — no need to ask for an ID anymore.'
             },
             {
-                title: 'Safer history',
-                text: 'Saved comments are shown as plain text, so nothing in them can run.'
+                title: 'Your locations stay yours',
+                text: 'Your user ID stays the same and keeps every saved place; it simply becomes your login name.'
             }
         ]
     },
     de: {
-        tagline: 'Ortsdetails im Verlauf — genau dort, wo du sie gespeichert hast.',
+        tagline: 'Deine Orte bleiben — jetzt mit einem echten Konto.',
         items: [
             {
-                title: 'Details im Verlauf',
-                text: 'Klappe einen gespeicherten Ort auf und sieh Öffnungszeiten, Telefon, Website und Barrierefreiheit.'
+                title: 'Bestehendes Konto absichern',
+                text: 'Lege einmalig ein Passwort und eine Wiederherstellungs-E-Mail für deine bestehende Benutzer-ID fest, damit niemand sonst sie nutzen kann.'
             },
             {
-                title: 'Längere Kommentare',
-                text: 'Kommentare fassen jetzt 75 Zeichen und haben beim Speichern zwei Zeilen.'
+                title: 'Neue Nutzer',
+                text: 'Erstelle dein eigenes Konto direkt in der App — du musst keine ID mehr anfragen.'
             },
             {
-                title: 'Sicherer Verlauf',
-                text: 'Gespeicherte Kommentare werden nur als Text angezeigt — nichts darin kann ausgeführt werden.'
+                title: 'Deine Orte bleiben deine',
+                text: 'Deine Benutzer-ID bleibt gleich und behält alle gespeicherten Orte; sie wird nur dein Anmeldename.'
             }
         ]
     },
     es: {
-        tagline: 'Los detalles de tus lugares, dentro del historial.',
+        tagline: 'Tus lugares se quedan — ahora con una cuenta de verdad.',
         items: [
             {
-                title: 'Detalles en el historial',
-                text: 'Despliega un lugar guardado para ver su horario, teléfono, web y accesibilidad.'
+                title: 'Protege tu cuenta actual',
+                text: 'Define una vez una contraseña y un correo de recuperación para tu ID actual, para que nadie más pueda usarlo.'
             },
             {
-                title: 'Comentarios más largos',
-                text: 'Los comentarios admiten ahora 75 caracteres y ocupan dos líneas al guardar.'
+                title: 'Nuevos usuarios',
+                text: 'Crea tu propia cuenta desde la app; ya no hace falta pedir un ID.'
             },
             {
-                title: 'Historial más seguro',
-                text: 'Los comentarios guardados se muestran como texto plano, así que nada de lo que contienen puede ejecutarse.'
+                title: 'Tus lugares siguen siendo tuyos',
+                text: 'Tu ID de usuario sigue igual y conserva todos los lugares guardados; solo pasa a ser tu nombre de inicio de sesión.'
             }
         ]
     },
     fr: {
-        tagline: 'Les détails de vos lieux, directement dans l’historique.',
+        tagline: 'Vos lieux restent — désormais avec un vrai compte.',
         items: [
             {
-                title: 'Détails dans l’historique',
-                text: 'Dépliez un lieu enregistré pour voir horaires, téléphone, site web et accessibilité.'
+                title: 'Sécurisez votre compte existant',
+                text: 'Définissez une fois un mot de passe et un e-mail de récupération pour votre ID actuel, afin que personne d’autre ne puisse l’utiliser.'
             },
             {
-                title: 'Commentaires plus longs',
-                text: 'Les commentaires vont désormais jusqu’à 75 caractères et disposent de deux lignes lors de l’enregistrement.'
+                title: 'Nouveaux utilisateurs',
+                text: 'Créez votre propre compte directement dans l’app — plus besoin de demander un ID.'
             },
             {
-                title: 'Historique plus sûr',
-                text: 'Les commentaires enregistrés s’affichent en texte brut : rien de ce qu’ils contiennent ne peut s’exécuter.'
+                title: 'Vos lieux restent les vôtres',
+                text: 'Votre ID utilisateur reste le même et conserve tous les lieux enregistrés ; il devient simplement votre identifiant de connexion.'
             }
         ]
     }

@@ -31,7 +31,14 @@ class AuthClaimIT extends AuthTestBase {
                 .post("/api/positions?userId=legacyHero")
                 .then().statusCode(201);
 
-        String token = claim("legacyHero", PASSWORD, "legacyhero@example.test");
+        String token = claim("legacyHero", PASSWORD, "legacyhero@example.test", "Legacy Hero");
+
+        given().auth().oauth2(token)
+                .when().get("/api/users/me")
+                .then()
+                .statusCode(200)
+                .body("userId", is("legacyHero"))
+                .body("name", is("Legacy Hero"));
 
         given().auth().oauth2(token)
                 .when().get("/api/positions")

@@ -1,5 +1,6 @@
 import { API_BASE_URL, API_PATH } from './config.js?v=0.3.1_34';
 import { t, getLanguage } from './i18n.js';
+import { clearSession, getToken } from './auth.js';
 
 /* ==========================================================================
    Internal: build a typed Error for HTTP 429 (rate limited). Carries
@@ -13,6 +14,101 @@ function tooManyRequestsError(response) {
     error.status = 429;
     error.retryAfter = Number.isNaN(retryAfter) ? null : retryAfter;
     return error;
+}
+
+/* ==========================================================================
+   Internal: fetch for the authenticated business endpoints. A stored session
+   adds the bearer token; the backend then derives the identity from the token
+   and ignores the userId query parameter (kept for the service-worker cache
+   key). A 401 means the current identity can no longer authenticate — the
+   token was rejected, or it had already expired and was dropped by
+   readSession() — so the session is cleared and the auth gate takes over
+   instead of the app silently falling back to the legacy parameter.
+   ========================================================================== */
+async function authorizedFetch(url, options = {}) {
+    const token = getToken();
+    const headers = { ...(options.headers || {}) };
+    if (token) {
+        headers.Authorization = `Bearer ${token}`;
+    }
+    const response = await fetch(url, { ...options, headers });
+    if (response.status === 401) {
+        clearSession();
+        window.dispatchEvent(new Event('locateme:session-expired'));
+    }
+    return response;
+}
+
+/* ==========================================================================
+   Internal: the public auth endpoints never send the bearer token (a stale
+   token on /auth/login must not be treated as an authentication attempt) and
+   a 401 is a credentials error, not a session expiry.
+   ========================================================================== */
+async function postAuth(path, payload) {
+    const response = await fetch(`${API_BASE_URL}${API_PATH}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (response.status === 429) throw tooManyRequestsError(response);
+
+    if (!response.ok) {
+        let serverMessage = null;
+        try {
+            const body = await response.json();
+            serverMessage = body && body.error ? body.error : null;
+        } catch (e) {
+            /* no JSON body – use the status below */
+        }
+        const error = new Error(serverMessage || `Server returned status ${response.status}`);
+        error.status = response.status;
+        error.serverMessage = serverMessage;
+        throw error;
+    }
+    return response.json();
+}
+
+/* ==========================================================================
+   POST /api/auth/register – create an account and return the token envelope.
+   ========================================================================== */
+export async function apiRegister(payload) {
+    return postAuth('/auth/register', payload);
+}
+
+/* ==========================================================================
+   POST /api/auth/login – verify credentials and return the token envelope.
+   ========================================================================== */
+export async function apiLogin(payload) {
+    return postAuth('/auth/login', payload);
+}
+
+/* ==========================================================================
+   POST /api/auth/claim – one-time migration of an imported legacy account.
+   ========================================================================== */
+export async function apiClaim(payload) {
+    return postAuth('/auth/claim', payload);
+}
+
+/* ==========================================================================
+   GET /api/auth/migration-status/{userId}
+   Returns: { migrationRequired: boolean }
+   ========================================================================== */
+export async function apiMigrationStatus(userId) {
+    const url = `${API_BASE_URL}${API_PATH}/auth/migration-status/${encodeURIComponent(userId)}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    try {
+        const response = await fetch(url, { signal: controller.signal });
+        if (response.status === 429) throw tooManyRequestsError(response);
+        if (!response.ok) {
+            const error = new Error(`Server returned status ${response.status}`);
+            error.status = response.status;
+            throw error;
+        }
+        return response.json();
+    } finally {
+        clearTimeout(timeoutId);
+    }
 }
 
 /* ==========================================================================
@@ -57,7 +153,7 @@ export async function apiGetPositionsWithMeta(userId, lat = null, lon = null) {
         url += `&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
     }
 
-    const response = await fetch(url);
+    const response = await authorizedFetch(url);
     if (response.status === 429) throw tooManyRequestsError(response);
     if (!response.ok) throw new Error(t('errors.fetchHistory'));
     const data = await response.json();
@@ -74,7 +170,7 @@ export async function apiGetCurrentPosition(userId, lat, lon) {
     const url = `${API_BASE_URL}${API_PATH}/positions/current` +
         `?userId=${encodeURIComponent(userId)}&lat=${lat}&lon=${lon}`;
 
-    const response = await fetch(url);
+    const response = await authorizedFetch(url);
     if (response.status === 429) throw tooManyRequestsError(response);
     if (!response.ok) throw new Error(`Server returned status ${response.status}`);
     return response.json();
@@ -90,7 +186,7 @@ export async function apiGetPlaces(userId, lat, lon) {
     const url = `${API_BASE_URL}${API_PATH}/places` +
         `?userId=${encodeURIComponent(userId)}&lat=${lat}&lon=${lon}`;
 
-    const response = await fetch(url, {
+    const response = await authorizedFetch(url, {
         headers: { 'Accept-Language': getLanguage() }
     });
     if (response.status === 429) throw tooManyRequestsError(response);
@@ -105,7 +201,7 @@ export async function apiGetPlaces(userId, lat, lon) {
    Throws on network error or non-ok response.
    ========================================================================== */
 export async function apiPostPosition(userId, payload) {
-    const response = await fetch(
+    const response = await authorizedFetch(
         `${API_BASE_URL}${API_PATH}/positions?userId=${encodeURIComponent(userId)}`,
         {
             method: 'POST',
@@ -123,7 +219,7 @@ export async function apiPostPosition(userId, payload) {
    Throws on network error or non-ok response.
    ========================================================================== */
 export async function apiDeletePosition(userId, id) {
-    const response = await fetch(
+    const response = await authorizedFetch(
         `${API_BASE_URL}${API_PATH}/positions/${id}?userId=${encodeURIComponent(userId)}`,
         { method: 'DELETE' }
     );

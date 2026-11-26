@@ -10,8 +10,8 @@
     <meta name="apple-mobile-web-app-title" content="locate.me">
     <title>locate.me</title>
     <script>
-        const APP_VERSION = '0.5.0_rc2';
-        const APP_BUILD   = '20261120';
+        const APP_VERSION = '0.5.0_rc4';
+        const APP_BUILD   = '20261125';
         document.documentElement.dataset.appVersion = APP_VERSION;
         document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light';
         document.documentElement.lang = localStorage.getItem('lang') || 'en';
@@ -33,7 +33,7 @@
             window.dispatchEvent(new Event('locateme:installed'));
         });
     </script>
-    <link rel="stylesheet" href="css/style.css?v=0.5.0_rc2_1">
+    <link rel="stylesheet" href="css/style.css?v=0.5.0_rc4_1">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -43,7 +43,7 @@
     <link rel="apple-touch-icon" href="icons/icon_192.png">
 </head>
 <body>
-    <script type="module" src="app.js?v=0.5.0_rc2_1"></script>
+    <script type="module" src="app.js?v=0.5.0_rc4_1"></script>
 
     <div class="app-container">
         <header class="app-header">
@@ -55,7 +55,7 @@
         
         <section id="page-locate" class="app-page">
             <div class="locate-action-group">
-                <div id="demo-mode-note" class="demo-mode-note hidden"><span data-i18n="locate.demoMode">Demo mode.</span><br><span data-i18n="locate.demoModeHint">Request your own user id in Settings.</span></div>
+                <div id="demo-mode-note" class="demo-mode-note hidden"><span data-i18n="locate.demoMode">Demo mode.</span><br><span data-i18n="locate.demoModeHint">Create an account in Settings to keep your own locations.</span></div>
             </div>
 
             <div id="locate-status-container" class="status-container">
@@ -397,7 +397,7 @@
                     <label for="username-input" class="label" data-i18n="label.userId">USER ID</label>
                     <div class="input-with-icon">
                         <input type="password" id="username-input" class="settings-input" placeholder="user123"
-                               maxlength="16" pattern="[A-Za-z0-9]+" autocomplete="off" spellcheck="false" autocapitalize="off">
+                               maxlength="32" pattern="[A-Za-z0-9_\-]+" autocomplete="off" spellcheck="false" autocapitalize="off">
                         <button type="button" id="toggle-password-btn" class="toggle-password-trigger" aria-label="Toggle user ID visibility" data-i18n-aria-label="settings.toggleUserId">
                             <svg class="eye-icon" id="eye-icon-visible" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -410,14 +410,14 @@
                         </button>
                     </div>
                     <small class="help-text" data-i18n="settings.userIdHelp">Left blank, demo "user123" will be used by default.</small>
-                    <small class="help-text"><a id="request-user-id-link" class="request-user-id-link" href="#">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
-                            <path d="M22 6l-10 7L2 6"></path>
-                        </svg>
-                        <span data-i18n="settings.requestUserId">Request your own User ID</span>
-                    </a></small>
                 </div>
+
+                <div class="form-group">
+                    <label class="label" data-i18n="label.account">ACCOUNT</label>
+                    <button id="settings-account-btn" class="track-btn" type="button" data-i18n="settings.accountAction">Log in or create an account</button>
+                    <small class="help-text" data-i18n="settings.accountHelp">Demo mode needs no account.</small>
+                </div>
+
                 <div id="settings-status" class="settings-status" aria-live="polite"></div>
                 
                 <div class="attribution-block">
@@ -506,6 +506,85 @@
                 </span>
             </button>
         </nav>
+
+        <!-- Authentication gate: claim / login / create account / demo.
+             Hidden by default; opened by js/pages/auth.js only after the
+             backend answered the migration-status probe (or after a 401). -->
+        <div id="auth-gate" class="auth-gate hidden" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+            <div class="auth-card">
+                <h2 id="auth-title" class="auth-title">Secure your account</h2>
+                <p id="auth-intro" class="auth-intro"></p>
+                <form id="auth-form" class="auth-form" novalidate>
+                    <div class="form-group">
+                        <label for="auth-userid" class="label" data-i18n="label.userId">USER ID</label>
+                        <input id="auth-userid" class="settings-input" type="text" autocomplete="username"
+                               autocapitalize="off" spellcheck="false" maxlength="32">
+                        <small id="auth-userid-help" class="help-text hidden" data-i18n="auth.userIdHelp"></small>
+                    </div>
+
+                    <div id="auth-name-group" class="form-group hidden">
+                        <label for="auth-name" class="label" data-i18n="label.name">NAME</label>
+                        <input id="auth-name" class="settings-input" type="text" autocomplete="name" maxlength="128">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="auth-password" class="label" data-i18n="label.password">PASSWORD</label>
+                        <div class="input-with-icon">
+                            <input id="auth-password" class="settings-input" type="password"
+                                   autocomplete="current-password" maxlength="32">
+                            <button type="button" id="auth-password-toggle" class="toggle-password-trigger"
+                                    aria-label="Show or hide password" data-i18n-aria-label="auth.togglePassword">
+                                <svg class="eye-icon" id="auth-password-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                <svg class="eye-icon hidden" id="auth-password-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <small class="help-text" data-i18n="auth.passwordHelp"></small>
+                    </div>
+
+                    <div id="auth-password2-group" class="form-group hidden">
+                        <label for="auth-password2" class="label" data-i18n="label.passwordRepeat">REPEAT PASSWORD</label>
+                        <div class="input-with-icon">
+                            <input id="auth-password2" class="settings-input" type="password"
+                                   autocomplete="new-password" maxlength="32">
+                            <button type="button" id="auth-password2-toggle" class="toggle-password-trigger"
+                                    aria-label="Show or hide password" data-i18n-aria-label="auth.togglePassword">
+                                <svg class="eye-icon" id="auth-password2-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                <svg class="eye-icon hidden" id="auth-password2-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="auth-email-group" class="form-group hidden">
+                        <label for="auth-email" class="label" data-i18n="label.recoveryEmail">RECOVERY EMAIL</label>
+                        <input id="auth-email" class="settings-input" type="email" autocomplete="email" maxlength="254">
+                    </div>
+
+                    <div id="auth-status" class="settings-status auth-status" aria-live="polite"></div>
+
+                    <div class="auth-actions">
+                        <button id="auth-submit" class="track-btn" type="submit">Continue</button>
+                        <button id="auth-secondary" class="auth-link" type="button"></button>
+                    </div>
+
+                    <div class="auth-footer">
+                        <button id="auth-demo" class="auth-link" type="button"></button>
+                        <button id="auth-later" class="auth-link auth-later hidden" type="button"></button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
 </body>

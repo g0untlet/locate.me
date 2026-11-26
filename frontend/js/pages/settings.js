@@ -7,26 +7,27 @@ import { t, getLanguage, setLanguage } from '../i18n.js';
    direkter Modulimport nötig.
    ========================================================================== */
 
-/* Mirrors the backend check in PositionsResource: alphanumeric, at most 16
-   characters. Validated inline so a typo cannot silently switch every request
-   to an unknown user. */
-const USER_ID_PATTERN   = /^[A-Za-z0-9]{1,16}$/;
-const SAVE_DEBOUNCE_MS  = 600;
+/* Accepts both legacy ids (alphanumeric, ≤16) and the new account ids
+   (`[a-z0-9_-]{3,32}`, the backend normalizes to lowercase). Validated inline
+   so a typo cannot silently switch every request to an unknown user. */
+const USER_ID_PATTERN   = /^[A-Za-z0-9_-]{1,32}$/;
 const STATUS_VISIBLE_MS = 2000;
 
-/* ==========================================================================
-   Request-UserId-Link: info@locate-me.net – als Char-Codes gespeichert, um
-   Crawlern die eMail-Adresse vorzuenthalten. Wird erst zur Laufzeit dekodiert.
-   ========================================================================== */
-function initRequestUserIdLink() {
-    const codes = [105,110,102,111,64,108,111,99,97,116,101,45,109,101,46,110,101,116];
-    const link  = document.getElementById('request-user-id-link');
-    if (link) link.href = 'mailto:' + codes.map(c => String.fromCharCode(c)).join('');
-}
+export function initSettingsPage({ onSave, getActiveUserId, onOpenAccount }) {
 
-export function initSettingsPage({ onSave, getActiveUserId }) {
+    const accountButton = document.getElementById('settings-account-btn');
+    if (accountButton && onOpenAccount) {
+        accountButton.addEventListener('click', onOpenAccount);
+    }
 
-    initRequestUserIdLink();
+    // Login, claim, registration and the demo path change the active id from
+    // the auth panel; keep the field in sync.
+    window.addEventListener('locateme:identity-changed', (event) => {
+        const input = document.getElementById('username-input');
+        if (input) {
+            input.value = (event.detail && event.detail.userId) || '';
+        }
+    });
 
     // --- Dark-Mode-Toggle --- 
     const darkToggle = document.getElementById('dark-mode-toggle'); 
@@ -54,12 +55,12 @@ export function initSettingsPage({ onSave, getActiveUserId }) {
 
     // --- User-ID: saved automatically (no Save button) -----------------------
     // The button only ever wrote this one value — theme and language already
-    // persist on interaction. The field now saves itself: shortly after typing,
-    // when leaving the field, on Enter and when the app is hidden. A blank value
-    // keeps meaning "demo user123", exactly as before.
+    // persist on interaction. The field saves when leaving it, on Enter and when
+    // the app is hidden/closed; typing alone never switches the identity, so a
+    // pause to think cannot trigger a login/claim prompt. A blank value keeps
+    // meaning "demo user123", exactly as before.
     const idInput   = document.getElementById('username-input');
     const statusDiv = document.getElementById('settings-status');
-    let saveTimer   = null;
     let statusTimer = null;
 
     function showStatus(key, isError) {
@@ -71,8 +72,6 @@ export function initSettingsPage({ onSave, getActiveUserId }) {
     }
 
     function persistUserId() {
-        clearTimeout(saveTimer);
-        saveTimer = null;
         const value = idInput.value.trim();
         if (value !== '' && !USER_ID_PATTERN.test(value)) {
             // The previously stored id stays active, so a typo never breaks
@@ -87,9 +86,8 @@ export function initSettingsPage({ onSave, getActiveUserId }) {
     }
 
     idInput.addEventListener('input', () => {
-        clearTimeout(saveTimer);
-        saveTimer = setTimeout(persistUserId, SAVE_DEBOUNCE_MS);
-        // The value changed again — a "saved" confirmation no longer applies.
+        // Never persist while typing: the id is saved on blur, Enter or when
+        // the app is hidden, so a pause to think cannot switch the identity.
         if (statusDiv.classList.contains('settings-status--ok')) showStatus(null);
     });
     idInput.addEventListener('blur', persistUserId);
